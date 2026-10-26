@@ -1,0 +1,35 @@
+@props([
+    'variant' => 'primary',
+    'size' => 'md',
+    'type' => 'button',
+    'href' => null,
+])
+
+@php
+$variantClasses = match($variant) {
+    'primary' => 'bg-indigo-600 text-white hover:bg-indigo-700 active:bg-indigo-800 shadow-sm focus-visible:ring-indigo-500',
+    'secondary' => 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 active:bg-slate-100 shadow-xs focus-visible:ring-indigo-500 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700 dark:hover:bg-slate-750',
+    'danger' => 'bg-rose-600 text-white hover:bg-rose-700 active:bg-rose-800 shadow-sm focus-visible:ring-rose-500',
+    'success' => 'bg-emerald-600 text-white hover:bg-emerald-700 active:bg-emerald-800 shadow-sm focus-visible:ring-emerald-500',
+    'ghost' => 'text-slate-600 hover:bg-slate-100 active:bg-slate-200 dark:text-slate-400 dark:hover:bg-slate-800 focus-visible:ring-slate-500',
+    default => 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm focus-visible:ring-indigo-500',
+};
+
+$sizeClasses = match($size) {
+    'sm' => 'px-3 py-1.5 text-xs font-medium rounded-lg gap-1.5',
+    'lg' => 'px-5 py-2.5 text-base font-medium rounded-xl gap-2.5',
+    default => 'px-4 py-2 text-sm font-medium rounded-xl gap-2',
+};
+
+$baseClasses = "inline-flex items-center justify-center transition-all duration-150 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none cursor-pointer";
+@endphp
+
+@if($href)
+    <a href="{{ $href }}" {{ $attributes->merge(['class' => "{$baseClasses} {$variantClasses} {$sizeClasses}"]) }}>
+        {{ $slot }}
+    </a>
+@else
+    <button type="{{ $type }}" {{ $attributes->merge(['class' => "{$baseClasses} {$variantClasses} {$sizeClasses}"]) }}>
+        {{ $slot }}
+    </button>
+@endif
