@@ -41,14 +41,20 @@ class DashboardController extends Controller
         // Produk & Stok
         $stockSummary = $reportService->getStockSummary();
 
-        // Transaksi Terbaru
-        $recentTransactions = Transaction::with(['category', 'user'])
+        // Transaksi Terbaru (Eager load items untuk perhitungan Modal, Jual, dan Laba)
+        $recentTransactions = Transaction::with(['category', 'user', 'items'])
             ->latest('transaction_date')
-            ->take(6)
+            ->take(8)
             ->get();
 
-        // Tren 7 Hari Terakhir
+        // Tren 7 Hari Terakhir & Ringkasan 7 Hari
         $dailyTrend = $reportService->getDailyTrend(7);
+        $sevenDaysIncome = (float) array_sum(array_column($dailyTrend, 'income'));
+        $sevenDaysExpense = (float) array_sum(array_column($dailyTrend, 'expense'));
+        $sevenDaysNet = $sevenDaysIncome - $sevenDaysExpense;
+
+        // 5 Produk Terlaris
+        $topProducts = $reportService->getTopProducts(5);
 
         return view('dashboard.index', compact(
             'todayIncome',
@@ -59,7 +65,11 @@ class DashboardController extends Controller
             'monthlyNet',
             'stockSummary',
             'recentTransactions',
-            'dailyTrend'
+            'dailyTrend',
+            'sevenDaysIncome',
+            'sevenDaysExpense',
+            'sevenDaysNet',
+            'topProducts'
         ));
     }
 }

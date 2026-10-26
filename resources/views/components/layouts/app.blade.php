@@ -64,7 +64,7 @@
                     <x-alert type="warning" :message="session('warning')" />
                 @endif
 
-                @if($errors->any() && !session('error'))
+                @if(isset($errors) && $errors->any() && !session('error'))
                     <x-alert type="error">
                         <span class="font-bold">Terjadi kesalahan pengisian data:</span>
                         <ul class="list-disc pl-5 mt-1 space-y-0.5 text-xs">
@@ -85,5 +85,7 @@
             </footer>
         </div>
     </div>
+
+    {{ $scripts ?? '' }}
 </body>
 </html>

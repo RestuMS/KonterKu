@@ -106,4 +106,27 @@ class ReportService
             'total_potential_revenue' => (float) $totalPotentialRevenue,
         ];
     }
+
+    /**
+     * Dapatkan produk terlaris berdasarkan kuantitas penjualan.
+     */
+    public function getTopProducts(int $limit = 5): \Illuminate\Support\Collection
+    {
+        return TransactionItem::whereHas('transaction', function ($q) {
+                $q->where('type', 'pemasukan');
+            })
+            ->select(
+                'product_id',
+                'product_name',
+                DB::raw('SUM(quantity) as total_sold'),
+                DB::raw('SUM(subtotal) as total_revenue'),
+                DB::raw('SUM(cost_price * quantity) as total_cost'),
+                DB::raw('SUM(subtotal - (cost_price * quantity)) as total_profit')
+            )
+            ->groupBy('product_id', 'product_name')
+            ->orderByDesc('total_sold')
+            ->with(['product.category'])
+            ->take($limit)
+            ->get();
+    }
 }

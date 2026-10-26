@@ -44,4 +44,37 @@ class Transaction extends Model
     {
         return $this->hasMany(TransactionItem::class);
     }
+
+    public function getCostPriceAttribute(): float
+    {
+        if ($this->type === 'pengeluaran') {
+            return (float) $this->total_amount;
+        }
+
+        if ($this->relationLoaded('items') ? $this->items->isNotEmpty() : $this->items()->exists()) {
+            return (float) $this->items->sum(function ($item) {
+                return (float) $item->cost_price * (int) $item->quantity;
+            });
+        }
+
+        return 0.0;
+    }
+
+    public function getSellingPriceAttribute(): float
+    {
+        if ($this->type === 'pemasukan') {
+            return (float) $this->total_amount;
+        }
+
+        return 0.0;
+    }
+
+    public function getProfitAttribute(): float
+    {
+        if ($this->type === 'pengeluaran') {
+            return -(float) $this->total_amount;
+        }
+
+        return $this->selling_price - $this->cost_price;
+    }
 }
