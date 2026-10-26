@@ -43,7 +43,7 @@ class ProductController extends Controller
 
     public function create(): View
     {
-        $categories = Category::whereIn('type', ['product', 'all'])->get();
+        $categories = Category::whereIn('type', ['product', 'all'])->orderBy('id')->get();
         return view('products.create', compact('categories'));
     }
 
@@ -60,7 +60,7 @@ class ProductController extends Controller
 
     public function edit(Product $product): View
     {
-        $categories = Category::whereIn('type', ['product', 'all'])->get();
+        $categories = Category::whereIn('type', ['product', 'all'])->orderBy('id')->get();
         return view('products.edit', compact('product', 'categories'));
     }
 
