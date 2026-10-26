@@ -7,6 +7,7 @@ use App\Models\Category;
 use App\Models\Product;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class ProductController extends Controller
@@ -49,6 +50,20 @@ class ProductController extends Controller
 
     public function store(ProductRequest $request): RedirectResponse
     {
+        if ($request->has('items') && is_array($request->items)) {
+            $count = 0;
+            DB::transaction(function () use ($request, &$count) {
+                foreach ($request->items as $item) {
+                    $item['is_active'] = isset($item['is_active']) && $item['is_active'];
+                    Product::create($item);
+                    $count++;
+                }
+            });
+
+            return redirect()->route('products.index')
+                ->with('success', "Berhasil menambahkan {$count} produk baru sekaligus.");
+        }
+
         $data = $request->validated();
         $data['is_active'] = $request->has('is_active');
 
