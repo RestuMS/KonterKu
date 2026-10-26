@@ -48,4 +48,6 @@ Route::middleware('auth')->group(function () {
     // Pengaturan
     Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
     Route::put('/settings', [SettingController::class, 'update'])->name('settings.update');
+    Route::put('/settings/profile', [SettingController::class, 'updateProfile'])->name('settings.profile');
+    Route::put('/settings/password', [SettingController::class, 'updatePassword'])->name('settings.password');
 });
