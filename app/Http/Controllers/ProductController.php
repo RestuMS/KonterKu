@@ -92,18 +92,43 @@ class ProductController extends Controller
 
     public function destroy(Product $product): RedirectResponse
     {
-        // Periksa apakah produk sudah pernah dipakai dalam transaksi
-        if ($product->transactionItems()->exists()) {
-            $product->update(['is_active' => false]);
+        try {
+            $name = $product->name;
+
+            // Jika produk memiliki riwayat transaksi penjualan/pembelian
+            if ($product->transactionItems()->exists()) {
+                // Jika produk masih aktif, nonaktifkan terlebih dahulu agar tidak merusak audit
+                if ($product->is_active) {
+                    $product->update(['is_active' => false]);
+
+                    return redirect()->route('products.index')
+                        ->with('info', "Produk {$name} memiliki riwayat transaksi sehingga dinonaktifkan (arsip) dan disembunyikan dari penjualan kasir. Jika Anda tetap ingin menghapusnya permanen, klik tombol hapus sekali lagi.");
+                }
+
+                // Jika sudah nonaktif dan user tetap ingin menghapus permanen:
+                // Putus referensi foreign key di item transaksi (product_id diset null) agar riwayat struk/nama produk di masa lalu tetap utuh
+                DB::transaction(function () use ($product) {
+                    $product->transactionItems()->update(['product_id' => null]);
+                    $product->stockMutations()->delete();
+                    $product->delete();
+                });
+
+                return redirect()->route('products.index')
+                    ->with('success', "Produk {$name} berhasil dihapus permanen. Riwayat transaksi masa lalu tetap aman.");
+            }
+
+            // Jika produk belum pernah bertransaksi sama sekali:
+            // Hapus riwayat mutasi stok awal, lalu hapus produk secara aman
+            DB::transaction(function () use ($product) {
+                $product->stockMutations()->delete();
+                $product->delete();
+            });
 
             return redirect()->route('products.index')
-                ->with('info', "Produk {$product->name} memiliki riwayat transaksi sehingga dinonaktifkan (arsip) dan tidak dihapus permanen demi keakuratan laporan keuangan.");
+                ->with('success', "Produk {$name} berhasil dihapus.");
+        } catch (\Throwable $e) {
+            return redirect()->route('products.index')
+                ->with('error', "Gagal menghapus produk: " . $e->getMessage());
         }
-
-        $name = $product->name;
-        $product->delete();
-
-        return redirect()->route('products.index')
-            ->with('success', "Produk {$name} berhasil dihapus.");
     }
 }
