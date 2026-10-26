@@ -17,9 +17,12 @@ class IncomeRequest extends FormRequest
             'transaction_date' => ['required', 'date'],
             'category_id' => ['required', 'exists:categories,id'],
             'payment_method' => ['required', 'in:cash,transfer,qris'],
+            'customer_target' => ['nullable', 'string', 'max:100'],
             'notes' => ['nullable', 'string', 'max:500'],
             'product_id' => ['nullable', 'exists:products,id'],
+            'product_name' => ['nullable', 'string', 'max:255'],
             'quantity' => ['nullable', 'integer', 'min:1'],
+            'cost_price' => ['nullable', 'numeric', 'min:0'],
             'amount' => ['required', 'numeric', 'gt:0'],
         ];
     }

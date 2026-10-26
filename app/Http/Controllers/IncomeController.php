@@ -66,7 +66,7 @@ class IncomeController extends Controller
     public function create(): View
     {
         $categories = Category::whereIn('type', ['product', 'transaction', 'all'])->orderBy('name')->get();
-        $products = Product::where('is_active', true)->where('stock', '>', 0)->with('category')->orderBy('name')->get();
+        $products = Product::where('is_active', true)->with('category')->orderBy('name')->get();
 
         return view('incomes.create', compact('categories', 'products'));
     }
@@ -90,6 +90,10 @@ class IncomeController extends Controller
         try {
             $invoiceNumber = 'TRX-' . Carbon::parse($request->transaction_date)->format('Ymd') . '-' . strtoupper(substr(uniqid(), -5));
 
+            $notes = $request->customer_target 
+                ? 'No. Tujuan: ' . $request->customer_target 
+                : $request->notes;
+
             $transaction = Transaction::create([
                 'invoice_number' => $invoiceNumber,
                 'type' => 'pemasukan',
@@ -98,10 +102,10 @@ class IncomeController extends Controller
                 'transaction_date' => $request->transaction_date,
                 'total_amount' => $request->amount,
                 'payment_method' => $request->payment_method,
-                'notes' => $request->notes,
+                'notes' => $notes,
             ]);
 
-            // Jika transaksi terkait produk fisik / voucher konter
+            // Jika transaksi terkait produk dari katalog
             if ($request->filled('product_id')) {
                 $product = Product::lockForUpdate()->findOrFail($request->product_id);
                 $qty = (int) ($request->quantity ?? 1);
@@ -111,12 +115,14 @@ class IncomeController extends Controller
                     return back()->withInput()->with('error', "Stok produk {$product->name} tidak mencukupi (sisa stok: {$product->stock} {$product->unit}).");
                 }
 
+                $costPrice = $request->filled('cost_price') ? (float)$request->cost_price : (float)$product->cost_price;
+
                 TransactionItem::create([
                     'transaction_id' => $transaction->id,
                     'product_id' => $product->id,
                     'product_name' => $product->name,
                     'quantity' => $qty,
-                    'cost_price' => $product->cost_price,
+                    'cost_price' => $costPrice,
                     'unit_price' => $request->amount / $qty,
                     'subtotal' => $request->amount,
                 ]);
@@ -130,6 +136,20 @@ class IncomeController extends Controller
                     "Penjualan invoice: {$invoiceNumber}",
                     Auth::id()
                 );
+            } elseif ($request->filled('product_name')) {
+                // Jika transaksi jasa / produk manual tanpa ID katalog
+                $qty = (int) ($request->quantity ?? 1);
+                $costPrice = (float) ($request->cost_price ?? 0);
+
+                TransactionItem::create([
+                    'transaction_id' => $transaction->id,
+                    'product_id' => null,
+                    'product_name' => $request->product_name,
+                    'quantity' => $qty,
+                    'cost_price' => $costPrice,
+                    'unit_price' => $request->amount / $qty,
+                    'subtotal' => $request->amount,
+                ]);
             }
 
             DB::commit();
