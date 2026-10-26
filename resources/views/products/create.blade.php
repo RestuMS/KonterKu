@@ -4,13 +4,19 @@
     </x-slot:header>
 
     @php
-        // Mengelompokkan kategori untuk pemilih visual cepat
+        // Mengelompokkan kategori secara sistematis untuk navigasi tombol cepat
         $pulsaCats = $categories->filter(fn($c) => str_starts_with(strtolower($c->name), 'pulsa'));
         $voucherCats = $categories->filter(fn($c) => str_starts_with(strtolower($c->name), 'voucher'));
+        $paketCats = $categories->filter(fn($c) => str_starts_with(strtolower($c->name), 'paket internet'));
+        $perdanaCats = $categories->filter(fn($c) => str_starts_with(strtolower($c->name), 'kartu perdana'));
+        $ewalletCats = $categories->filter(fn($c) => str_starts_with(strtolower($c->name), 'e-wallet'));
         $tokenCats = $categories->filter(fn($c) => str_contains(strtolower($c->name), 'token'));
         $otherCats = $categories->reject(fn($c) => 
             str_starts_with(strtolower($c->name), 'pulsa') || 
             str_starts_with(strtolower($c->name), 'voucher') || 
+            str_starts_with(strtolower($c->name), 'paket internet') || 
+            str_starts_with(strtolower($c->name), 'kartu perdana') || 
+            str_starts_with(strtolower($c->name), 'e-wallet') || 
             str_contains(strtolower($c->name), 'token')
         );
     @endphp
@@ -30,6 +36,7 @@
             notes: '{{ old('notes', '') }}',
             isActive: {{ old('is_active', '1') ? 'true' : 'false' }},
             isAutoCode: true,
+            activeTab: 'all',
             categories: {{ Js::from($categories) }},
 
             init() {
@@ -73,9 +80,9 @@
                 const lower = cat.name.toLowerCase();
                 if (lower.includes('voucher')) {
                     this.unit = 'voucher';
-                } else if (lower.includes('kartu') || lower.includes('perdana')) {
+                } else if (lower.includes('kartu perdana') || lower.includes('perdana')) {
                     this.unit = 'kartu';
-                } else if (lower.includes('pulsa') || lower.includes('token')) {
+                } else if (lower.includes('pulsa') || lower.includes('paket') || lower.includes('token') || lower.includes('e-wallet')) {
                     this.unit = 'transaksi';
                 } else if (lower.includes('aksesoris')) {
                     this.unit = 'pcs';
@@ -111,7 +118,6 @@
 
             appendDenom(denom) {
                 const trimmed = this.name.trim();
-                // Jika sudah ada angka nominal di nama, ganti angka tersebut
                 if (/\d+[\.\d]*/.test(trimmed)) {
                     this.name = trimmed.replace(/\d+[\.\d]*/, denom);
                 } else {
@@ -136,21 +142,28 @@
             generateSku() {
                 let prefix = 'PROD';
                 const lower = this.categoryName.toLowerCase();
-                if (lower.includes('pulsa telkomsel')) prefix = 'PULSA-TSEL';
-                else if (lower.includes('pulsa indosat')) prefix = 'PULSA-ISAT';
-                else if (lower.includes('pulsa tri')) prefix = 'PULSA-TRI';
-                else if (lower.includes('pulsa xl')) prefix = 'PULSA-XL';
-                else if (lower.includes('pulsa axis')) prefix = 'PULSA-AXIS';
-                else if (lower.includes('pulsa smartfren')) prefix = 'PULSA-SMART';
-                else if (lower.includes('voucher telkomsel')) prefix = 'VCR-TSEL';
-                else if (lower.includes('voucher indosat')) prefix = 'VCR-ISAT';
-                else if (lower.includes('voucher tri')) prefix = 'VCR-TRI';
-                else if (lower.includes('voucher xl')) prefix = 'VCR-XL';
-                else if (lower.includes('voucher axis')) prefix = 'VCR-AXIS';
-                else if (lower.includes('voucher smartfren')) prefix = 'VCR-SMART';
+
+                // Deteksi Provider
+                let prov = 'GEN';
+                if (lower.includes('telkomsel')) prov = 'TSEL';
+                else if (lower.includes('indosat')) prov = 'ISAT';
+                else if (lower.includes('tri')) prov = 'TRI';
+                else if (lower.includes('xl')) prov = 'XL';
+                else if (lower.includes('axis')) prov = 'AXIS';
+                else if (lower.includes('smartfren')) prov = 'SMART';
+                else if (lower.includes('by.u') || lower.includes('byu')) prov = 'BYU';
+
+                // Tipe Produk
+                if (lower.includes('pulsa')) prefix = 'PULSA-' + prov;
+                else if (lower.includes('voucher')) prefix = 'VCR-' + prov;
+                else if (lower.includes('paket internet') || lower.includes('paket data')) prefix = 'DATA-' + prov;
+                else if (lower.includes('kartu perdana')) prefix = 'SIM-' + prov;
                 else if (lower.includes('token')) prefix = 'PLN';
-                else if (lower.includes('perdana')) prefix = 'SIM';
-                else if (lower.includes('paket')) prefix = 'DATA';
+                else if (lower.includes('dana')) prefix = 'DANA';
+                else if (lower.includes('gopay')) prefix = 'GOPAY';
+                else if (lower.includes('shopeepay')) prefix = 'SPAY';
+                else if (lower.includes('seabank')) prefix = 'SEABANK';
+                else if (lower.includes('ovo')) prefix = 'OVO';
                 else if (this.categorySlug) prefix = this.categorySlug.toUpperCase().substring(0, 8);
 
                 // Ekstrak angka dari nama (seperti 50.000 -> 50K atau 50000)
@@ -208,7 +221,7 @@
                     <span>Tambah Produk Konter Baru</span>
                 </h2>
                 <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                    Klik kategori operator di bawah untuk mengisi nama produk secara otomatis dengan cepat.
+                    Pilih kategori operator atau dompet digital di bawah untuk mengisi nama produk secara instan.
                 </p>
             </div>
             <div class="flex items-center gap-3">
@@ -233,15 +246,15 @@
                         </div>
                         <h3 class="text-base font-black text-slate-900 dark:text-white">Pilih Kategori & Nama Produk</h3>
                         <p class="text-xs text-slate-500 mt-0.5">
-                            Klik salah satu tombol kategori di bawah ini agar otomatis mengisi awalan nama produk Anda.
+                            Klik tombol kategori di bawah untuk mengaktifkan auto-fill awalan nama produk Anda.
                         </p>
                     </div>
 
-                    <!-- Kategori Cepat: Pulsa Operator -->
+                    <!-- 1. Kategori: Pulsa Reguler -->
                     <div class="space-y-2">
                         <div class="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
                             <span class="w-5 h-5 rounded-md bg-sky-100 dark:bg-sky-950/60 text-sky-600 dark:text-sky-400 inline-flex items-center justify-center text-[11px]">📱</span>
-                            <span>Kategori Pulsa Reguler:</span>
+                            <span>Pulsa Reguler (Semua Operator):</span>
                         </div>
                         <div class="flex flex-wrap gap-2">
                             @foreach($pulsaCats as $cat)
@@ -251,7 +264,7 @@
                                     :class="categoryId == {{ $cat->id }} 
                                         ? 'bg-sky-600 text-white shadow-md shadow-sky-600/20 ring-2 ring-sky-500 ring-offset-2 dark:ring-offset-slate-800' 
                                         : 'bg-slate-50 dark:bg-slate-750 text-slate-700 dark:text-slate-200 hover:bg-sky-50 hover:text-sky-700 hover:border-sky-300 dark:hover:bg-sky-950/40 border border-slate-200/80 dark:border-slate-700'"
-                                    class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all duration-150 flex items-center gap-1.5 cursor-pointer active:scale-95"
+                                    class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all duration-150 flex items-center gap-1.5 cursor-pointer active:scale-95"
                                 >
                                     <span x-show="categoryId == {{ $cat->id }}">✓</span>
                                     <span>{{ $cat->name }}</span>
@@ -260,11 +273,11 @@
                         </div>
                     </div>
 
-                    <!-- Kategori Cepat: Voucher Fisik Operator -->
+                    <!-- 2. Kategori: Voucher Fisik -->
                     <div class="space-y-2 pt-2">
                         <div class="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
                             <span class="w-5 h-5 rounded-md bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 inline-flex items-center justify-center text-[11px]">🎟️</span>
-                            <span>Kategori Voucher Fisik:</span>
+                            <span>Voucher Fisik (Semua Operator):</span>
                         </div>
                         <div class="flex flex-wrap gap-2">
                             @foreach($voucherCats as $cat)
@@ -274,6 +287,75 @@
                                     :class="categoryId == {{ $cat->id }} 
                                         ? 'bg-amber-500 text-white shadow-md shadow-amber-500/20 ring-2 ring-amber-400 ring-offset-2 dark:ring-offset-slate-800' 
                                         : 'bg-slate-50 dark:bg-slate-750 text-slate-700 dark:text-slate-200 hover:bg-amber-50 hover:text-amber-800 hover:border-amber-300 dark:hover:bg-amber-950/40 border border-slate-200/80 dark:border-slate-700'"
+                                    class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all duration-150 flex items-center gap-1.5 cursor-pointer active:scale-95"
+                                >
+                                    <span x-show="categoryId == {{ $cat->id }}">✓</span>
+                                    <span>{{ $cat->name }}</span>
+                                </button>
+                            @endforeach
+                        </div>
+                    </div>
+
+                    <!-- 3. Kategori: Paket Internet -->
+                    <div class="space-y-2 pt-2">
+                        <div class="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
+                            <span class="w-5 h-5 rounded-md bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 inline-flex items-center justify-center text-[11px]">🌐</span>
+                            <span>Paket Data / Internet (Semua Operator):</span>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            @foreach($paketCats as $cat)
+                                <button
+                                    type="button"
+                                    @click="selectCategory({{ Js::from($cat) }})"
+                                    :class="categoryId == {{ $cat->id }} 
+                                        ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20 ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-slate-800' 
+                                        : 'bg-slate-50 dark:bg-slate-750 text-slate-700 dark:text-slate-200 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 dark:hover:bg-blue-950/40 border border-slate-200/80 dark:border-slate-700'"
+                                    class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all duration-150 flex items-center gap-1.5 cursor-pointer active:scale-95"
+                                >
+                                    <span x-show="categoryId == {{ $cat->id }}">✓</span>
+                                    <span>{{ $cat->name }}</span>
+                                </button>
+                            @endforeach
+                        </div>
+                    </div>
+
+                    <!-- 4. Kategori: Kartu Perdana -->
+                    <div class="space-y-2 pt-2">
+                        <div class="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
+                            <span class="w-5 h-5 rounded-md bg-purple-100 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 inline-flex items-center justify-center text-[11px]">💳</span>
+                            <span>Kartu Perdana Segel (Semua Operator):</span>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            @foreach($perdanaCats as $cat)
+                                <button
+                                    type="button"
+                                    @click="selectCategory({{ Js::from($cat) }})"
+                                    :class="categoryId == {{ $cat->id }} 
+                                        ? 'bg-purple-600 text-white shadow-md shadow-purple-600/20 ring-2 ring-purple-500 ring-offset-2 dark:ring-offset-slate-800' 
+                                        : 'bg-slate-50 dark:bg-slate-750 text-slate-700 dark:text-slate-200 hover:bg-purple-50 hover:text-purple-700 hover:border-purple-300 dark:hover:bg-purple-950/40 border border-slate-200/80 dark:border-slate-700'"
+                                    class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all duration-150 flex items-center gap-1.5 cursor-pointer active:scale-95"
+                                >
+                                    <span x-show="categoryId == {{ $cat->id }}">✓</span>
+                                    <span>{{ $cat->name }}</span>
+                                </button>
+                            @endforeach
+                        </div>
+                    </div>
+
+                    <!-- 5. Kategori: E-Wallet & Bank Digital -->
+                    <div class="space-y-2 pt-2">
+                        <div class="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
+                            <span class="w-5 h-5 rounded-md bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 inline-flex items-center justify-center text-[11px]">👛</span>
+                            <span>Top Up E-Wallet & Bank Digital:</span>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            @foreach($ewalletCats as $cat)
+                                <button
+                                    type="button"
+                                    @click="selectCategory({{ Js::from($cat) }})"
+                                    :class="categoryId == {{ $cat->id }} 
+                                        ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20 ring-2 ring-emerald-500 ring-offset-2 dark:ring-offset-slate-800' 
+                                        : 'bg-slate-50 dark:bg-slate-750 text-slate-700 dark:text-slate-200 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300 dark:hover:bg-emerald-950/40 border border-slate-200/80 dark:border-slate-700'"
                                     class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all duration-150 flex items-center gap-1.5 cursor-pointer active:scale-95"
                                 >
                                     <span x-show="categoryId == {{ $cat->id }}">✓</span>
@@ -283,11 +365,11 @@
                         </div>
                     </div>
 
-                    <!-- Kategori Cepat: Token & Kategori Lainnya -->
+                    <!-- 6. Kategori: Token Listrik PLN & Aksesoris -->
                     <div class="space-y-2 pt-2">
                         <div class="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
-                            <span class="w-5 h-5 rounded-md bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 inline-flex items-center justify-center text-[11px]">⚡</span>
-                            <span>Token & Kategori Lainnya:</span>
+                            <span class="w-5 h-5 rounded-md bg-orange-100 dark:bg-orange-950/60 text-orange-600 dark:text-orange-400 inline-flex items-center justify-center text-[11px]">⚡</span>
+                            <span>Token Listrik PLN & Lainnya:</span>
                         </div>
                         <div class="flex flex-wrap gap-2">
                             @foreach($tokenCats as $cat)
@@ -320,7 +402,7 @@
                         </div>
                     </div>
 
-                    <!-- Dropdown Kategori & Kode SKU -->
+                    <!-- Dropdown Kategori Terpilih & Kode SKU -->
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-5 pt-3">
                         <div>
                             <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1.5">
@@ -361,7 +443,7 @@
                                 name="code"
                                 x-model="code"
                                 @input="isAutoCode = false"
-                                placeholder="Contoh: PULSA-TSEL-50K"
+                                placeholder="Contoh: DATA-TSEL-50K"
                                 required
                                 class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-750 text-slate-900 dark:text-white text-xs font-mono font-bold focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 shadow-2xs"
                             >
@@ -481,7 +563,7 @@
                                 required
                                 class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-750 text-slate-900 dark:text-white text-xs font-bold focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 shadow-2xs"
                             >
-                            <p class="text-[11px] text-slate-400 mt-1">Untuk pulsa/token isi 0 atau 999.</p>
+                            <p class="text-[11px] text-slate-400 mt-1">Untuk pulsa/e-wallet/token isi 0 atau 999.</p>
                         </div>
 
                         <!-- Batas Minimum Stok -->

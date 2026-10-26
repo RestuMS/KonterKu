@@ -18,7 +18,7 @@ class CategorySeeder extends Seeder
                 'name' => 'Pulsa Telkomsel',
                 'slug' => 'pulsa-telkomsel',
                 'type' => 'product',
-                'description' => 'Isi ulang pulsa reguler & transfer Telkomsel (SimPATI, By.U, AS)',
+                'description' => 'Isi ulang pulsa reguler Telkomsel (SimPATI, AS, Loop)',
             ],
             [
                 'name' => 'Pulsa Indosat',
@@ -49,6 +49,12 @@ class CategorySeeder extends Seeder
                 'slug' => 'pulsa-smartfren',
                 'type' => 'product',
                 'description' => 'Isi ulang pulsa reguler Smartfren',
+            ],
+            [
+                'name' => 'Pulsa By.U',
+                'slug' => 'pulsa-byu',
+                'type' => 'product',
+                'description' => 'Isi ulang pulsa reguler By.U Telkomsel',
             ],
 
             // Voucher Fisik Operator
@@ -88,6 +94,100 @@ class CategorySeeder extends Seeder
                 'type' => 'product',
                 'description' => 'Voucher fisik kuota internet Smartfren Nonstop / Unlimited',
             ],
+            [
+                'name' => 'Voucher By.U',
+                'slug' => 'voucher-byu',
+                'type' => 'product',
+                'description' => 'Voucher fisik kuota internet By.U',
+            ],
+
+            // Paket Internet Operator
+            [
+                'name' => 'Paket Internet Telkomsel',
+                'slug' => 'paket-internet-telkomsel',
+                'type' => 'product',
+                'description' => 'Injeksi paket kuota internet Telkomsel',
+            ],
+            [
+                'name' => 'Paket Internet Indosat',
+                'slug' => 'paket-internet-indosat',
+                'type' => 'product',
+                'description' => 'Injeksi paket kuota internet Indosat Freedom',
+            ],
+            [
+                'name' => 'Paket Internet Tri',
+                'slug' => 'paket-internet-tri',
+                'type' => 'product',
+                'description' => 'Injeksi paket kuota internet Tri Happy / AON',
+            ],
+            [
+                'name' => 'Paket Internet XL',
+                'slug' => 'paket-internet-xl',
+                'type' => 'product',
+                'description' => 'Injeksi paket kuota internet XL Xtra Combo Flex',
+            ],
+            [
+                'name' => 'Paket Internet Axis',
+                'slug' => 'paket-internet-axis',
+                'type' => 'product',
+                'description' => 'Injeksi paket kuota internet Axis Bronet / Warnet',
+            ],
+            [
+                'name' => 'Paket Internet Smartfren',
+                'slug' => 'paket-internet-smartfren',
+                'type' => 'product',
+                'description' => 'Injeksi paket kuota internet Smartfren Kuota / Unlimited',
+            ],
+            [
+                'name' => 'Paket Internet By.U',
+                'slug' => 'paket-internet-byu',
+                'type' => 'product',
+                'description' => 'Injeksi paket kuota internet By.U Yang Bikin Kumat / Nagih',
+            ],
+
+            // Kartu Perdana Operator
+            [
+                'name' => 'Kartu Perdana Telkomsel',
+                'slug' => 'kartu-perdana-telkomsel',
+                'type' => 'product',
+                'description' => 'Kartu SIM perdana baru Telkomsel',
+            ],
+            [
+                'name' => 'Kartu Perdana Indosat',
+                'slug' => 'kartu-perdana-indosat',
+                'type' => 'product',
+                'description' => 'Kartu SIM perdana baru Indosat IM3',
+            ],
+            [
+                'name' => 'Kartu Perdana Tri',
+                'slug' => 'kartu-perdana-tri',
+                'type' => 'product',
+                'description' => 'Kartu SIM perdana baru Tri',
+            ],
+            [
+                'name' => 'Kartu Perdana XL',
+                'slug' => 'kartu-perdana-xl',
+                'type' => 'product',
+                'description' => 'Kartu SIM perdana baru XL Axiata',
+            ],
+            [
+                'name' => 'Kartu Perdana Axis',
+                'slug' => 'kartu-perdana-axis',
+                'type' => 'product',
+                'description' => 'Kartu SIM perdana baru Axis',
+            ],
+            [
+                'name' => 'Kartu Perdana Smartfren',
+                'slug' => 'kartu-perdana-smartfren',
+                'type' => 'product',
+                'description' => 'Kartu SIM perdana baru Smartfren',
+            ],
+            [
+                'name' => 'Kartu Perdana By.U',
+                'slug' => 'kartu-perdana-byu',
+                'type' => 'product',
+                'description' => 'Kartu SIM perdana baru By.U',
+            ],
 
             // Token Listrik PLN
             [
@@ -97,18 +197,36 @@ class CategorySeeder extends Seeder
                 'description' => 'Token stroom listrik prabayar PLN (20k, 50k, 100k, dll.)',
             ],
 
-            // Paket Data & Kartu Perdana
+            // E-Wallet & Bank Digital
             [
-                'name' => 'Paket Data Internet',
-                'slug' => 'paket-data-internet',
-                'type' => 'product',
-                'description' => 'Injeksi paket kuota data langsung ke nomor pembeli',
+                'name' => 'E-Wallet DANA',
+                'slug' => 'ewallet-dana',
+                'type' => 'all',
+                'description' => 'Top up saldo akun dompet digital DANA',
             ],
             [
-                'name' => 'Kartu Perdana',
-                'slug' => 'kartu-perdana',
-                'type' => 'product',
-                'description' => 'Kartu SIM perdana baru dan segel semua operator',
+                'name' => 'E-Wallet GoPay',
+                'slug' => 'ewallet-gopay',
+                'type' => 'all',
+                'description' => 'Top up saldo akun dompet digital GoPay / Gojek',
+            ],
+            [
+                'name' => 'E-Wallet ShopeePay',
+                'slug' => 'ewallet-shopeepay',
+                'type' => 'all',
+                'description' => 'Top up saldo akun dompet digital ShopeePay',
+            ],
+            [
+                'name' => 'E-Wallet SeaBank',
+                'slug' => 'ewallet-seabank',
+                'type' => 'all',
+                'description' => 'Top up saldo / transfer bank digital SeaBank',
+            ],
+            [
+                'name' => 'E-Wallet OVO',
+                'slug' => 'ewallet-ovo',
+                'type' => 'all',
+                'description' => 'Top up saldo akun dompet digital OVO',
             ],
 
             // Aksesoris & Sparepart
@@ -124,7 +242,7 @@ class CategorySeeder extends Seeder
                 'name' => 'Jasa Servis & Transfer',
                 'slug' => 'jasa-servis-transfer',
                 'type' => 'transaction',
-                'description' => 'Jasa servis ringan, transfer uang, tarik tunai, top-up e-wallet',
+                'description' => 'Jasa servis ringan, transfer uang, tarik tunai, pembayaran tagihan',
             ],
             [
                 'name' => 'Operasional Toko',

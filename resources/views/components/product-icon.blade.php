@@ -18,25 +18,34 @@
 
     $combinedText = strtolower($catSlug . ' ' . $catName . ' ' . $name);
 
-    // Deteksi tipe icon
-    if (str_contains($combinedText, 'pulsa') || str_contains($combinedText, 'kuota') || str_contains($combinedText, 'data') || str_contains($combinedText, 'internet') || str_contains($combinedText, 'paket')) {
-        $type = 'pulsa';
-        $bg = 'bg-gradient-to-br from-sky-500 to-indigo-600 shadow-sky-500/20 text-white';
+    // Deteksi tipe icon spesifik konter
+    if (str_contains($combinedText, 'dana') || str_contains($combinedText, 'gopay') || str_contains($combinedText, 'shopeepay') || str_contains($combinedText, 'seabank') || str_contains($combinedText, 'ovo') || str_contains($combinedText, 'wallet')) {
+        $type = 'ewallet';
+        $bg = 'bg-gradient-to-br from-blue-600 to-indigo-700 shadow-blue-600/25 text-white';
+    } elseif (str_contains($combinedText, 'token') || str_contains($combinedText, 'pln') || str_contains($combinedText, 'listrik')) {
+        $type = 'token';
+        $bg = 'bg-gradient-to-br from-amber-500 to-orange-600 shadow-amber-500/25 text-white';
+    } elseif (str_contains($combinedText, 'paket internet') || str_contains($combinedText, 'kuota') || str_contains($combinedText, 'data')) {
+        $type = 'paket';
+        $bg = 'bg-gradient-to-br from-sky-500 to-blue-600 shadow-sky-500/25 text-white';
     } elseif (str_contains($combinedText, 'voucher') || str_contains($combinedText, 'gosok')) {
         $type = 'voucher';
-        $bg = 'bg-gradient-to-br from-amber-500 to-orange-600 shadow-amber-500/20 text-white';
+        $bg = 'bg-gradient-to-br from-orange-500 to-rose-500 shadow-orange-500/25 text-white';
     } elseif (str_contains($combinedText, 'perdana') || str_contains($combinedText, 'kartu') || str_contains($combinedText, 'sim')) {
         $type = 'kartu';
-        $bg = 'bg-gradient-to-br from-purple-500 to-indigo-600 shadow-purple-500/20 text-white';
-    } elseif (str_contains($combinedText, 'aksesoris') || str_contains($combinedText, 'kabel') || str_contains($combinedText, 'charger') || str_contains($combinedText, 'headset') || str_contains($combinedText, 'earphone') || str_contains($combinedText, 'case') || str_contains($combinedText, 'tempered')) {
+        $bg = 'bg-gradient-to-br from-purple-600 to-indigo-700 shadow-purple-600/25 text-white';
+    } elseif (str_contains($combinedText, 'pulsa')) {
+        $type = 'pulsa';
+        $bg = 'bg-gradient-to-br from-indigo-500 to-violet-600 shadow-indigo-500/25 text-white';
+    } elseif (str_contains($combinedText, 'aksesoris') || str_contains($combinedText, 'kabel') || str_contains($combinedText, 'charger') || str_contains($combinedText, 'headset') || str_contains($combinedText, 'casing') || str_contains($combinedText, 'tempered')) {
         $type = 'aksesoris';
-        $bg = 'bg-gradient-to-br from-emerald-500 to-teal-600 shadow-emerald-500/20 text-white';
-    } elseif (str_contains($combinedText, 'servis') || str_contains($combinedText, 'transfer') || str_contains($combinedText, 'topup') || str_contains($combinedText, 'dana') || str_contains($combinedText, 'pln') || str_contains($combinedText, 'jasa')) {
+        $bg = 'bg-gradient-to-br from-emerald-500 to-teal-600 shadow-emerald-500/25 text-white';
+    } elseif (str_contains($combinedText, 'servis') || str_contains($combinedText, 'transfer') || str_contains($combinedText, 'jasa')) {
         $type = 'jasa';
-        $bg = 'bg-gradient-to-br from-blue-500 to-cyan-600 shadow-blue-500/20 text-white';
+        $bg = 'bg-gradient-to-br from-cyan-600 to-blue-700 shadow-cyan-600/25 text-white';
     } else {
         $type = 'default';
-        $bg = 'bg-gradient-to-br from-slate-600 to-slate-800 shadow-slate-500/20 text-white';
+        $bg = 'bg-gradient-to-br from-slate-600 to-slate-800 shadow-slate-500/25 text-white';
     }
 
     $sizeClasses = match($size) {
@@ -53,13 +62,28 @@
 @endphp
 
 <div class="inline-flex items-center justify-center shrink-0 shadow-md {{ $bg }} {{ $sizeClasses }} {{ $class }}">
-    @if($type === 'pulsa')
-        <!-- Pulsa & Paket Data (Phone + Cellular Waves) -->
+    @if($type === 'ewallet')
+        <!-- E-Wallet & Bank Digital (Wallet / Card) -->
+        <svg class="{{ $iconSize }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+        </svg>
+    @elseif($type === 'token')
+        <!-- Token Listrik PLN (Lightning Bolt) -->
+        <svg class="{{ $iconSize }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+        </svg>
+    @elseif($type === 'paket')
+        <!-- Paket Internet (Globe / Wi-Fi Signal) -->
+        <svg class="{{ $iconSize }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+        </svg>
+    @elseif($type === 'pulsa')
+        <!-- Pulsa Reguler (Smartphone + Signal) -->
         <svg class="{{ $iconSize }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2zM9 8h6M9 12h3" />
         </svg>
     @elseif($type === 'voucher')
-        <!-- Voucher Fisik (Ticket / Scratch Coupon) -->
+        <!-- Voucher Fisik (Ticket / Barcode Voucher) -->
         <svg class="{{ $iconSize }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
         </svg>
@@ -74,9 +98,9 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z" />
         </svg>
     @elseif($type === 'jasa')
-        <!-- Jasa Servis & Transfer (Lightning Fast Service) -->
+        <!-- Jasa Servis & Transfer -->
         <svg class="{{ $iconSize }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
         </svg>
     @else
         <!-- Default Produk (Box Package) -->
