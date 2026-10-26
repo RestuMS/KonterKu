@@ -156,7 +156,7 @@
                                 {{ $tx->invoice_number }}
                             </td>
                             <td class="px-6 py-3.5 text-slate-500">
-                                {{ $tx->transaction_date->format('d/m/Y H:i') }}
+                                @tanggalWaktu($tx->transaction_date)
                             </td>
                             <td class="px-6 py-3.5">
                                 @if($tx->type === 'pemasukan')
@@ -186,8 +186,11 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="px-6 py-8 text-center text-slate-400">
-                                Tidak ada transaksi pada rentang tanggal yang dipilih.
+                            <td colspan="7" class="px-6 py-4">
+                                <x-empty-state
+                                    title="Tidak Ada Transaksi Ditemukan"
+                                    description="Tidak ditemukan riwayat transaksi pemasukan maupun pengeluaran pada rentang tanggal yang dipilih."
+                                />
                             </td>
                         </tr>
                     @endforelse

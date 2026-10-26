@@ -89,7 +89,7 @@
                                 </a>
                             </td>
                             <td class="px-6 py-3.5 text-slate-500">
-                                {{ $inc->transaction_date->format('d/m/Y H:i') }}
+                                @tanggalWaktu($inc->transaction_date)
                             </td>
                             <td class="px-6 py-3.5">
                                 <x-badge color="sky">{{ $inc->category->name ?? 'Umum' }}</x-badge>
@@ -156,8 +156,17 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="px-6 py-8 text-center text-slate-400">
-                                Tidak ada data pemasukan yang ditemukan.
+                            <td colspan="7" class="px-6 py-4">
+                                <x-empty-state
+                                    title="Belum Ada Transaksi Pemasukan"
+                                    description="Belum ada transaksi pemasukan yang tercatat. Catat penjualan pulsa, kuota, kartu, atau jasa konter sekarang."
+                                >
+                                    <x-slot:action>
+                                        <x-button href="{{ route('incomes.create') }}" variant="primary" size="sm">
+                                            + Catat Pemasukan Baru
+                                        </x-button>
+                                    </x-slot:action>
+                                </x-empty-state>
                             </td>
                         </tr>
                     @endforelse

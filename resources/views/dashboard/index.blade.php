@@ -185,7 +185,7 @@
                                 @endif
                             </td>
                             <td class="px-6 py-3.5 text-slate-500">
-                                {{ $tx->transaction_date->format('d/m/Y H:i') }}
+                                @tanggalWaktu($tx->transaction_date)
                             </td>
                             <td class="px-6 py-3.5">
                                 @if($tx->type === 'pemasukan')
@@ -209,8 +209,17 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="px-6 py-8 text-center text-slate-400">
-                                Belum ada transaksi tercatat. Mulai dengan mencatat pemasukan atau pengeluaran baru!
+                            <td colspan="6" class="px-6 py-4">
+                                <x-empty-state
+                                    title="Belum Ada Transaksi Tercatat"
+                                    description="Aktivitas arus kas masuk dan keluar hari ini masih kosong. Mulai dengan mencatat transaksi pertama Anda!"
+                                >
+                                    <x-slot:action>
+                                        <x-button href="{{ route('incomes.create') }}" variant="primary" size="sm">
+                                            + Catat Pemasukan
+                                        </x-button>
+                                    </x-slot:action>
+                                </x-empty-state>
                             </td>
                         </tr>
                     @endforelse

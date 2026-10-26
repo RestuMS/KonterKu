@@ -157,8 +157,17 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="8" class="px-6 py-8 text-center text-slate-400">
-                                Belum ada data produk ditemukan. Klik "Tambah Produk Baru" untuk menambahkan barang!
+                            <td colspan="8" class="px-6 py-4">
+                                <x-empty-state
+                                    title="Belum Ada Produk Terdaftar"
+                                    description="Katalog barang konter masih kosong. Daftarkan voucher, kartu perdana, aksesoris, atau pulsa untuk mulai bertransaksi."
+                                >
+                                    <x-slot:action>
+                                        <x-button href="{{ route('products.create') }}" variant="primary" size="sm">
+                                            + Tambah Produk Baru
+                                        </x-button>
+                                    </x-slot:action>
+                                </x-empty-state>
                             </td>
                         </tr>
                     @endforelse

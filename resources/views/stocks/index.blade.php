@@ -62,7 +62,7 @@
                     @forelse($mutations as $m)
                         <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-750/30 transition-colors">
                             <td class="px-6 py-3.5 text-slate-500">
-                                {{ $m->created_at->format('d/m/Y H:i') }}
+                                @tanggalWaktu($m->created_at)
                             </td>
                             <td class="px-6 py-3.5">
                                 <span class="font-bold text-slate-900 dark:text-slate-100 block">{{ $m->product->name ?? 'Produk Dihapus' }}</span>
@@ -92,8 +92,17 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="px-6 py-8 text-center text-slate-400">
-                                Belum ada riwayat mutasi stok. Mutasi akan tercatat otomatis saat transaksi atau opname.
+                            <td colspan="7" class="px-6 py-4">
+                                <x-empty-state
+                                    title="Belum Ada Riwayat Mutasi"
+                                    description="Belum ada riwayat pergerakan stok. Pergerakan stok akan tercatat otomatis saat transaksi penjualan atau penyesuaian opname."
+                                >
+                                    <x-slot:action>
+                                        <x-button href="{{ route('stocks.create') }}" variant="primary" size="sm">
+                                            + Penyesuaian / Opname Stok
+                                        </x-button>
+                                    </x-slot:action>
+                                </x-empty-state>
                             </td>
                         </tr>
                     @endforelse

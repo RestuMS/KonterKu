@@ -87,7 +87,7 @@
                                 {{ $exp->invoice_number }}
                             </td>
                             <td class="px-6 py-3.5 text-slate-500">
-                                {{ $exp->transaction_date->format('d/m/Y H:i') }}
+                                @tanggalWaktu($exp->transaction_date)
                             </td>
                             <td class="px-6 py-3.5">
                                 <x-badge color="amber">{{ $exp->category->name ?? 'Operasional' }}</x-badge>
@@ -136,8 +136,17 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="px-6 py-8 text-center text-slate-400">
-                                Tidak ada data pengeluaran yang ditemukan.
+                            <td colspan="7" class="px-6 py-4">
+                                <x-empty-state
+                                    title="Belum Ada Pengeluaran"
+                                    description="Belum ada catatan pengeluaran kas atau biaya operasional toko konter yang tercatat."
+                                >
+                                    <x-slot:action>
+                                        <x-button href="{{ route('expenses.create') }}" variant="danger" size="sm">
+                                            + Catat Pengeluaran Baru
+                                        </x-button>
+                                    </x-slot:action>
+                                </x-empty-state>
                             </td>
                         </tr>
                     @endforelse
