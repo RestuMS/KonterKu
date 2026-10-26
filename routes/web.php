@@ -28,7 +28,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // Pemasukan / Penjualan
-    Route::resource('incomes', IncomeController::class)->except(['edit', 'update']);
+    Route::resource('incomes', IncomeController::class);
 
     // Pengeluaran
     Route::resource('expenses', ExpenseController::class)->except(['show', 'edit', 'update']);
