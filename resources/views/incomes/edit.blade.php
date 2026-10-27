@@ -110,8 +110,8 @@
                                 ⚡
                             </div>
                             <div>
-                                <span class="text-sm font-bold block leading-tight">Jasa & Lain-lain</span>
-                                <span class="text-[11px] opacity-75">Transfer, token PLN, fee admin</span>
+                                <span class="text-sm font-bold block leading-tight">Transfer, Tarik Tunai & Manual</span>
+                                <span class="text-[11px] opacity-75">Transfer bank, tarik tunai, transaksi non-katalog</span>
                             </div>
                         </button>
                     </div>

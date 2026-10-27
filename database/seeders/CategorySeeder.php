@@ -229,20 +229,18 @@ class CategorySeeder extends Seeder
                 'description' => 'Top up saldo akun dompet digital OVO',
             ],
 
-            // Aksesoris & Sparepart
+            // Transfer & Tarik Tunai
             [
-                'name' => 'Aksesoris & Sparepart',
-                'slug' => 'aksesoris-sparepart',
-                'type' => 'product',
-                'description' => 'Kabel data, charger, adaptor, tempered glass, headset, dll.',
+                'name' => 'Transfer Uang',
+                'slug' => 'transfer-uang',
+                'type' => 'all',
+                'description' => 'Layanan transfer uang antar bank (BRI, BNI, BCA, Mandiri, BSI, dll.) & e-wallet',
             ],
-
-            // Jasa Servis & Transaksi
             [
-                'name' => 'Jasa Servis & Transfer',
-                'slug' => 'jasa-servis-transfer',
-                'type' => 'transaction',
-                'description' => 'Jasa servis ringan, transfer uang, tarik tunai, pembayaran tagihan',
+                'name' => 'Tarik Tunai',
+                'slug' => 'tarik-tunai',
+                'type' => 'all',
+                'description' => 'Layanan tarik tunai saldo rekening bank & saldo e-wallet agen konter',
             ],
             [
                 'name' => 'Operasional Toko',

@@ -37,12 +37,9 @@
     } elseif (str_contains($combinedText, 'pulsa')) {
         $type = 'pulsa';
         $bg = 'bg-gradient-to-br from-indigo-500 to-violet-600 shadow-indigo-500/25 text-white';
-    } elseif (str_contains($combinedText, 'aksesoris') || str_contains($combinedText, 'kabel') || str_contains($combinedText, 'charger') || str_contains($combinedText, 'headset') || str_contains($combinedText, 'casing') || str_contains($combinedText, 'tempered')) {
-        $type = 'aksesoris';
-        $bg = 'bg-gradient-to-br from-emerald-500 to-teal-600 shadow-emerald-500/25 text-white';
-    } elseif (str_contains($combinedText, 'servis') || str_contains($combinedText, 'transfer') || str_contains($combinedText, 'jasa')) {
-        $type = 'jasa';
-        $bg = 'bg-gradient-to-br from-cyan-600 to-blue-700 shadow-cyan-600/25 text-white';
+    } elseif (str_contains($combinedText, 'transfer') || str_contains($combinedText, 'tarik') || str_contains($combinedText, 'tunai') || str_contains($combinedText, 'bank') || str_contains($combinedText, 'bri') || str_contains($combinedText, 'bni') || str_contains($combinedText, 'bca') || str_contains($combinedText, 'mandiri')) {
+        $type = 'transfer';
+        $bg = 'bg-gradient-to-br from-emerald-600 to-teal-700 shadow-emerald-600/25 text-white';
     } else {
         $type = 'default';
         $bg = 'bg-gradient-to-br from-slate-600 to-slate-800 shadow-slate-500/25 text-white';
@@ -92,13 +89,8 @@
         <svg class="{{ $iconSize }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V9.414a2 2 0 00-.586-1.414l-4.414-4.414A2 2 0 0013.586 3H9zm0 0v4a2 2 0 002 2h4M9 13h6m-6 4h3" />
         </svg>
-    @elseif($type === 'aksesoris')
-        <!-- Aksesoris & Sparepart (Headset / Plug) -->
-        <svg class="{{ $iconSize }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z" />
-        </svg>
-    @elseif($type === 'jasa')
-        <!-- Jasa Servis & Transfer -->
+    @elseif($type === 'transfer')
+        <!-- Transfer Uang & Tarik Tunai (Bank / Cash Exchange) -->
         <svg class="{{ $iconSize }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
         </svg>

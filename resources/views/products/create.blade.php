@@ -160,7 +160,7 @@
                 if (lower.includes('voucher')) item.unit = 'voucher';
                 else if (lower.includes('kartu perdana') || lower.includes('perdana')) item.unit = 'kartu';
                 else if (lower.includes('pulsa') || lower.includes('paket') || lower.includes('token') || lower.includes('e-wallet')) item.unit = 'transaksi';
-                else if (lower.includes('aksesoris')) item.unit = 'pcs';
+                else item.unit = 'pcs';
 
                 // Auto generate kode SKU
                 this.generateItemSku(index);
@@ -254,7 +254,7 @@
                 let unit = 'transaksi';
                 if (lower.includes('voucher')) unit = 'voucher';
                 else if (lower.includes('kartu perdana')) unit = 'kartu';
-                else if (lower.includes('aksesoris')) unit = 'pcs';
+                else unit = 'pcs';
 
                 this.batchGen.selectedDenoms.forEach((denomStr) => {
                     const cleanNominal = parseInt(denomStr.replace(/\./g, '')) || 0;

@@ -90,9 +90,11 @@ class IncomeController extends Controller
         try {
             $invoiceNumber = 'TRX-' . Carbon::parse($request->transaction_date)->format('Ymd') . '-' . strtoupper(substr(uniqid(), -5));
 
-            $notes = $request->customer_target 
-                ? 'No. Tujuan: ' . $request->customer_target 
-                : $request->notes;
+            $notes = trim(
+                ($request->customer_target ? 'No. Tujuan: ' . $request->customer_target : '') .
+                ($request->customer_target && $request->notes ? ' | ' : '') .
+                ($request->notes ?? '')
+            ) ?: null;
 
             $transaction = Transaction::create([
                 'invoice_number' => $invoiceNumber,

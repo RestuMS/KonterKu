@@ -160,7 +160,7 @@
                             <td colspan="8" class="px-6 py-4">
                                 <x-empty-state
                                     title="Belum Ada Produk Terdaftar"
-                                    description="Katalog barang konter masih kosong. Daftarkan voucher, kartu perdana, aksesoris, atau pulsa untuk mulai bertransaksi."
+                                    description="Katalog barang konter masih kosong. Daftarkan voucher, paket internet, kartu perdana, atau pulsa untuk mulai bertransaksi."
                                 >
                                     <x-slot:action>
                                         <x-button href="{{ route('products.create') }}" variant="primary" size="sm">
