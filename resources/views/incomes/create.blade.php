@@ -73,7 +73,7 @@
         ])->values();
     @endphp
 
-    <!-- Script Alpine.js Data Function (Didefinisikan Global di Window agar Kebal Race Condition) -->
+    <!-- Script Alpine.js Data Function (Global Window Scope) -->
     <script>
         window.posCashier = function() {
             return {
@@ -121,6 +121,7 @@
                 transactionDate: '{{ old('transaction_date', now()->format('Y-m-d\TH:i')) }}',
                 notes: '{{ old('notes', '') }}',
                 submitting: false,
+                validationErrors: [],
 
                 // Database Items
                 products: @json($productData),
@@ -134,6 +135,7 @@
                 // Ganti Mode Transaksi
                 setMode(newMode) {
                     this.mode = newMode;
+                    this.validationErrors = [];
                     if (newMode === 'transfer') {
                         this.applyTransfer();
                     } else {
@@ -216,6 +218,7 @@
                     if (prod.category_id) {
                         this.categoryId = prod.category_id;
                     }
+                    this.validationErrors = [];
                 },
 
                 // Batalkan Pilihan Produk
@@ -224,6 +227,8 @@
                     this.productName = '';
                     this.costPrice = 0;
                     this.sellingPrice = 0;
+                    this.customerTarget = '';
+                    this.validationErrors = [];
                 },
 
                 // Hitung Layanan Transfer & Tarik Tunai
@@ -278,6 +283,68 @@
                     if (found) {
                         this.categoryId = found.id;
                     }
+                },
+
+                // Validasi Client-Side Form Sebelum Submit
+                validateAndSubmit(e) {
+                    this.validationErrors = [];
+
+                    // 1. Validasi Nama Produk
+                    if (!this.productName || !this.productName.trim()) {
+                        this.validationErrors.push('Nama item / produk transaksi wajib diisi atau dipilih dari katalog.');
+                    }
+
+                    // 2. Validasi Kategori
+                    if (!this.categoryId) {
+                        this.validationErrors.push('Kategori transaksi wajib dipilih.');
+                    }
+
+                    // 3. Validasi Total Bayar Pelanggan
+                    const jual = parseFloat(this.sellingPrice) || 0;
+                    if (jual <= 0) {
+                        this.validationErrors.push('Total bayar pelanggan (harga jual) wajib diisi dan harus lebih besar dari Rp 0.');
+                    }
+
+                    // 4. Validasi Modal Kulakan
+                    const modal = parseFloat(this.costPrice) || 0;
+                    if (modal < 0) {
+                        this.validationErrors.push('Harga modal / HPP tidak boleh bernilai negatif.');
+                    }
+
+                    // 5. Validasi Kuantitas
+                    const q = parseInt(this.qty) || 0;
+                    if (q < 1) {
+                        this.validationErrors.push('Jumlah kuantitas transaksi minimal 1 unit/kali.');
+                    }
+
+                    // 6. Validasi Khusus Layanan Transfer / Tarik Tunai
+                    if (this.mode === 'transfer') {
+                        if (!this.transferAccount || !this.transferAccount.trim()) {
+                            this.validationErrors.push('No. Rekening / No. HP Tujuan wajib diisi untuk layanan transfer / tarik tunai.');
+                        }
+                        const transferNom = parseFloat(this.transferNominal) || 0;
+                        if (transferNom < 1000) {
+                            this.validationErrors.push('Nominal transfer / tarik tunai minimal Rp 1.000.');
+                        }
+                    }
+
+                    // 7. Validasi Ketersediaan Stok Katalog
+                    if (this.selectedProductId && this.currentSelectedProduct) {
+                        if (this.currentSelectedProduct.stock < q) {
+                            this.validationErrors.push('Stok produk ' + this.currentSelectedProduct.name + ' tidak mencukupi (sisa: ' + this.currentSelectedProduct.stock + ' ' + this.currentSelectedProduct.unit + ', diminta: ' + q + ' ' + this.currentSelectedProduct.unit + ').');
+                        }
+                    }
+
+                    // Jika ada error validasi, cegah submit dan gulir ke atas
+                    if (this.validationErrors.length > 0) {
+                        e.preventDefault();
+                        this.submitting = false;
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                        return false;
+                    }
+
+                    this.submitting = true;
+                    return true;
                 },
 
                 // Kalkulasi Laba & Omzet
@@ -346,6 +413,31 @@
         </div>
 
         <!-- ================================================================= -->
+        <!-- ALERT KESALAHAN VALIDASI CLIENT-SIDE                             -->
+        <!-- ================================================================= -->
+        <div 
+            x-show="validationErrors.length > 0" 
+            x-transition 
+            class="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/70 border border-rose-300 dark:border-rose-800 text-rose-800 dark:text-rose-200 shadow-xs"
+            style="display: none;"
+        >
+            <div class="flex items-center justify-between mb-2">
+                <div class="flex items-center gap-2 font-black text-xs uppercase tracking-wider text-rose-700 dark:text-rose-300">
+                    <svg class="w-4 h-4 shrink-0 text-rose-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                    </svg>
+                    <span>Mohon Lengkapi Data Transaksi:</span>
+                </div>
+                <button type="button" @click="validationErrors = []" class="text-xs text-rose-500 hover:text-rose-700 font-bold cursor-pointer">✕ Tutup</button>
+            </div>
+            <ul class="list-disc pl-5 space-y-1 text-xs">
+                <template x-for="(err, idx) in validationErrors" :key="idx">
+                    <li x-text="err"></li>
+                </template>
+            </ul>
+        </div>
+
+        <!-- ================================================================= -->
         <!-- 2 TOMBOL MODE UTAMA: FILTER BY PRODUK vs TRANSFER & TARIK TUNAI   -->
         <!-- ================================================================= -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -409,12 +501,13 @@
         </div>
 
         <!-- ================================================================= -->
-        <!-- FORM UTAMA TRANSAKSI DENGAN LAYOUT 2-KOLOM BULLETPROOF           -->
+        <!-- FORM UTAMA TRANSAKSI DENGAN VALIDASI LENGKAP                     -->
         <!-- ================================================================= -->
         <form
             method="POST"
             action="{{ route('incomes.store') }}"
-            @submit="if(submitting) { $event.preventDefault(); return; } submitting = true;"
+            @submit="validateAndSubmit($event)"
+            novalidate
         >
             @csrf
 
@@ -778,8 +871,11 @@
                                     x-model="productName"
                                     required
                                     placeholder="Nama paket, pulsa, atau transaksi..."
-                                    class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-bold focus:ring-2 focus:ring-indigo-500 shadow-2xs"
+                                    class="w-full px-3.5 py-2.5 rounded-xl border @error('product_name') border-rose-500 ring-1 ring-rose-500 @else border-slate-300 dark:border-slate-600 @enderror bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-bold focus:ring-2 focus:ring-indigo-500 shadow-2xs"
                                 >
+                                @error('product_name')
+                                    <p class="text-[11px] text-rose-500 font-bold mt-1">{{ $message }}</p>
+                                @enderror
                             </div>
 
                             <!-- No. Tujuan / Rekening Pelanggan -->
@@ -794,12 +890,15 @@
                                         name="customer_target"
                                         x-model="customerTarget"
                                         placeholder="0812-xxxx / No Meteran / No Rekening"
-                                        class="w-full pl-3.5 pr-10 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-mono font-medium focus:ring-2 focus:ring-indigo-500 shadow-2xs"
+                                        class="w-full pl-3.5 pr-10 py-2.5 rounded-xl border @error('customer_target') border-rose-500 ring-1 ring-rose-500 @else border-slate-300 dark:border-slate-600 @enderror bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-mono font-medium focus:ring-2 focus:ring-indigo-500 shadow-2xs"
                                     >
                                     <span class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 pointer-events-none text-xs">
                                         📞
                                     </span>
                                 </div>
+                                @error('customer_target')
+                                    <p class="text-[11px] text-rose-500 font-bold mt-1">{{ $message }}</p>
+                                @enderror
                             </div>
 
                             <!-- Kategori Transaksi -->
@@ -811,7 +910,7 @@
                                     name="category_id"
                                     x-model="categoryId"
                                     required
-                                    class="block w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-xs font-medium py-2.5 px-3 focus:ring-2 focus:ring-indigo-500 shadow-2xs"
+                                    class="block w-full rounded-xl border @error('category_id') border-rose-500 ring-1 ring-rose-500 @else border-slate-300 dark:border-slate-600 @enderror bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-xs font-medium py-2.5 px-3 focus:ring-2 focus:ring-indigo-500 shadow-2xs"
                                 >
                                     <option value="">-- Pilih Kategori --</option>
                                     @foreach($cleanCategories as $cat)
@@ -820,6 +919,9 @@
                                         </option>
                                     @endforeach
                                 </select>
+                                @error('category_id')
+                                    <p class="text-[11px] text-rose-500 font-bold mt-1">{{ $message }}</p>
+                                @enderror
                             </div>
 
                             <!-- Rincian Harga Modal, Jual & Qty -->
@@ -837,9 +939,12 @@
                                             min="0"
                                             step="0.01"
                                             x-model.number="costPrice"
-                                            class="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-xs font-mono font-bold focus:ring-2 focus:ring-indigo-500 shadow-2xs"
+                                            class="w-full pl-9 pr-3 py-2 rounded-xl border @error('cost_price') border-rose-500 ring-1 ring-rose-500 @else border-slate-300 dark:border-slate-600 @enderror bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-xs font-mono font-bold focus:ring-2 focus:ring-indigo-500 shadow-2xs"
                                         >
                                     </div>
+                                    @error('cost_price')
+                                        <p class="text-[11px] text-rose-500 font-bold mt-1">{{ $message }}</p>
+                                    @enderror
                                 </div>
 
                                 <!-- Jumlah / Qty -->
@@ -859,7 +964,7 @@
                                             min="1"
                                             x-model.number="qty"
                                             required
-                                            class="w-full py-2 border-y border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-mono font-bold text-center"
+                                            class="w-full py-2 border-y @error('quantity') border-rose-500 ring-1 ring-rose-500 @else border-slate-300 dark:border-slate-600 @enderror bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-mono font-bold text-center"
                                         >
                                         <button
                                             type="button"
@@ -867,6 +972,9 @@
                                             class="px-2.5 py-2 rounded-r-xl border border-l-0 border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-750 text-slate-600 dark:text-slate-300 font-bold text-xs"
                                         >+</button>
                                     </div>
+                                    @error('quantity')
+                                        <p class="text-[11px] text-rose-500 font-bold mt-1">{{ $message }}</p>
+                                    @enderror
                                 </div>
                             </div>
 
@@ -886,12 +994,15 @@
                                         x-model.number="sellingPrice"
                                         required
                                         placeholder="0"
-                                        class="w-full pl-11 pr-3.5 py-3 rounded-xl border border-indigo-300 dark:border-indigo-600 bg-indigo-50/30 dark:bg-indigo-950/30 text-indigo-700 dark:text-indigo-300 text-base font-mono font-black focus:ring-2 focus:ring-indigo-500 shadow-2xs"
+                                        class="w-full pl-11 pr-3.5 py-3 rounded-xl border @error('amount') border-rose-500 ring-1 ring-rose-500 @else border-indigo-300 dark:border-indigo-600 @enderror bg-indigo-50/30 dark:bg-indigo-950/30 text-indigo-700 dark:text-indigo-300 text-base font-mono font-black focus:ring-2 focus:ring-indigo-500 shadow-2xs"
                                     >
                                 </div>
+                                @error('amount')
+                                    <p class="text-[11px] text-rose-500 font-bold mt-1">{{ $message }}</p>
+                                @enderror
                             </div>
 
-                            <!-- Kartu Laba Real-Time -->
+                            <!-- Kartu Laba Real-Time & Peringatan Rugi -->
                             <div class="p-3.5 rounded-xl bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-indigo-500/10 dark:from-emerald-950/40 dark:via-teal-950/40 dark:to-indigo-950/40 border border-emerald-300/80 dark:border-emerald-700/60 flex items-center justify-between">
                                 <div>
                                     <span class="text-[11px] font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300 block">
@@ -900,8 +1011,22 @@
                                     <span class="text-[10px] text-slate-500 dark:text-slate-400 font-mono" x-text="profitMargin + '% profit margin'"></span>
                                 </div>
                                 <div class="text-right font-mono">
-                                    <span class="text-base font-black text-emerald-600 dark:text-emerald-400 block" x-text="'+ Rp ' + formatRupiah(totalProfit)"></span>
+                                    <span 
+                                        :class="unitProfit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'"
+                                        class="text-base font-black block" 
+                                        x-text="(unitProfit >= 0 ? '+ Rp ' : '- Rp ') + formatRupiah(Math.abs(totalProfit))"
+                                    ></span>
                                 </div>
+                            </div>
+
+                            <!-- Peringatan Jual di Bawah Modal (Jika Rugi) -->
+                            <div 
+                                x-show="unitProfit < 0 && sellingPrice > 0" 
+                                class="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/50 border border-amber-300 dark:border-amber-800 text-[11px] text-amber-800 dark:text-amber-200 flex items-center gap-2 font-semibold"
+                                style="display: none;"
+                            >
+                                <span class="text-sm">⚠️</span>
+                                <span>Peringatan: Harga jual lebih kecil dari modal kulakan (Potensi rugi Rp <strong x-text="formatRupiah(Math.abs(totalProfit))"></strong>).</span>
                             </div>
 
                             <!-- Metode Pembayaran -->
@@ -934,20 +1059,26 @@
                                         <span>🏦 Transfer</span>
                                     </label>
                                 </div>
+                                @error('payment_method')
+                                    <p class="text-[11px] text-rose-500 font-bold mt-1">{{ $message }}</p>
+                                @enderror
                             </div>
 
                             <!-- Tanggal & Waktu -->
                             <div>
                                 <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
-                                    Tanggal & Waktu
+                                    Tanggal & Waktu Transaksi <span class="text-rose-500">*</span>
                                 </label>
                                 <input
                                     type="datetime-local"
                                     name="transaction_date"
                                     x-model="transactionDate"
                                     required
-                                    class="block w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-xs font-medium py-2 px-3 focus:ring-2 focus:ring-indigo-500 shadow-2xs"
+                                    class="block w-full rounded-xl border @error('transaction_date') border-rose-500 ring-1 ring-rose-500 @else border-slate-300 dark:border-slate-600 @enderror bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-xs font-medium py-2 px-3 focus:ring-2 focus:ring-indigo-500 shadow-2xs"
                                 >
+                                @error('transaction_date')
+                                    <p class="text-[11px] text-rose-500 font-bold mt-1">{{ $message }}</p>
+                                @enderror
                             </div>
 
                             <!-- Catatan Transaksi -->
@@ -960,19 +1091,22 @@
                                     name="notes"
                                     x-model="notes"
                                     placeholder="Keterangan tambahan..."
-                                    class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-medium focus:ring-2 focus:ring-indigo-500 shadow-2xs"
+                                    class="w-full px-3 py-2 rounded-xl border @error('notes') border-rose-500 ring-1 ring-rose-500 @else border-slate-300 dark:border-slate-600 @enderror bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-medium focus:ring-2 focus:ring-indigo-500 shadow-2xs"
                                 >
+                                @error('notes')
+                                    <p class="text-[11px] text-rose-500 font-bold mt-1">{{ $message }}</p>
+                                @enderror
                             </div>
 
                             <!-- Tombol Submit -->
                             <div class="pt-2">
                                 <button
                                     type="submit"
-                                    :disabled="submitting || sellingPrice <= 0 || !categoryId"
+                                    :disabled="submitting"
                                     class="w-full inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-md shadow-indigo-600/30 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                                 >
                                     <svg x-show="submitting" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
-                                    <span x-text="submitting ? 'Menyimpan...' : 'Simpan Transaksi Penjualan'">Simpan Transaksi Penjualan</span>
+                                    <span x-text="submitting ? 'Menyimpan Transaksi...' : 'Simpan Transaksi Penjualan'">Simpan Transaksi Penjualan</span>
                                 </button>
                             </div>
                         </div>

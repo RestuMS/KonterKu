@@ -30,24 +30,64 @@ class ExpenseController extends Controller
             $query->where('category_id', $request->category_id);
         }
 
-        if ($request->filled('start_date') && $request->filled('end_date')) {
-            $query->whereBetween('transaction_date', [
-                Carbon::parse($request->start_date)->startOfDay(),
-                Carbon::parse($request->end_date)->endOfDay(),
-            ]);
+        if ($request->filled('payment_method')) {
+            $query->where('payment_method', $request->payment_method);
         }
 
-        $expenses = $query->latest('transaction_date')->paginate(10)->withQueryString();
-        $categories = Category::whereIn('type', ['transaction', 'all'])->get();
+        if ($request->filled('start_date')) {
+            $query->where('transaction_date', '>=', Carbon::parse($request->start_date)->startOfDay());
+        }
+
+        if ($request->filled('end_date')) {
+            $query->where('transaction_date', '<=', Carbon::parse($request->end_date)->endOfDay());
+        }
+
+        $expenses = $query->latest('transaction_date')->paginate(12)->withQueryString();
+        
+        $categories = Category::where('type', 'transaction')
+            ->orWhere(function($q) {
+                $q->where('type', 'all')->whereNotIn('name', ['Transfer Uang', 'Tarik Tunai']);
+            })
+            ->get();
+
         $totalAmount = (clone $query)->sum('total_amount');
 
-        return view('expenses.index', compact('expenses', 'categories', 'totalAmount'));
+        $todayAmount = Transaction::where('type', 'pengeluaran')
+            ->whereDate('transaction_date', Carbon::today())
+            ->sum('total_amount');
+
+        $monthAmount = Transaction::where('type', 'pengeluaran')
+            ->whereBetween('transaction_date', [
+                Carbon::now()->startOfMonth(),
+                Carbon::now()->endOfMonth(),
+            ])
+            ->sum('total_amount');
+
+        return view('expenses.index', compact(
+            'expenses', 
+            'categories', 
+            'totalAmount', 
+            'todayAmount', 
+            'monthAmount'
+        ));
     }
 
     public function create(): View
     {
-        $categories = Category::whereIn('type', ['transaction', 'all'])->get();
-        return view('expenses.create', compact('categories'));
+        $categories = Category::where('type', 'transaction')
+            ->orWhere(function($q) {
+                $q->where('type', 'all')->whereNotIn('name', ['Transfer Uang', 'Tarik Tunai']);
+            })
+            ->get();
+
+        // 5 pengeluaran terakhir untuk referensi cepat kasir
+        $recentExpenses = Transaction::with('category')
+            ->where('type', 'pengeluaran')
+            ->latest('transaction_date')
+            ->limit(5)
+            ->get();
+
+        return view('expenses.create', compact('categories', 'recentExpenses'));
     }
 
     public function store(ExpenseRequest $request): RedirectResponse
@@ -66,7 +106,7 @@ class ExpenseController extends Controller
         ]);
 
         return redirect()->route('expenses.index')
-            ->with('success', "Pengeluaran {$invoiceNumber} berhasil dicatat.");
+            ->with('success', "Pengeluaran {$invoiceNumber} senilai Rp " . number_format($request->amount, 0, ',', '.') . " berhasil dicatat.");
     }
 
     public function destroy(Transaction $expense): RedirectResponse
@@ -79,6 +119,6 @@ class ExpenseController extends Controller
         $expense->delete();
 
         return redirect()->route('expenses.index')
-            ->with('success', "Pengeluaran {$invoice} berhasil dihapus.");
+            ->with('success', "Catatan pengeluaran {$invoice} berhasil dihapus.");
     }
 }

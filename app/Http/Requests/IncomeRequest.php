@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Product;
 use Illuminate\Foundation\Http\FormRequest;
 
 class IncomeRequest extends FormRequest
@@ -13,33 +14,77 @@ class IncomeRequest extends FormRequest
 
     public function rules(): array
     {
+        // Jika sedang update/edit transaksi, hanya harga jual, kategori, metode bayar, dan tanggal yang divalidasi
+        if ($this->isMethod('PUT') || $this->isMethod('PATCH')) {
+            return [
+                'amount'           => ['required', 'numeric', 'gt:0'],
+                'category_id'      => ['required', 'exists:categories,id'],
+                'payment_method'   => ['required', 'in:cash,transfer,qris'],
+                'transaction_date' => ['required', 'date'],
+            ];
+        }
+
+        // Aturan validasi untuk transaksi penjualan baru (store)
         return [
             'transaction_date' => ['required', 'date'],
-            'category_id' => ['required', 'exists:categories,id'],
-            'payment_method' => ['required', 'in:cash,transfer,qris'],
-            'customer_target' => ['nullable', 'string', 'max:100'],
-            'notes' => ['nullable', 'string', 'max:500'],
-            'product_id' => ['nullable', 'exists:products,id'],
-            'product_name' => ['nullable', 'string', 'max:255'],
-            'quantity' => ['nullable', 'integer', 'min:1'],
-            'cost_price' => ['nullable', 'numeric', 'min:0'],
-            'amount' => ['required', 'numeric', 'gt:0'],
+            'product_name'     => ['required', 'string', 'max:255'],
+            'category_id'      => ['required', 'exists:categories,id'],
+            'payment_method'   => ['required', 'in:cash,transfer,qris'],
+            'amount'           => ['required', 'numeric', 'gt:0'],
+            'quantity'         => ['required', 'integer', 'min:1', 'max:10000'],
+            'cost_price'       => ['nullable', 'numeric', 'min:0'],
+            'customer_target'  => ['nullable', 'string', 'max:100'],
+            'notes'            => ['nullable', 'string', 'max:500'],
+            'product_id'       => ['nullable', 'exists:products,id'],
         ];
     }
 
     public function messages(): array
     {
         return [
-            'amount.required' => 'Nominal transaksi pemasukan wajib diisi.',
-            'amount.gt' => 'Nominal transaksi harus lebih besar dari 0 (tidak boleh 0 atau negatif).',
-            'amount.numeric' => 'Nominal transaksi harus berupa angka yang valid.',
-            'transaction_date.required' => 'Tanggal transaksi wajib diisi.',
-            'transaction_date.date' => 'Format tanggal transaksi tidak valid.',
-            'category_id.required' => 'Kategori pemasukan wajib dipilih.',
-            'category_id.exists' => 'Kategori yang dipilih tidak valid.',
-            'payment_method.required' => 'Metode pembayaran wajib dipilih.',
-            'payment_method.in' => 'Metode pembayaran harus berupa tunai, transfer, atau QRIS.',
-            'quantity.min' => 'Jumlah kuantitas minimal 1 unit.',
+            'amount.required'           => 'Total nominal pembayaran / harga jual wajib diisi.',
+            'amount.numeric'            => 'Total nominal pembayaran harus berupa angka yang valid.',
+            'amount.gt'                 => 'Total nominal pembayaran harus lebih besar dari Rp 0.',
+            'category_id.required'      => 'Kategori transaksi pemasukan wajib dipilih.',
+            'category_id.exists'        => 'Kategori yang dipilih tidak valid atau tidak ditemukan dalam sistem.',
+            'payment_method.required'   => 'Metode pembayaran wajib dipilih.',
+            'payment_method.in'         => 'Metode pembayaran harus berupa Tunai (Cash), QRIS, atau Transfer Bank.',
+            'transaction_date.required' => 'Tanggal dan waktu transaksi wajib diisi.',
+            'transaction_date.date'     => 'Format tanggal transaksi tidak valid.',
+            'product_name.required'     => 'Nama produk / item transaksi penjualan wajib diisi.',
+            'product_name.max'          => 'Nama produk maksimal 255 karakter.',
+            'cost_price.numeric'        => 'Harga modal / HPP harus berupa angka.',
+            'cost_price.min'            => 'Harga modal / HPP tidak boleh bernilai negatif.',
+            'quantity.required'         => 'Jumlah kuantitas (Qty) wajib diisi.',
+            'quantity.integer'          => 'Jumlah kuantitas harus berupa bilangan bulat.',
+            'quantity.min'              => 'Jumlah kuantitas transaksi minimal 1 unit/kali.',
+            'quantity.max'              => 'Jumlah kuantitas transaksi maksimal 10.000.',
+            'customer_target.max'       => 'Nomor tujuan / rekening / ID pelanggan maksimal 100 karakter.',
+            'notes.max'                 => 'Catatan transaksi maksimal 500 karakter.',
+            'product_id.exists'         => 'Produk katalog yang dipilih tidak valid atau sudah tidak tersedia.',
         ];
+    }
+
+    /**
+     * Validasi tambahan setelah validasi dasar: Cek ketersediaan stok produk katalog (hanya untuk create)
+     */
+    public function withValidator($validator): void
+    {
+        $validator->after(function ($validator) {
+            if (!$this->isMethod('PUT') && !$this->isMethod('PATCH')) {
+                if ($this->filled('product_id')) {
+                    $product = Product::find($this->product_id);
+                    if ($product) {
+                        $qty = (int) ($this->quantity ?? 1);
+                        if ($product->stock < $qty) {
+                            $validator->errors()->add(
+                                'quantity',
+                                "Stok produk '{$product->name}' tidak mencukupi (sisa stok: {$product->stock} {$product->unit}, diminta: {$qty} {$product->unit})."
+                            );
+                        }
+                    }
+                }
+            }
+        });
     }
 }

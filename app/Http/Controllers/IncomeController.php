@@ -187,7 +187,7 @@ class IncomeController extends Controller
         return view('incomes.edit', compact('income', 'categories', 'products'));
     }
 
-    public function update(IncomeRequest $request, Transaction $income, StockService $stockService): RedirectResponse
+    public function update(IncomeRequest $request, Transaction $income): RedirectResponse
     {
         if ($income->type !== 'pemasukan') {
             abort(404);
@@ -195,70 +195,31 @@ class IncomeController extends Controller
 
         DB::beginTransaction();
         try {
-            $income->load('items.product');
+            $income->load('items');
 
-            // 1. Kembalikan stok item produk sebelumnya jika ada
-            foreach ($income->items as $oldItem) {
-                if ($oldItem->product) {
-                    $stockService->addStock(
-                        $oldItem->product,
-                        $oldItem->quantity,
-                        Transaction::class,
-                        $income->id,
-                        "Koreksi edit transaksi invoice: {$income->invoice_number} (pengembalian stok lama)",
-                        Auth::id()
-                    );
-                }
-            }
-
-            // Hapus rincian item sebelumnya dan kosongkan relasi di memori
-            $income->items()->delete();
-            $income->unsetRelation('items');
-
-            // 2. Perbarui data transaksi utama
+            // 1. Perbarui data transaksi utama (Hanya yang diizinkan untuk diedit)
             $income->update([
                 'transaction_date' => $request->transaction_date,
-                'category_id' => $request->category_id,
-                'total_amount' => $request->amount,
-                'payment_method' => $request->payment_method,
-                'notes' => $request->notes,
+                'category_id'      => $request->category_id,
+                'total_amount'     => $request->amount,
+                'payment_method'   => $request->payment_method,
             ]);
 
-            // 3. Jika ada produk baru yang dipilih, lakukan pengurangan stok baru
-            if ($request->filled('product_id')) {
-                $product = Product::lockForUpdate()->findOrFail($request->product_id);
-                $qty = (int) ($request->quantity ?? 1);
-
-                if ($product->stock < $qty) {
-                    DB::rollBack();
-                    return back()->withInput()->with('error', "Stok produk {$product->name} tidak mencukupi untuk jumlah baru (sisa stok: {$product->stock} {$product->unit}).");
+            // 2. Sesuaikan unit_price & subtotal pada item transaksi yang sudah ada
+            if ($income->items->isNotEmpty()) {
+                foreach ($income->items as $item) {
+                    $qty = (int) ($item->quantity ?: 1);
+                    $item->update([
+                        'unit_price' => $request->amount / $qty,
+                        'subtotal'   => $request->amount,
+                    ]);
                 }
-
-                TransactionItem::create([
-                    'transaction_id' => $income->id,
-                    'product_id' => $product->id,
-                    'product_name' => $product->name,
-                    'quantity' => $qty,
-                    'cost_price' => $product->cost_price,
-                    'unit_price' => $request->amount / $qty,
-                    'subtotal' => $request->amount,
-                ]);
-
-                // Kurangi stok produk secara atomik
-                $stockService->reduceStock(
-                    $product,
-                    $qty,
-                    Transaction::class,
-                    $income->id,
-                    "Penyesuaian edit transaksi invoice: {$income->invoice_number}",
-                    Auth::id()
-                );
             }
 
             DB::commit();
 
             return redirect()->route('incomes.show', $income)
-                ->with('success', "Transaksi {$income->invoice_number} berhasil diperbarui dan stok telah disesuaikan secara konsisten.");
+                ->with('success', "Transaksi {$income->invoice_number} berhasil diperbarui.");
         } catch (\Throwable $e) {
             DB::rollBack();
             return back()->withInput()->with('error', 'Gagal memperbarui transaksi: ' . $e->getMessage());
