@@ -11,29 +11,61 @@
 
         <div class="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-5">
             <div>
-                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/15 border border-indigo-400/20 text-indigo-300 text-xs font-semibold mb-3">
-                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                    <span>Sistem KonterKu Aktif</span>
-                    <span class="text-indigo-400/60">•</span>
-                    <span>{{ now()->locale('id')->translatedFormat('l, d F Y') }}</span>
+                <!-- Status Badge & Tanggal Terkini (Kotak Merah 1) -->
+                <div class="inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-white/10 hover:bg-white/15 border border-white/20 backdrop-blur-md shadow-xs mb-3.5 transition-all">
+                    <span class="relative flex h-2 w-2">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-400 shadow-xs shadow-emerald-400/50"></span>
+                    </span>
+                    <span class="text-xs font-bold text-white tracking-wide">Sistem KonterKu Aktif</span>
+                    <span class="text-white/30">•</span>
+                    <span class="text-xs font-medium text-slate-200 flex items-center gap-1.5">
+                        <svg class="w-3.5 h-3.5 text-indigo-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                        </svg>
+                        <span>{{ now()->locale('id')->translatedFormat('l, d F Y') }}</span>
+                    </span>
                 </div>
                 <h2 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
-                    Selamat Datang, <span class="bg-gradient-to-r from-white via-indigo-100 to-indigo-300 bg-clip-text text-transparent">{{ Auth::user()->name ?? 'Administrator' }}</span> 👋
+                    Selamat Datang Bos, <span class="bg-gradient-to-r from-white via-indigo-100 to-indigo-300 bg-clip-text text-transparent">{{ Auth::user()->name ?? 'Administrator' }}</span> 👋
                 </h2>
                 <p class="text-xs sm:text-sm text-slate-300/90 mt-1.5 max-w-xl leading-relaxed">
                     Pantau kinerja penjualan harian, tren grafik kas, produk terlaris, serta pergerakan laba rugi transaksi konter secara real-time.
                 </p>
             </div>
 
-            <!-- Quick Info Pills -->
-            <div class="flex items-center gap-3 flex-wrap">
-                <div class="px-4 py-2.5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md">
-                    <span class="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">Total Produk</span>
-                    <span class="text-base font-bold text-white">{{ $stockSummary['total_products'] }} <span class="text-xs font-normal text-slate-400">Item</span></span>
+            <!-- Quick Info Stat Cards (Kotak Merah 2 - Glassmorphism Elevated) -->
+            <div class="flex items-center gap-3 sm:gap-4 flex-wrap">
+                <!-- Total Produk -->
+                <div class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/20 backdrop-blur-md shadow-sm shadow-black/20 transition-all duration-200">
+                    <div class="w-9 h-9 rounded-xl bg-indigo-500/25 border border-indigo-400/30 text-indigo-200 flex items-center justify-center shrink-0 shadow-sm">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <span class="text-[10px] uppercase font-extrabold tracking-wider text-slate-300 block">Total Produk</span>
+                        <div class="flex items-baseline gap-1">
+                            <span class="text-lg font-black font-mono text-white tracking-tight">{{ $stockSummary['total_products'] }}</span>
+                            <span class="text-xs font-semibold text-slate-300">Item</span>
+                        </div>
+                    </div>
                 </div>
-                <div class="px-4 py-2.5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md">
-                    <span class="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">Transaksi Hari Ini</span>
-                    <span class="text-base font-bold text-emerald-400">{{ $todayTransactionsCount }} <span class="text-xs font-normal text-slate-400">Selesai</span></span>
+
+                <!-- Transaksi Hari Ini -->
+                <div class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/20 backdrop-blur-md shadow-sm shadow-black/20 transition-all duration-200">
+                    <div class="w-9 h-9 rounded-xl bg-emerald-500/25 border border-emerald-400/30 text-emerald-300 flex items-center justify-center shrink-0 shadow-sm">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <span class="text-[10px] uppercase font-extrabold tracking-wider text-slate-300 block">Transaksi Hari Ini</span>
+                        <div class="flex items-baseline gap-1">
+                            <span class="text-lg font-black font-mono text-emerald-400 tracking-tight">{{ $todayTransactionsCount }}</span>
+                            <span class="text-xs font-semibold text-emerald-300/80">Selesai</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -84,21 +116,23 @@
             </div>
         </div>
 
-        <!-- Saldo Kas Bersih Bulan Ini -->
+        <!-- Laba Bersih Bulan Ini -->
         <div class="relative overflow-hidden bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-700/80 shadow-xs hover:shadow-md transition-all duration-200">
             <div class="flex items-center justify-between">
-                <span class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Saldo Bersih Bulan Ini</span>
-                <div class="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shadow-2xs">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <span class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Laba Bersih Bulan Ini</span>
+                <div class="w-10 h-10 rounded-xl {{ $monthlyNetProfit >= 0 ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400' : 'bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400' }} flex items-center justify-center shadow-2xs">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 </div>
             </div>
             <div class="mt-4">
-                <div class="text-2xl font-black {{ $monthlyNet >= 0 ? 'text-indigo-600 dark:text-indigo-400' : 'text-rose-600' }} tracking-tight">
-                    @rupiah($monthlyNet)
+                <div class="text-2xl font-black font-mono tracking-tight {{ $monthlyNetProfit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400' }}">
+                    {{ $monthlyNetProfit >= 0 ? '+' : '' }}@rupiah($monthlyNetProfit)
                 </div>
-                <div class="mt-2 flex items-center gap-1.5 text-xs text-slate-500 truncate">
-                    <span>Omzet:</span>
-                    <strong class="text-slate-800 dark:text-slate-200">@rupiah($monthlyIncome)</strong>
+                <div class="mt-2 flex items-center justify-between text-xs text-slate-500">
+                    <span class="inline-flex items-center gap-1 font-semibold {{ $monthlyNetProfit >= 0 ? 'text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40' : 'text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/40' }} px-2 py-0.5 rounded-md">
+                        {{ $monthlyIncome > 0 ? round(($monthlyNetProfit / $monthlyIncome) * 100, 1) : 0 }}% Margin
+                    </span>
+                    <span class="text-slate-400 text-[11px] font-mono">Net Profit Usaha</span>
                 </div>
             </div>
         </div>
@@ -132,43 +166,43 @@
         </div>
     </div>
 
-    <!-- 1. Row: Grafik Tren Arus Kas 7 Hari Terakhir & Peringatan Stok Menipis -->
+    <!-- 1. Row: Grafik Tren Laba Bersih 7 Hari Terakhir & Peringatan Stok Menipis -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-        <!-- Grafik Tren Arus Kas (Chart.js Modern Canvas) -->
+        <!-- Grafik Tren Laba Bersih (Chart.js Modern Canvas) -->
         <div class="lg:col-span-2">
-            <x-card title="Grafik Tren Arus Kas 7 Hari Terakhir" subtitle="Visualisasi pergerakan pemasukan penjualan dan beban operasional harian">
+            <x-card title="Grafik Tren Laba Bersih 7 Hari Terakhir" subtitle="Visualisasi dinamika naik turunnya keuntungan bersih harian toko setelah dipotong modal & beban">
                 <x-slot:action>
                     <div class="flex items-center gap-2 flex-wrap text-xs">
-                        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/60 dark:border-emerald-800/40 text-emerald-700 dark:text-emerald-300 font-semibold">
-                            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                            Masuk: @rupiah($sevenDaysIncome)
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-800/60 text-emerald-700 dark:text-emerald-300 font-bold shadow-2xs">
+                            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                            <span>Total 7 Hari: {{ $sevenDaysNetProfit >= 0 ? '+' : '' }}@rupiah($sevenDaysNetProfit)</span>
                         </span>
-                        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-200/60 dark:border-rose-800/40 text-rose-700 dark:text-rose-300 font-semibold">
-                            <span class="w-2 h-2 rounded-full bg-rose-500"></span>
-                            Keluar: @rupiah($sevenDaysExpense)
+                        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-semibold">
+                            Rata-rata: {{ $avgDailyNetProfit >= 0 ? '+' : '' }}@rupiah($avgDailyNetProfit)/hari
                         </span>
                     </div>
                 </x-slot:action>
 
                 <!-- Chart Container -->
                 <div class="relative w-full h-72 sm:h-80 pt-2">
-                    <canvas id="cashflowChart"></canvas>
+                    <canvas id="netProfitChart"></canvas>
                 </div>
 
                 <!-- Chart Footer Legend & Net Summary -->
                 <div class="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700/60 flex flex-wrap items-center justify-between gap-4 text-xs text-slate-500">
-                    <div class="flex items-center gap-5">
-                        <span class="inline-flex items-center gap-2 font-semibold text-emerald-600 dark:text-emerald-400">
-                            <span class="w-3 h-1.5 rounded-full bg-emerald-500"></span> Pemasukan
+                    <div class="flex items-center gap-3">
+                        <span class="inline-flex items-center gap-1.5 font-bold text-emerald-600 dark:text-emerald-400">
+                            <span class="w-3 h-3 rounded-full bg-emerald-500 shadow-xs shadow-emerald-500/50"></span>
+                            <span>Laba Bersih Harian (Net Profit)</span>
                         </span>
-                        <span class="inline-flex items-center gap-2 font-semibold text-rose-600 dark:text-rose-400">
-                            <span class="w-3 h-1.5 rounded-full bg-rose-500"></span> Pengeluaran
+                        <span class="text-slate-400 text-[11px] hidden sm:inline">
+                            (Omzet Kasir &minus; Modal HPP &minus; Beban Operasional)
                         </span>
                     </div>
                     <div class="text-right font-medium">
-                        <span>Arus Kas Bersih 7 Hari: </span>
-                        <strong class="{{ $sevenDaysNet >= 0 ? 'text-indigo-600 dark:text-indigo-400' : 'text-rose-600' }} font-mono font-bold">
-                            {{ $sevenDaysNet >= 0 ? '+' : '' }}@rupiah($sevenDaysNet)
+                        <span>Laba Bersih Hari Ini: </span>
+                        <strong class="{{ $todayNetProfit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600' }} font-mono font-bold">
+                            {{ $todayNetProfit >= 0 ? '+' : '' }}@rupiah($todayNetProfit)
                         </strong>
                     </div>
                 </div>
@@ -443,23 +477,23 @@
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
         <script>
             document.addEventListener('DOMContentLoaded', function () {
-                const canvas = document.getElementById('cashflowChart');
+                const canvas = document.getElementById('netProfitChart');
                 if (!canvas) return;
 
                 const ctx = canvas.getContext('2d');
 
                 const chartLabels = {!! json_encode(array_column($dailyTrend, 'label')) !!};
+                const netProfitData = {!! json_encode(array_column($dailyTrend, 'net_profit')) !!};
                 const incomeData = {!! json_encode(array_column($dailyTrend, 'income')) !!};
+                const cogsData = {!! json_encode(array_column($dailyTrend, 'cogs')) !!};
+                const grossProfitData = {!! json_encode(array_column($dailyTrend, 'gross_profit')) !!};
                 const expenseData = {!! json_encode(array_column($dailyTrend, 'expense')) !!};
 
-                // Gradients for line fill
-                const incGradient = ctx.createLinearGradient(0, 0, 0, 280);
-                incGradient.addColorStop(0, 'rgba(16, 185, 129, 0.32)');
-                incGradient.addColorStop(1, 'rgba(16, 185, 129, 0.0)');
-
-                const expGradient = ctx.createLinearGradient(0, 0, 0, 280);
-                expGradient.addColorStop(0, 'rgba(244, 63, 94, 0.30)');
-                expGradient.addColorStop(1, 'rgba(244, 63, 94, 0.0)');
+                // Gradient mulus untuk Laba Bersih
+                const profitGradient = ctx.createLinearGradient(0, 0, 0, 290);
+                profitGradient.addColorStop(0, 'rgba(16, 185, 129, 0.35)');
+                profitGradient.addColorStop(0.5, 'rgba(16, 185, 129, 0.10)');
+                profitGradient.addColorStop(1, 'rgba(16, 185, 129, 0.0)');
 
                 new Chart(ctx, {
                     type: 'line',
@@ -467,32 +501,21 @@
                         labels: chartLabels,
                         datasets: [
                             {
-                                label: 'Pemasukan',
-                                data: incomeData,
-                                borderColor: '#10b981',
-                                backgroundColor: incGradient,
-                                borderWidth: 3,
+                                label: 'Laba Bersih',
+                                data: netProfitData,
+                                borderColor: '#10b981', // Emerald 500
+                                backgroundColor: profitGradient,
+                                borderWidth: 3.5,
                                 fill: true,
-                                tension: 0.38,
+                                tension: 0.36,
                                 pointBackgroundColor: '#10b981',
                                 pointBorderColor: '#ffffff',
-                                pointBorderWidth: 2,
-                                pointRadius: 4,
-                                pointHoverRadius: 7,
-                            },
-                            {
-                                label: 'Pengeluaran',
-                                data: expenseData,
-                                borderColor: '#f43f5e',
-                                backgroundColor: expGradient,
-                                borderWidth: 3,
-                                fill: true,
-                                tension: 0.38,
-                                pointBackgroundColor: '#f43f5e',
-                                pointBorderColor: '#ffffff',
-                                pointBorderWidth: 2,
-                                pointRadius: 4,
-                                pointHoverRadius: 7,
+                                pointBorderWidth: 2.5,
+                                pointRadius: 5,
+                                pointHoverRadius: 8,
+                                pointHoverBackgroundColor: '#047857',
+                                pointHoverBorderColor: '#ffffff',
+                                pointHoverBorderWidth: 3,
                             }
                         ]
                     },
@@ -508,32 +531,38 @@
                                 display: false
                             },
                             tooltip: {
-                                backgroundColor: 'rgba(15, 23, 42, 0.94)',
-                                titleColor: '#f8fafc',
+                                backgroundColor: 'rgba(15, 23, 42, 0.96)',
+                                titleColor: '#ffffff',
                                 bodyColor: '#f1f5f9',
                                 titleFont: { family: "'Plus Jakarta Sans', sans-serif", size: 12, weight: 'bold' },
-                                bodyFont: { family: "'Plus Jakarta Sans', sans-serif", size: 12 },
-                                padding: 12,
-                                cornerRadius: 12,
-                                displayColors: true,
-                                boxWidth: 8,
-                                boxHeight: 8,
-                                usePointStyle: true,
+                                bodyFont: { family: "'Plus Jakarta Sans', sans-serif", size: 11 },
+                                padding: 14,
+                                cornerRadius: 14,
+                                borderColor: 'rgba(51, 65, 85, 0.6)',
+                                borderWidth: 1,
+                                displayColors: false,
                                 callbacks: {
+                                    title: function(items) {
+                                        return '📅 Tanggal: ' + items[0].label;
+                                    },
                                     label: function(context) {
                                         const val = context.parsed.y || 0;
-                                        return ' ' + context.dataset.label + ': Rp ' + val.toLocaleString('id-ID');
+                                        const sign = val >= 0 ? '+' : '';
+                                        return '⭐ Laba Bersih: ' + sign + 'Rp ' + val.toLocaleString('id-ID');
                                     },
-                                    footer: function(tooltipItems) {
-                                        let inc = 0;
-                                        let exp = 0;
-                                        tooltipItems.forEach(function(item) {
-                                            if (item.datasetIndex === 0) inc = item.parsed.y || 0;
-                                            if (item.datasetIndex === 1) exp = item.parsed.y || 0;
-                                        });
-                                        const diff = inc - exp;
-                                        const sign = diff >= 0 ? '+' : '';
-                                        return '\nSelisih Kas: ' + sign + 'Rp ' + diff.toLocaleString('id-ID');
+                                    afterBody: function(items) {
+                                        const idx = items[0].dataIndex;
+                                        const inc = incomeData[idx] || 0;
+                                        const cogs = cogsData[idx] || 0;
+                                        const gross = grossProfitData[idx] || 0;
+                                        const exp = expenseData[idx] || 0;
+                                        return [
+                                            '───────────────────────',
+                                            '• Omzet Kasir: Rp ' + inc.toLocaleString('id-ID'),
+                                            '• Modal Kulakan (HPP): -Rp ' + cogs.toLocaleString('id-ID'),
+                                            '• Laba Kotor Penjualan: Rp ' + gross.toLocaleString('id-ID'),
+                                            '• Beban Pengeluaran: -Rp ' + exp.toLocaleString('id-ID'),
+                                        ];
                                     }
                                 }
                             }
@@ -549,7 +578,6 @@
                                 }
                             },
                             y: {
-                                beginAtZero: true,
                                 grid: {
                                     color: 'rgba(148, 163, 184, 0.12)',
                                     drawBorder: false,
@@ -558,12 +586,14 @@
                                     font: { family: "'Plus Jakarta Sans', sans-serif", size: 10, weight: '500' },
                                     color: '#94a3b8',
                                     callback: function(value) {
-                                        if (value >= 1000000) {
-                                            return 'Rp ' + (value / 1000000).toFixed(1) + 'jt';
-                                        } else if (value >= 1000) {
-                                            return 'Rp ' + (value / 1000).toFixed(0) + 'rb';
+                                        const sign = value < 0 ? '-' : (value > 0 ? '+' : '');
+                                        const abs = Math.abs(value);
+                                        if (abs >= 1000000) {
+                                            return sign + 'Rp ' + (abs / 1000000).toFixed(1) + 'jt';
+                                        } else if (abs >= 1000) {
+                                            return sign + 'Rp ' + (abs / 1000).toFixed(0) + 'rb';
                                         }
-                                        return 'Rp ' + value;
+                                        return sign + 'Rp ' + abs;
                                     }
                                 }
                             }

@@ -5,6 +5,9 @@ namespace App\Providers;
 use Illuminate\Support\ServiceProvider;
 
 use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\View;
+use App\Models\Product;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -31,6 +34,26 @@ class AppServiceProvider extends ServiceProvider
 
         Blade::directive('tanggalWaktu', function ($expression) {
             return "<?php echo ($expression) ? \Carbon\Carbon::parse($expression)->format('d/m/Y H:i') : '-'; ?>";
+        });
+
+        // Bagikan data indikator stok menipis & kasbon belum lunas ke sidebar & navbar
+        View::composer(['components.sidebar', 'components.navbar'], function ($view) {
+            $lowStockCount = 0;
+            if (Schema::hasTable('products')) {
+                $lowStockCount = Product::where('is_active', true)
+                    ->whereColumn('stock', '<=', 'min_stock')
+                    ->count();
+            }
+
+            $unpaidKasbonCount = 0;
+            if (Schema::hasTable('kasbons')) {
+                $unpaidKasbonCount = \App\Models\Kasbon::where('status', 'unpaid')->count();
+            }
+
+            $view->with([
+                'lowStockCount' => $lowStockCount,
+                'unpaidKasbonCount' => $unpaidKasbonCount,
+            ]);
         });
     }
 }

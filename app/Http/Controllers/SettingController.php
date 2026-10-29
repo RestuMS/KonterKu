@@ -26,7 +26,37 @@ class SettingController extends Controller
 
         $user = Auth::user();
 
-        return view('settings.index', compact('settings', 'user'));
+        // Kategori terpisah sesuai kebutuhan pengaturan
+        $productCategories = \App\Models\Category::where('type', 'product')
+            ->withCount('products')
+            ->orderBy('name')
+            ->get();
+
+        $incomeCategories = \App\Models\Category::whereIn('type', ['income', 'all'])
+            ->orWhere(function($q) {
+                $q->where('type', 'transaction')
+                  ->whereNotIn('slug', ['jajan', 'beli-kuota', 'beli-mainan', 'beli-bensin', 'operasional-toko']);
+            })
+            ->withCount('transactions')
+            ->orderBy('name')
+            ->get();
+
+        $expenseCategories = \App\Models\Category::where('type', 'expense')
+            ->orWhere(function($q) {
+                $q->whereIn('type', ['transaction', 'all'])
+                  ->whereIn('slug', ['jajan', 'beli-kuota', 'beli-mainan', 'beli-bensin', 'operasional-toko']);
+            })
+            ->withCount('transactions')
+            ->orderBy('name')
+            ->get();
+
+        return view('settings.index', compact(
+            'settings', 
+            'user', 
+            'productCategories', 
+            'incomeCategories', 
+            'expenseCategories'
+        ));
     }
 
     public function update(SettingRequest $request): RedirectResponse

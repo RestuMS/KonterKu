@@ -1,3 +1,8 @@
+@php
+    $lowStockCount = $lowStockCount ?? (\App\Models\Product::where('is_active', true)->whereColumn('stock', '<=', 'min_stock')->count());
+    $unpaidKasbonCount = $unpaidKasbonCount ?? (\App\Models\Kasbon::where('status', 'unpaid')->count());
+@endphp
+
 <aside
     class="fixed inset-y-0 left-0 z-40 w-64 bg-slate-900 text-white flex flex-col transition-transform duration-300 ease-in-out lg:translate-x-0 border-r border-slate-800"
     :class="mobileSidebar ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'"
@@ -68,16 +73,53 @@
             Pengeluaran
         </a>
 
+        <!-- Buku Kasbon / Catatan Hutang -->
+        <div class="flex items-center justify-between rounded-xl transition-all duration-150 {{ request()->routeIs('kasbons.*') ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/30' : 'text-slate-300 hover:bg-slate-800/80 hover:text-white' }}">
+            <a
+                href="{{ route('kasbons.index') }}"
+                class="flex-1 flex items-center gap-3 px-3 py-2.5 text-sm font-medium {{ request()->routeIs('kasbons.*') ? 'text-white' : 'text-slate-300 hover:text-white' }}"
+            >
+                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                </svg>
+                <span>Buku Kasbon</span>
+            </a>
+
+            @if(isset($unpaidKasbonCount) && $unpaidKasbonCount > 0)
+                <a
+                    href="{{ route('kasbons.index', ['status' => 'unpaid']) }}"
+                    class="mr-2.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-black bg-amber-500 hover:bg-amber-600 text-slate-900 shadow-sm shadow-amber-500/50 transition-all hover:scale-105 active:scale-95 cursor-pointer"
+                    title="{{ $unpaidKasbonCount }} orang belum melunasi hutang/kasbon"
+                >
+                    <span class="w-1.5 h-1.5 rounded-full bg-slate-900 animate-ping"></span>
+                    <span>{{ $unpaidKasbonCount > 99 ? '99+' : $unpaidKasbonCount }}</span>
+                </a>
+            @endif
+        </div>
+
         <!-- Produk & Stok -->
-        <a
-            href="{{ route('products.index') }}"
-            class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 {{ request()->routeIs('products.*') ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/30' : 'text-slate-300 hover:bg-slate-800/80 hover:text-white' }}"
-        >
-            <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
-            </svg>
-            Produk & Stok
-        </a>
+        <div class="flex items-center justify-between rounded-xl transition-all duration-150 {{ request()->routeIs('products.*') ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/30' : 'text-slate-300 hover:bg-slate-800/80 hover:text-white' }}">
+            <a
+                href="{{ route('products.index') }}"
+                class="flex-1 flex items-center gap-3 px-3 py-2.5 text-sm font-medium {{ request()->routeIs('products.*') ? 'text-white' : 'text-slate-300 hover:text-white' }}"
+            >
+                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                </svg>
+                <span>Produk & Stok</span>
+            </a>
+
+            @if(isset($lowStockCount) && $lowStockCount > 0)
+                <a
+                    href="{{ route('products.index', ['low_stock' => 1]) }}"
+                    class="mr-2.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-black bg-rose-500 hover:bg-rose-600 text-white shadow-sm shadow-rose-500/50 transition-all hover:scale-105 active:scale-95 cursor-pointer"
+                    title="{{ $lowStockCount }} produk berada di bawah batas stok minimum! Klik untuk langsung filter produk menipis."
+                >
+                    <span class="w-1.5 h-1.5 rounded-full bg-white animate-ping"></span>
+                    <span>{{ $lowStockCount > 99 ? '99+' : $lowStockCount }}</span>
+                </a>
+            @endif
+        </div>
 
         <!-- Mutasi Stok -->
         <a

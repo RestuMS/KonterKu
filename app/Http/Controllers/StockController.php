@@ -29,15 +29,36 @@ class StockController extends Controller
             $query->where('type', $request->type);
         }
 
+        if ($request->filled('start_date')) {
+            $query->where('created_at', '>=', \Carbon\Carbon::parse($request->start_date)->startOfDay());
+        }
+
+        if ($request->filled('end_date')) {
+            $query->where('created_at', '<=', \Carbon\Carbon::parse($request->end_date)->endOfDay());
+        }
+
         $mutations = $query->latest()->paginate(15)->withQueryString();
 
-        return view('stocks.index', compact('mutations'));
+        // Metrik Statistik Mutasi Stok
+        $totalIn = StockMutation::where('type', 'in')->sum('quantity');
+        $totalOut = StockMutation::where('type', 'out')->sum('quantity');
+        $totalAdjustment = StockMutation::where('type', 'adjustment')->count();
+        $todayCount = StockMutation::whereDate('created_at', \Carbon\Carbon::today())->count();
+
+        return view('stocks.index', compact(
+            'mutations',
+            'totalIn',
+            'totalOut',
+            'totalAdjustment',
+            'todayCount'
+        ));
     }
 
     public function create(): View
     {
-        $products = Product::where('is_active', true)->orderBy('name')->get();
-        return view('stocks.create', compact('products'));
+        $products = Product::with('category')->where('is_active', true)->orderBy('name')->get();
+        $recentMutations = StockMutation::with(['product', 'user'])->latest()->limit(5)->get();
+        return view('stocks.create', compact('products', 'recentMutations'));
     }
 
     public function store(StockAdjustmentRequest $request, StockService $stockService): RedirectResponse

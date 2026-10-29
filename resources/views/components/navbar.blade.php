@@ -1,5 +1,9 @@
 @props(['title' => 'Dashboard'])
 
+@php
+    $lowStockCount = $lowStockCount ?? (\App\Models\Product::where('is_active', true)->whereColumn('stock', '<=', 'min_stock')->count());
+@endphp
+
 <header class="sticky top-0 z-30 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-700/80 transition-colors">
     <div class="px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         <!-- Left: Mobile Toggle & Page Title -->
@@ -21,7 +25,23 @@
         </div>
 
         <!-- Right: Actions & User Dropdown -->
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2.5 sm:gap-3">
+            <!-- Alert Stok Menipis Interaktif -->
+            @if(isset($lowStockCount) && $lowStockCount > 0)
+                <a
+                    href="{{ route('products.index', ['low_stock' => 1]) }}"
+                    class="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold rounded-xl bg-rose-50 text-rose-700 hover:bg-rose-100 dark:bg-rose-950/50 dark:text-rose-300 dark:hover:bg-rose-900/60 transition-all border border-rose-200/80 dark:border-rose-800/60 shadow-2xs group"
+                    title="{{ $lowStockCount }} produk berada di bawah batas stok minimum! Klik untuk filter & kulakan."
+                >
+                    <span class="relative flex h-2 w-2">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
+                    </span>
+                    <span class="hidden md:inline font-bold">Stok Menipis</span>
+                    <span class="px-1.5 py-0.5 rounded-md bg-rose-200/80 dark:bg-rose-900 text-rose-800 dark:text-rose-200 font-mono font-black text-[11px] leading-none">{{ $lowStockCount }}</span>
+                </a>
+            @endif
+
             <!-- Quick New Transaction Shortcut -->
             <a
                 href="{{ route('incomes.create') }}"

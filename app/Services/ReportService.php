@@ -48,12 +48,30 @@ class ReportService
     }
 
     /**
-     * Dapatkan tren pemasukan & pengeluaran beberapa hari terakhir (untuk chart/grafik dashboard).
+     * Dapatkan tren keuangan & laba bersih beberapa hari terakhir (untuk chart/grafik dashboard).
      */
     public function getDailyTrend(int $days = 7): array
     {
         $startDate = Carbon::now()->subDays($days - 1)->startOfDay();
         $endDate = Carbon::now()->endOfDay();
+
+        // Ambil transaksi dalam rentang hari tersebut
+        $transactions = Transaction::whereBetween('transaction_date', [$startDate, $endDate])
+            ->select('id', 'type', 'total_amount', 'transaction_date')
+            ->get();
+
+        $incomeIds = $transactions->where('type', 'pemasukan')->pluck('id');
+
+        // Ambil total modal kulakan (HPP) per transaksi pemasukan
+        $itemsByTx = TransactionItem::whereIn('transaction_id', $incomeIds)
+            ->select('transaction_id', DB::raw('(cost_price * quantity) as cogs'))
+            ->get()
+            ->groupBy('transaction_id');
+
+        $cogsByTxId = [];
+        foreach ($itemsByTx as $txId => $items) {
+            $cogsByTxId[$txId] = $items->sum('cogs');
+        }
 
         $trend = [];
         $current = $startDate->copy();
@@ -62,19 +80,29 @@ class ReportService
             $dateStr = $current->toDateString();
             $dayLabel = $current->locale('id')->isoFormat('D MMM');
 
-            $income = Transaction::where('type', 'pemasukan')
-                ->whereDate('transaction_date', $dateStr)
-                ->sum('total_amount');
+            $dayTxs = $transactions->filter(function ($t) use ($dateStr) {
+                return Carbon::parse($t->transaction_date)->toDateString() === $dateStr;
+            });
 
-            $expense = Transaction::where('type', 'pengeluaran')
-                ->whereDate('transaction_date', $dateStr)
-                ->sum('total_amount');
+            $income = (float) $dayTxs->where('type', 'pemasukan')->sum('total_amount');
+            $expense = (float) $dayTxs->where('type', 'pengeluaran')->sum('total_amount');
+
+            $cogs = 0;
+            foreach ($dayTxs->where('type', 'pemasukan') as $incTx) {
+                $cogs += ($cogsByTxId[$incTx->id] ?? 0);
+            }
+
+            $grossProfit = $income - $cogs;
+            $netProfit = $grossProfit - $expense;
 
             $trend[] = [
                 'date' => $dateStr,
                 'label' => $dayLabel,
-                'income' => (float) $income,
-                'expense' => (float) $expense,
+                'income' => $income,
+                'expense' => $expense,
+                'cogs' => (float) $cogs,
+                'gross_profit' => (float) $grossProfit,
+                'net_profit' => (float) $netProfit,
             ];
 
             $current->addDay();

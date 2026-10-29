@@ -6,13 +6,25 @@ export default defineConfig({
     plugins: [
         laravel({
             input: ['resources/css/app.css', 'resources/js/app.js'],
-            refresh: true,
+            refresh: [
+                'resources/views/**',
+                'routes/**',
+                'app/Http/**',
+                'app/View/**',
+                'resources/css/**',
+                'resources/js/**',
+            ],
         }),
         tailwindcss(),
     ],
     server: {
+        host: '127.0.0.1',
+        port: 5173,
+        cors: true,
         watch: {
-            ignored: ['**/storage/framework/views/**'],
+            usePolling: true,
+            interval: 500,
+            ignored: ['**/storage/framework/views/**', '**/node_modules/**'],
         },
     },
 });

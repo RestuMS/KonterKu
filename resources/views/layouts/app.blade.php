@@ -88,6 +88,42 @@
         </div>
     </div>
 
+    @if(app()->environment('local'))
+        <script>
+            // Auto Live-Reload untuk mode development (berfungsi baik saat Vite aktif maupun tidak)
+            (function() {
+                const isViteHot = {{ file_exists(public_path('hot')) ? 'true' : 'false' }};
+                if (!isViteHot) {
+                    let lastTimestamp = null;
+                    let isChecking = false;
+
+                    const checkReload = async () => {
+                        if (isChecking) return;
+                        isChecking = true;
+                        try {
+                            const res = await fetch('{{ route('dev.reload-check') }}', { credentials: 'same-origin' });
+                            if (res.ok) {
+                                const data = await res.json();
+                                if (lastTimestamp === null) {
+                                    lastTimestamp = data.latest;
+                                } else if (data.latest > lastTimestamp) {
+                                    console.log('🔄 Deteksi penambahan menu/file baru! Merefresh halaman otomatis...');
+                                    window.location.reload();
+                                }
+                            }
+                        } catch (e) {
+                            // Abaikan saat server restart
+                        } finally {
+                            isChecking = false;
+                        }
+                    };
+
+                    setInterval(checkReload, 1000);
+                }
+            })();
+        </script>
+    @endif
+
     {{ $scripts ?? '' }}
 </body>
 </html>
