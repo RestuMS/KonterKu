@@ -20,13 +20,13 @@ class IncomeRequest extends FormRequest
                 'amount'           => ['required', 'numeric', 'gt:0'],
                 'category_id'      => ['required', 'exists:categories,id'],
                 'payment_method'   => ['required', 'in:cash,transfer,qris'],
-                'transaction_date' => ['required', 'date'],
+                'transaction_date' => ['nullable', 'date'],
             ];
         }
 
         // Aturan validasi untuk transaksi penjualan baru (store)
         return [
-            'transaction_date' => ['required', 'date'],
+            'transaction_date' => ['nullable', 'date'],
             'product_name'     => ['required', 'string', 'max:255'],
             'category_id'      => ['required', 'exists:categories,id'],
             'payment_method'   => ['required', 'in:cash,transfer,qris'],
@@ -49,7 +49,6 @@ class IncomeRequest extends FormRequest
             'category_id.exists'        => 'Kategori yang dipilih tidak valid atau tidak ditemukan dalam sistem.',
             'payment_method.required'   => 'Metode pembayaran wajib dipilih.',
             'payment_method.in'         => 'Metode pembayaran harus berupa Tunai (Cash), QRIS, atau Transfer Bank.',
-            'transaction_date.required' => 'Tanggal dan waktu transaksi wajib diisi.',
             'transaction_date.date'     => 'Format tanggal transaksi tidak valid.',
             'product_name.required'     => 'Nama produk / item transaksi penjualan wajib diisi.',
             'product_name.max'          => 'Nama produk maksimal 255 karakter.',
@@ -66,12 +65,30 @@ class IncomeRequest extends FormRequest
     }
 
     /**
-     * Validasi tambahan setelah validasi dasar: Cek ketersediaan stok produk katalog (hanya untuk create)
+     * Validasi tambahan setelah validasi dasar:
+     * 1. Cek nomor rekening/tujuan untuk layanan Transfer & Tarik Tunai
+     * 2. Cek ketersediaan stok produk katalog
      */
     public function withValidator($validator): void
     {
         $validator->after(function ($validator) {
             if (!$this->isMethod('PUT') && !$this->isMethod('PATCH')) {
+                // 1. Validasi Layanan Transfer / Tarik Tunai di Backend
+                if ($this->filled('category_id')) {
+                    $category = \App\Models\Category::find($this->category_id);
+                    if ($category) {
+                        $catName = strtolower($category->name);
+                        $isTransferService = str_contains($catName, 'transfer') || str_contains($catName, 'tarik tunai');
+                        if ($isTransferService && empty(trim($this->customer_target ?? ''))) {
+                            $validator->errors()->add(
+                                'customer_target',
+                                "Nomor rekening / nomor tujuan / ID pelanggan wajib diisi untuk transaksi {$category->name}."
+                            );
+                        }
+                    }
+                }
+
+                // 2. Validasi Ketersediaan Stok Produk Katalog
                 if ($this->filled('product_id')) {
                     $product = Product::find($this->product_id);
                     if ($product) {

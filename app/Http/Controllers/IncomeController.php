@@ -88,7 +88,11 @@ class IncomeController extends Controller
 
         DB::beginTransaction();
         try {
-            $invoiceNumber = 'TRX-' . Carbon::parse($request->transaction_date)->format('Ymd') . '-' . strtoupper(substr(uniqid(), -5));
+            $transactionDate = $request->filled('transaction_date') 
+                ? Carbon::parse($request->transaction_date) 
+                : now();
+
+            $invoiceNumber = 'TRX-' . $transactionDate->format('Ymd') . '-' . strtoupper(substr(uniqid(), -5));
 
             $notes = trim(
                 ($request->customer_target ? 'No. Tujuan: ' . $request->customer_target : '') .
@@ -101,7 +105,7 @@ class IncomeController extends Controller
                 'type' => 'pemasukan',
                 'category_id' => $request->category_id,
                 'user_id' => Auth::id(),
-                'transaction_date' => $request->transaction_date,
+                'transaction_date' => $transactionDate,
                 'total_amount' => $request->amount,
                 'payment_method' => $request->payment_method,
                 'notes' => $notes,
@@ -199,7 +203,7 @@ class IncomeController extends Controller
 
             // 1. Perbarui data transaksi utama (Hanya yang diizinkan untuk diedit)
             $income->update([
-                'transaction_date' => $request->transaction_date,
+                'transaction_date' => $request->filled('transaction_date') ? Carbon::parse($request->transaction_date) : $income->transaction_date,
                 'category_id'      => $request->category_id,
                 'total_amount'     => $request->amount,
                 'payment_method'   => $request->payment_method,

@@ -9,8 +9,8 @@
         <div class="absolute -right-12 -top-12 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
         <div class="absolute -left-12 -bottom-12 w-64 h-64 bg-sky-500/10 rounded-full blur-3xl pointer-events-none"></div>
 
-        <div class="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-5">
-            <div>
+        <div class="relative z-10 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-5">
+            <div class="min-w-0 max-w-lg lg:max-w-xl">
                 <!-- Status Badge & Tanggal Terkini (Kotak Merah 1) -->
                 <div class="inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-white/10 hover:bg-white/15 border border-white/20 backdrop-blur-md shadow-xs mb-3.5 transition-all">
                     <span class="relative flex h-2 w-2">
@@ -29,15 +29,15 @@
                 <h2 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
                     Selamat Datang Bos, <span class="bg-gradient-to-r from-white via-indigo-100 to-indigo-300 bg-clip-text text-transparent">{{ Auth::user()->name ?? 'Administrator' }}</span> 👋
                 </h2>
-                <p class="text-xs sm:text-sm text-slate-300/90 mt-1.5 max-w-xl leading-relaxed">
+                <p class="text-xs sm:text-sm text-slate-300/90 mt-1.5 leading-relaxed">
                     Pantau kinerja penjualan harian, tren grafik kas, produk terlaris, serta pergerakan laba rugi transaksi konter secara real-time.
                 </p>
             </div>
 
-            <!-- Quick Info Stat Cards (Kotak Merah 2 - Glassmorphism Elevated) -->
-            <div class="flex items-center gap-3 sm:gap-4 flex-wrap">
+            <!-- Quick Info Stat Cards (3 Kartu Sejajar Berdampingan) -->
+            <div class="flex items-center gap-2.5 sm:gap-3 shrink-0 flex-nowrap overflow-x-auto pb-1 sm:pb-0">
                 <!-- Total Produk -->
-                <div class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/20 backdrop-blur-md shadow-sm shadow-black/20 transition-all duration-200">
+                <div class="flex items-center gap-2.5 sm:gap-3 px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/20 backdrop-blur-md shadow-sm shadow-black/20 transition-all duration-200 shrink-0">
                     <div class="w-9 h-9 rounded-xl bg-indigo-500/25 border border-indigo-400/30 text-indigo-200 flex items-center justify-center shrink-0 shadow-sm">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
@@ -46,14 +46,14 @@
                     <div>
                         <span class="text-[10px] uppercase font-extrabold tracking-wider text-slate-300 block">Total Produk</span>
                         <div class="flex items-baseline gap-1">
-                            <span class="text-lg font-black font-mono text-white tracking-tight">{{ $stockSummary['total_products'] }}</span>
+                            <span class="text-base sm:text-lg font-black font-mono text-white tracking-tight">{{ $stockSummary['total_products'] }}</span>
                             <span class="text-xs font-semibold text-slate-300">Item</span>
                         </div>
                     </div>
                 </div>
 
                 <!-- Transaksi Hari Ini -->
-                <div class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/20 backdrop-blur-md shadow-sm shadow-black/20 transition-all duration-200">
+                <div class="flex items-center gap-2.5 sm:gap-3 px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/20 backdrop-blur-md shadow-sm shadow-black/20 transition-all duration-200 shrink-0">
                     <div class="w-9 h-9 rounded-xl bg-emerald-500/25 border border-emerald-400/30 text-emerald-300 flex items-center justify-center shrink-0 shadow-sm">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -62,22 +62,68 @@
                     <div>
                         <span class="text-[10px] uppercase font-extrabold tracking-wider text-slate-300 block">Transaksi Hari Ini</span>
                         <div class="flex items-baseline gap-1">
-                            <span class="text-lg font-black font-mono text-emerald-400 tracking-tight">{{ $todayTransactionsCount }}</span>
+                            <span class="text-base sm:text-lg font-black font-mono text-emerald-400 tracking-tight">{{ $todayTransactionsCount }}</span>
                             <span class="text-xs font-semibold text-emerald-300/80">Selesai</span>
                         </div>
                     </div>
                 </div>
+
+                <!-- Total Piutang (Berada di samping Transaksi Hari Ini) -->
+                <a href="{{ route('kasbons.index') }}" class="flex items-center gap-2.5 sm:gap-3 px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-2xl {{ $totalUnpaidKasbon > 0 ? 'bg-amber-500/15 hover:bg-amber-500/25 border border-amber-400/30' : 'bg-white/10 hover:bg-white/15 border border-white/20' }} backdrop-blur-md shadow-sm shadow-black/20 transition-all duration-200 group shrink-0">
+                    <div class="w-9 h-9 rounded-xl {{ $totalUnpaidKasbon > 0 ? 'bg-amber-500/25 border border-amber-400/30 text-amber-300' : 'bg-white/10 border border-white/20 text-slate-300' }} flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <span class="text-[10px] uppercase font-extrabold tracking-wider {{ $totalUnpaidKasbon > 0 ? 'text-amber-200' : 'text-slate-300' }} block">Total Piutang</span>
+                        <div class="flex items-baseline gap-1">
+                            <span class="text-base sm:text-lg font-black font-mono {{ $totalUnpaidKasbon > 0 ? 'text-amber-400' : 'text-white' }} tracking-tight">@rupiah($totalUnpaidKasbon)</span>
+                            <span class="text-xs font-semibold {{ $totalUnpaidKasbon > 0 ? 'text-amber-300/80' : 'text-slate-400' }}">({{ $totalUnpaidKasbonCount }})</span>
+                        </div>
+                    </div>
+                </a>
             </div>
         </div>
     </div>
 
-    <!-- Statistics Cards Grid (Modern Elevated Aesthetic) -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+    <!-- Alert Notifikasi Piutang Kasbon (Jika Ada Hutang Menggantung) -->
+    @if($totalUnpaidKasbon > 0)
+        <div class="mb-8 p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-300/80 dark:border-amber-700/60 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 shadow-xs">
+            <div class="flex items-center gap-3.5">
+                <div class="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-md shadow-amber-500/25">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </div>
+                <div>
+                    <h4 class="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2 flex-wrap">
+                        <span>Perhatian: Ada Piutang Kasbon Belum Lunas Sebesar @rupiah($totalUnpaidKasbon)</span>
+                        @if($overdueKasbonCount > 0)
+                            <span class="px-2 py-0.5 rounded-full text-[11px] font-extrabold bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300 border border-rose-300/80">
+                                {{ $overdueKasbonCount }} Lewat Jatuh Tempo
+                            </span>
+                        @endif
+                    </h4>
+                    <p class="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+                        Tercatat <strong>{{ $totalUnpaidKasbonCount }} transaksi kasbon pelanggan</strong> yang belum melunasi pembayaran (potensi laba tertahan: <strong class="text-amber-600 dark:text-amber-400 font-mono">+@rupiah($totalUnpaidKasbonProfit)</strong>).
+                    </p>
+                </div>
+            </div>
+            <a href="{{ route('kasbons.index') }}" class="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold shadow-sm shadow-amber-500/30 transition-all shrink-0">
+                <span>Buka Buku Kasbon</span>
+                <span>&rarr;</span>
+            </a>
+        </div>
+    @endif
+
+    <!-- Statistics Cards Grid (Modern Elevated Aesthetic - 5 Kolom Finansial) -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-5 mb-8">
         <!-- Pemasukan Hari Ini -->
         <div class="relative overflow-hidden bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-700/80 shadow-xs hover:shadow-md transition-all duration-200">
             <div class="flex items-center justify-between">
                 <span class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Pemasukan Hari Ini</span>
-                <div class="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shadow-2xs">
+                <div class="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shadow-xs">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12"/></svg>
                 </div>
             </div>
@@ -90,7 +136,7 @@
                         <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                         {{ $todayTransactionsCount }} transaksi
                     </span>
-                    <span>tercatat hari ini</span>
+                    <span>hari ini</span>
                 </div>
             </div>
         </div>
@@ -99,7 +145,7 @@
         <div class="relative overflow-hidden bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-700/80 shadow-xs hover:shadow-md transition-all duration-200">
             <div class="flex items-center justify-between">
                 <span class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Pengeluaran Hari Ini</span>
-                <div class="w-10 h-10 rounded-xl bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 flex items-center justify-center shadow-2xs">
+                <div class="w-10 h-10 rounded-xl bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 flex items-center justify-center shadow-xs">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 13l-5 5m0 0l-5-5m5 5V6"/></svg>
                 </div>
             </div>
@@ -111,7 +157,7 @@
                     <span class="inline-flex items-center gap-1 text-rose-600 font-semibold bg-rose-50 dark:bg-rose-950/40 px-2 py-0.5 rounded-md">
                         Operasional
                     </span>
-                    <span>& belanja persediaan</span>
+                    <span>& belanja toko</span>
                 </div>
             </div>
         </div>
@@ -120,7 +166,7 @@
         <div class="relative overflow-hidden bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-700/80 shadow-xs hover:shadow-md transition-all duration-200">
             <div class="flex items-center justify-between">
                 <span class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Laba Bersih Bulan Ini</span>
-                <div class="w-10 h-10 rounded-xl {{ $monthlyNetProfit >= 0 ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400' : 'bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400' }} flex items-center justify-center shadow-2xs">
+                <div class="w-10 h-10 rounded-xl {{ $monthlyNetProfit >= 0 ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400' : 'bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400' }} flex items-center justify-center shadow-xs">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 </div>
             </div>
@@ -132,16 +178,51 @@
                     <span class="inline-flex items-center gap-1 font-semibold {{ $monthlyNetProfit >= 0 ? 'text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40' : 'text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/40' }} px-2 py-0.5 rounded-md">
                         {{ $monthlyIncome > 0 ? round(($monthlyNetProfit / $monthlyIncome) * 100, 1) : 0 }}% Margin
                     </span>
-                    <span class="text-slate-400 text-[11px] font-mono">Net Profit Usaha</span>
+                    <span class="text-slate-400 text-[11px] font-mono">Net Profit</span>
                 </div>
             </div>
         </div>
+
+        <!-- Total Piutang Kasbon Menggantung -->
+        <a href="{{ route('kasbons.index') }}" class="relative overflow-hidden bg-white dark:bg-slate-800 rounded-2xl p-5 border {{ $totalUnpaidKasbon > 0 ? 'border-amber-300/90 dark:border-amber-700/80 shadow-xs' : 'border-slate-200/80 dark:border-slate-700/80 shadow-xs' }} hover:shadow-md hover:border-amber-400 dark:hover:border-amber-500 transition-all duration-200 group block">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">Total Piutang Kasbon</span>
+                <div class="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center shadow-xs">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                    </svg>
+                </div>
+            </div>
+            <div class="mt-4">
+                <div class="text-2xl font-black font-mono text-amber-600 dark:text-amber-400 tracking-tight">
+                    @rupiah($totalUnpaidKasbon)
+                </div>
+                <div class="mt-2 flex items-center justify-between text-xs text-slate-500">
+                    @if($overdueKasbonCount > 0)
+                        <span class="inline-flex items-center gap-1 text-rose-600 font-semibold bg-rose-50 dark:bg-rose-950/40 px-2 py-0.5 rounded-md">
+                            <span class="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse"></span>
+                            {{ $overdueKasbonCount }} jatuh tempo
+                        </span>
+                    @elseif($totalUnpaidKasbonCount > 0)
+                        <span class="inline-flex items-center gap-1 text-amber-700 dark:text-amber-300 font-semibold bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded-md">
+                            <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                            {{ $totalUnpaidKasbonCount }} pelanggan
+                        </span>
+                    @else
+                        <span class="inline-flex items-center gap-1 text-emerald-600 font-semibold bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md">
+                            Semua lunas
+                        </span>
+                    @endif
+                    <span class="text-indigo-600 dark:text-indigo-400 text-[11px] font-bold group-hover:underline">Buka Kasbon &rarr;</span>
+                </div>
+            </div>
+        </a>
 
         <!-- Stok Perlu Restock -->
         <div class="relative overflow-hidden bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-700/80 shadow-xs hover:shadow-md transition-all duration-200">
             <div class="flex items-center justify-between">
                 <span class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Stok Perlu Restock</span>
-                <div class="w-10 h-10 rounded-xl {{ $stockSummary['low_stock_count'] > 0 ? 'bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400' : 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400' }} flex items-center justify-center shadow-2xs">
+                <div class="w-10 h-10 rounded-xl {{ $stockSummary['low_stock_count'] > 0 ? 'bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400' : 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400' }} flex items-center justify-center shadow-xs">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
                 </div>
             </div>

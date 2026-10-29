@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\KasbonRequest;
 use App\Models\Category;
 use App\Models\Kasbon;
 use App\Models\Product;
@@ -98,27 +99,9 @@ class KasbonController extends Controller
         ));
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(KasbonRequest $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'customer_name' => 'required|string|max:150',
-            'customer_phone' => 'nullable|string|max:25',
-            'product_id' => 'nullable|exists:products,id',
-            'product_name' => 'nullable|string|max:255',
-            'quantity' => 'nullable|integer|min:1',
-            'cost_price' => 'nullable|numeric|min:0',
-            'amount' => 'required|numeric|min:100',
-            'debt_date' => 'required|date',
-            'due_date' => 'nullable|date|after_or_equal:debt_date',
-            'description' => 'nullable|string|max:500',
-            'notes' => 'nullable|string|max:500',
-        ], [
-            'customer_name.required' => 'Nama pelanggan / peminjam wajib diisi.',
-            'amount.required' => 'Nominal hutang wajib diisi.',
-            'amount.min' => 'Nominal hutang minimal Rp 100.',
-            'debt_date.required' => 'Tanggal berhutang wajib diisi.',
-            'due_date.after_or_equal' => 'Tanggal jatuh tempo tidak boleh sebelum tanggal berhutang.',
-        ]);
+        $validated = $request->validated();
 
         $quantity = (int) ($validated['quantity'] ?? 1);
         $amount = (float) $validated['amount'];
@@ -160,8 +143,8 @@ class KasbonController extends Controller
                 'notes' => $validated['notes'] ?? null,
             ]);
 
-            // Jika memilih produk stok fisik dari katalog, kurangi stok dan catat mutasi keluar
-            if ($product && $product->stock >= $quantity) {
+            // Kurangi stok dan catat mutasi keluar jika produk fisik dari katalog dipilih
+            if ($product) {
                 $stockBefore = $product->stock;
                 $product->decrement('stock', $quantity);
 
@@ -181,20 +164,15 @@ class KasbonController extends Controller
             ->with('success', "Kasbon an. {$validated['customer_name']} sebesar Rp " . number_format($amount, 0, ',', '.') . " (Estimasi Laba: Rp " . number_format($profit, 0, ',', '.') . ") berhasil dicatat.");
     }
 
-    public function update(Request $request, Kasbon $kasbon): RedirectResponse
+    public function update(KasbonRequest $request, Kasbon $kasbon): RedirectResponse
     {
-        $validated = $request->validate([
-            'customer_name' => 'required|string|max:150',
-            'customer_phone' => 'nullable|string|max:25',
-            'product_name' => 'nullable|string|max:255',
-            'quantity' => 'nullable|integer|min:1',
-            'cost_price' => 'nullable|numeric|min:0',
-            'amount' => 'required|numeric|min:100',
-            'debt_date' => 'required|date',
-            'due_date' => 'nullable|date|after_or_equal:debt_date',
-            'description' => 'nullable|string|max:500',
-            'notes' => 'nullable|string|max:500',
-        ]);
+        // Proteksi integritas pembukuan: Larang edit kasbon yang sudah lunas
+        if ($kasbon->status === 'paid') {
+            return redirect()->route('kasbons.index')
+                ->with('error', "Kasbon an. {$kasbon->customer_name} sudah berstatus LUNAS dan tercatat di pembukuan pemasukan. Batalkan status lunas terlebih dahulu jika ingin mengoreksi data.");
+        }
+
+        $validated = $request->validated();
 
         $quantity = (int) ($validated['quantity'] ?? $kasbon->quantity ?: 1);
         $amount = (float) $validated['amount'];

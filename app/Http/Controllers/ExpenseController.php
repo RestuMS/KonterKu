@@ -92,14 +92,18 @@ class ExpenseController extends Controller
 
     public function store(ExpenseRequest $request): RedirectResponse
     {
-        $invoiceNumber = 'EXP-' . Carbon::parse($request->transaction_date)->format('Ymd') . '-' . strtoupper(substr(uniqid(), -5));
+        $transactionDate = $request->filled('transaction_date') 
+            ? Carbon::parse($request->transaction_date) 
+            : now();
+
+        $invoiceNumber = 'EXP-' . $transactionDate->format('Ymd') . '-' . strtoupper(substr(uniqid(), -5));
 
         Transaction::create([
             'invoice_number' => $invoiceNumber,
             'type' => 'pengeluaran',
             'category_id' => $request->category_id,
             'user_id' => Auth::id(),
-            'transaction_date' => $request->transaction_date,
+            'transaction_date' => $transactionDate,
             'total_amount' => $request->amount,
             'payment_method' => $request->payment_method,
             'notes' => $request->notes,
@@ -107,6 +111,43 @@ class ExpenseController extends Controller
 
         return redirect()->route('expenses.index')
             ->with('success', "Pengeluaran {$invoiceNumber} senilai Rp " . number_format($request->amount, 0, ',', '.') . " berhasil dicatat.");
+    }
+
+    public function edit(Transaction $expense): View
+    {
+        if ($expense->type !== 'pengeluaran') {
+            abort(404);
+        }
+
+        $categories = Category::where('type', 'transaction')
+            ->orWhere(function($q) {
+                $q->where('type', 'all')->whereNotIn('name', ['Transfer Uang', 'Tarik Tunai']);
+            })
+            ->get();
+
+        return view('expenses.edit', compact('expense', 'categories'));
+    }
+
+    public function update(ExpenseRequest $request, Transaction $expense): RedirectResponse
+    {
+        if ($expense->type !== 'pengeluaran') {
+            abort(404);
+        }
+
+        $transactionDate = $request->filled('transaction_date') 
+            ? Carbon::parse($request->transaction_date) 
+            : $expense->transaction_date;
+
+        $expense->update([
+            'category_id' => $request->category_id,
+            'transaction_date' => $transactionDate,
+            'total_amount' => $request->amount,
+            'payment_method' => $request->payment_method,
+            'notes' => $request->notes,
+        ]);
+
+        return redirect()->route('expenses.index')
+            ->with('success', "Catatan pengeluaran {$expense->invoice_number} berhasil diperbarui.");
     }
 
     public function destroy(Transaction $expense): RedirectResponse

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Kasbon;
 use App\Models\Product;
 use App\Models\Transaction;
 use App\Models\TransactionItem;
@@ -16,6 +17,20 @@ class DashboardController extends Controller
         $today = Carbon::today();
         $startOfMonth = Carbon::now()->startOfMonth();
         $endOfMonth = Carbon::now()->endOfMonth();
+
+        // 1. Statistik Kasbon / Piutang Menggantung
+        $unpaidKasbonQuery = Kasbon::unpaid();
+        $totalUnpaidKasbon = (float) (clone $unpaidKasbonQuery)->sum('amount');
+        $totalUnpaidKasbonCount = (clone $unpaidKasbonQuery)->count();
+        $totalUnpaidKasbonProfit = (float) (clone $unpaidKasbonQuery)->sum('profit');
+        $overdueKasbonCount = (clone $unpaidKasbonQuery)
+            ->whereNotNull('due_date')
+            ->whereDate('due_date', '<', $today)
+            ->count();
+        $recentUnpaidKasbons = Kasbon::unpaid()
+            ->latest('debt_date')
+            ->take(4)
+            ->get();
 
         // 1. Statistik Hari Ini
         $todayIncome = (float) Transaction::where('type', 'pemasukan')
@@ -99,7 +114,12 @@ class DashboardController extends Controller
             'sevenDaysNetProfit',
             'sevenDaysNet',
             'avgDailyNetProfit',
-            'topProducts'
+            'topProducts',
+            'totalUnpaidKasbon',
+            'totalUnpaidKasbonCount',
+            'totalUnpaidKasbonProfit',
+            'overdueKasbonCount',
+            'recentUnpaidKasbons'
         ));
     }
 }

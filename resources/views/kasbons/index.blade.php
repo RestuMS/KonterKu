@@ -450,15 +450,24 @@
                                             </form>
                                         @endif
 
-                                        <!-- Tombol Edit Kasbon -->
-                                        <button
-                                            type="button"
-                                            @click='openEditModal(@json($k))'
-                                            class="p-2 rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-slate-800 transition-colors"
-                                            title="Edit Rincian Kasbon"
-                                        >
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
-                                        </button>
+                                        <!-- Tombol Edit Kasbon (Hanya untuk yang belum lunas) -->
+                                        @if($k->status === 'unpaid')
+                                            <button
+                                                type="button"
+                                                @click='openEditModal(@json($k))'
+                                                class="p-2 rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                                                title="Edit Rincian Kasbon"
+                                            >
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                                            </button>
+                                        @else
+                                            <span
+                                                class="p-2 rounded-xl text-slate-300 dark:text-slate-600 cursor-not-allowed inline-flex items-center"
+                                                title="Kasbon berstatus LUNAS terkunci dari edit untuk menjaga akurasi laporan kasir"
+                                            >
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                                            </span>
+                                        @endif
 
                                         <!-- Tombol Hapus Kasbon -->
                                         <form method="POST" action="{{ route('kasbons.destroy', $k) }}" onsubmit="return confirm('Yakin ingin menghapus catatan kasbon an. {{ $k->customer_name }}?')">
@@ -597,9 +606,15 @@
                         >
                             <option value="">-- Pilih Produk dari Katalog Konter (Atau Input Manual) --</option>
                             <template x-for="p in products" :key="p.id">
-                                <option :value="p.id" x-text="p.name + ' (Jual: Rp ' + Number(p.selling_price).toLocaleString('id-ID') + ' | Modal: Rp ' + Number(p.cost_price).toLocaleString('id-ID') + ')'"></option>
+                                <option :value="p.id" :disabled="p.stock <= 0" x-text="p.name + ' (Stok: ' + p.stock + ' | Jual: Rp ' + Number(p.selling_price).toLocaleString('id-ID') + ' | Modal: Rp ' + Number(p.cost_price).toLocaleString('id-ID') + ')' + (p.stock <= 0 ? ' [STOK KOSONG]' : '')"></option>
                             </template>
                         </select>
+
+                        <!-- Peringatan jika stok kurang dari Qty -->
+                        <div x-show="selectedProduct && selectedProduct.stock < (parseInt(createQuantity) || 1)" class="p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs flex items-center gap-2" style="display: none;">
+                            <span>⚠️</span>
+                            <span>Peringatan: Sisa stok produk ini hanya <strong x-text="selectedProduct ? selectedProduct.stock : 0"></strong> unit. Kurangi kuantitas atau tambah stok terlebih dahulu.</span>
+                        </div>
                     </div>
 
                     <!-- Nama Produk & Kuantitas -->
@@ -742,7 +757,8 @@
                         </button>
                         <button
                             type="submit"
-                            class="px-5 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black shadow-md shadow-indigo-600/25 transition-all"
+                            :disabled="selectedProduct && selectedProduct.stock < (parseInt(createQuantity) || 1)"
+                            class="px-5 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black shadow-md shadow-indigo-600/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                         >
                             Simpan Catatan Kasbon
                         </button>
@@ -1121,6 +1137,15 @@
                             this.createAmount = unitSelling * qty;
                             this.calculateProfit();
                         }
+                    },
+
+                    // Produk yang sedang dipilih
+                    get selectedProduct() {
+                        if (!this.selectedProductId) return null;
+                        const self = this;
+                        return this.products.find(function(item) {
+                            return item.id == self.selectedProductId;
+                        });
                     },
 
                     // Hitung Ulang Nominal & Laba

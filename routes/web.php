@@ -32,7 +32,7 @@ Route::middleware('auth')->group(function () {
     Route::resource('incomes', IncomeController::class);
 
     // Pengeluaran
-    Route::resource('expenses', ExpenseController::class)->except(['show', 'edit', 'update']);
+    Route::resource('expenses', ExpenseController::class)->except(['show']);
 
     // Buku Kasbon / Catatan Hutang Pelanggan
     Route::get('/kasbons', [KasbonController::class, 'index'])->name('kasbons.index');

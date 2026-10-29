@@ -118,10 +118,49 @@
                 qty: {{ old('quantity', 1) }},
                 categoryId: '{{ old('category_id', '') }}',
                 paymentMethod: '{{ old('payment_method', 'cash') }}',
-                transactionDate: '{{ old('transaction_date', now()->format('Y-m-d\TH:i')) }}',
+                transactionDate: '{{ old('transaction_date', '') }}',
+                isAutoTime: {{ old('transaction_date') ? 'false' : 'true' }},
+                currentTimeString: '',
+                currentDateString: '',
+                timerId: null,
                 notes: '{{ old('notes', '') }}',
                 submitting: false,
                 validationErrors: [],
+
+                // Update Jam & Tanggal Real-Time Otomatis
+                updateRealTime() {
+                    const now = new Date();
+                    const year = now.getFullYear();
+                    const month = String(now.getMonth() + 1).padStart(2, '0');
+                    const day = String(now.getDate()).padStart(2, '0');
+                    const hours = String(now.getHours()).padStart(2, '0');
+                    const minutes = String(now.getMinutes()).padStart(2, '0');
+                    const seconds = String(now.getSeconds()).padStart(2, '0');
+
+                    if (this.isAutoTime) {
+                        this.transactionDate = `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+                    }
+
+                    const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+                    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+                    this.currentDateString = `${days[now.getDay()]}, ${day} ${months[now.getMonth()]} ${year}`;
+                    this.currentTimeString = `${hours}:${minutes}:${seconds} WIB`;
+                },
+
+                toggleManualTime() {
+                    this.isAutoTime = !this.isAutoTime;
+                    if (this.isAutoTime) {
+                        this.updateRealTime();
+                    } else if (!this.transactionDate) {
+                        const now = new Date();
+                        const year = now.getFullYear();
+                        const month = String(now.getMonth() + 1).padStart(2, '0');
+                        const day = String(now.getDate()).padStart(2, '0');
+                        const hours = String(now.getHours()).padStart(2, '0');
+                        const minutes = String(now.getMinutes()).padStart(2, '0');
+                        this.transactionDate = `${year}-${month}-${day}T${hours}:${minutes}`;
+                    }
+                },
 
                 // Database Items
                 products: @json($productData),
@@ -343,6 +382,10 @@
                         return false;
                     }
 
+                    if (this.isAutoTime) {
+                        this.updateRealTime();
+                    }
+
                     this.submitting = true;
                     return true;
                 },
@@ -377,6 +420,11 @@
                 },
 
                 init() {
+                    this.updateRealTime();
+                    this.timerId = setInterval(() => {
+                        this.updateRealTime();
+                    }, 1000);
+
                     if (this.selectedProductId) {
                         const p = this.products.find(item => item.id == this.selectedProductId);
                         if (p) this.selectProduct(p);
@@ -1064,18 +1112,65 @@
                                 @enderror
                             </div>
 
-                            <!-- Tanggal & Waktu -->
+                            <!-- Tanggal & Waktu (Otomatis Real-Time) -->
                             <div>
-                                <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
-                                    Tanggal & Waktu Transaksi <span class="text-rose-500">*</span>
-                                </label>
-                                <input
-                                    type="datetime-local"
-                                    name="transaction_date"
-                                    x-model="transactionDate"
-                                    required
-                                    class="block w-full rounded-xl border @error('transaction_date') border-rose-500 ring-1 ring-rose-500 @else border-slate-300 dark:border-slate-600 @enderror bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-xs font-medium py-2 px-3 focus:ring-2 focus:ring-indigo-500 shadow-2xs"
+                                <div class="flex items-center justify-between mb-1.5">
+                                    <label class="text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                                        <svg class="w-3.5 h-3.5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                        </svg>
+                                        <span>Waktu Transaksi</span>
+                                    </label>
+                                    <button 
+                                        type="button" 
+                                        @click="toggleManualTime()"
+                                        class="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 hover:underline cursor-pointer flex items-center gap-1 transition-colors"
+                                    >
+                                        <span x-text="isAutoTime ? '✏️ Ubah Manual' : '🔄 Balik ke Otomatis'"></span>
+                                    </button>
+                                </div>
+
+                                <!-- Box Mode Otomatis Real-Time (Default: Kasir Tidak Perlu Set Jam) -->
+                                <div 
+                                    x-show="isAutoTime" 
+                                    class="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 flex items-center justify-between transition-all shadow-2xs"
                                 >
+                                    <div class="flex items-center gap-2.5 min-w-0">
+                                        <span class="relative flex h-2.5 w-2.5 shrink-0">
+                                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                            <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500 shadow-xs shadow-emerald-500/50"></span>
+                                        </span>
+                                        <div class="min-w-0">
+                                            <span class="text-[10px] font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-400 block leading-tight">
+                                                Otomatis Real-Time
+                                            </span>
+                                            <span class="text-xs font-semibold text-slate-700 dark:text-slate-300 truncate block mt-0.5" x-text="currentDateString"></span>
+                                        </div>
+                                    </div>
+                                    <div class="text-right shrink-0">
+                                        <span class="text-xs font-black font-mono text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/70 px-2 py-1 rounded-lg border border-indigo-200/60 dark:border-indigo-800/60 shadow-2xs inline-block" x-text="currentTimeString">
+                                            00:00:00 WIB
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <!-- Input Hidden Saat Otomatis Real-Time -->
+                                <template x-if="isAutoTime">
+                                    <input type="hidden" name="transaction_date" :value="transactionDate">
+                                </template>
+
+                                <!-- Mode Manual (Jika Kasir Ingin Input Transaksi Terlewat / Mundur) -->
+                                <div x-show="!isAutoTime" x-cloak class="space-y-1.5">
+                                    <input
+                                        type="datetime-local"
+                                        name="transaction_date"
+                                        x-model="transactionDate"
+                                        :disabled="isAutoTime"
+                                        class="block w-full rounded-xl border @error('transaction_date') border-rose-500 ring-1 ring-rose-500 @else border-indigo-300 dark:border-indigo-600 @enderror bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-xs font-medium py-2 px-3 focus:ring-2 focus:ring-indigo-500 shadow-2xs"
+                                    >
+                                    <p class="text-[10px] text-slate-500 dark:text-slate-400">Mode manual aktif. Masukkan tanggal & waktu sesuai transaksi yang terlewat.</p>
+                                </div>
+
                                 @error('transaction_date')
                                     <p class="text-[11px] text-rose-500 font-bold mt-1">{{ $message }}</p>
                                 @enderror
