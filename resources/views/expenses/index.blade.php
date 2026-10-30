@@ -213,6 +213,72 @@
                 @endif
             </div>
 
+            <!-- Preset Kategori Cepat (Disesuaikan dengan Form Input Pengeluaran) -->
+            <div class="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-thin text-xs pt-2 border-t border-slate-100 dark:border-slate-800">
+                <span class="text-slate-400 text-[11px] uppercase tracking-wider font-bold mr-1 flex items-center gap-1 shrink-0">
+                    <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
+                    <span>Kategori:</span>
+                </span>
+
+                <!-- Semua Kategori -->
+                <a
+                    href="{{ route('expenses.index', array_merge(request()->except(['category_id', 'page']))) }}"
+                    class="px-3 py-1.5 rounded-xl transition-all cursor-pointer shrink-0 {{ !request('category_id') ? 'bg-rose-600 text-white font-bold shadow-xs' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200' }}"
+                >
+                    Semua
+                </a>
+
+                @if(isset($presetCategories['jajan']) && $presetCategories['jajan'])
+                    <a
+                        href="{{ route('expenses.index', array_merge(request()->except(['page']), ['category_id' => $presetCategories['jajan']->id])) }}"
+                        class="px-3 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shrink-0 {{ request('category_id') == $presetCategories['jajan']->id ? 'bg-rose-600 text-white font-bold shadow-xs' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200' }}"
+                    >
+                        <span>🍔</span>
+                        <span>Beli Jajan</span>
+                    </a>
+                @endif
+
+                @if(isset($presetCategories['kuota']) && $presetCategories['kuota'])
+                    <a
+                        href="{{ route('expenses.index', array_merge(request()->except(['page']), ['category_id' => $presetCategories['kuota']->id])) }}"
+                        class="px-3 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shrink-0 {{ request('category_id') == $presetCategories['kuota']->id ? 'bg-sky-600 text-white font-bold shadow-xs' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200' }}"
+                    >
+                        <span>⚡</span>
+                        <span>Beli Kuota</span>
+                    </a>
+                @endif
+
+                @if(isset($presetCategories['mainan']) && $presetCategories['mainan'])
+                    <a
+                        href="{{ route('expenses.index', array_merge(request()->except(['page']), ['category_id' => $presetCategories['mainan']->id])) }}"
+                        class="px-3 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shrink-0 {{ request('category_id') == $presetCategories['mainan']->id ? 'bg-purple-600 text-white font-bold shadow-xs' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200' }}"
+                    >
+                        <span>🎮</span>
+                        <span>Beli Mainan</span>
+                    </a>
+                @endif
+
+                @if(isset($presetCategories['bensin']) && $presetCategories['bensin'])
+                    <a
+                        href="{{ route('expenses.index', array_merge(request()->except(['page']), ['category_id' => $presetCategories['bensin']->id])) }}"
+                        class="px-3 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shrink-0 {{ request('category_id') == $presetCategories['bensin']->id ? 'bg-emerald-600 text-white font-bold shadow-xs' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200' }}"
+                    >
+                        <span>⛽</span>
+                        <span>Beli Bensin</span>
+                    </a>
+                @endif
+
+                @if(isset($presetCategories['operasional']) && $presetCategories['operasional'])
+                    <a
+                        href="{{ route('expenses.index', array_merge(request()->except(['page']), ['category_id' => $presetCategories['operasional']->id])) }}"
+                        class="px-3 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shrink-0 {{ request('category_id') == $presetCategories['operasional']->id ? 'bg-indigo-600 text-white font-bold shadow-xs' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200' }}"
+                    >
+                        <span>🏢</span>
+                        <span>Operasional Toko</span>
+                    </a>
+                @endif
+            </div>
+
             <!-- Form Filter Input Fields -->
             <form method="GET" action="{{ route('expenses.index') }}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3.5 pt-3 border-t border-slate-100 dark:border-slate-800">
                 <!-- Pencarian (4 Col) -->

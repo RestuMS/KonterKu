@@ -13,8 +13,19 @@ use Illuminate\Support\Facades\Route;
 
 // Rute Autentikasi Publik
 Route::middleware('guest')->group(function () {
+    // Login
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
     Route::post('/login', [AuthController::class, 'login'])->name('login.post');
+
+    // Registrasi Akun Baru
+    Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
+    Route::post('/register', [AuthController::class, 'register'])->name('register.post');
+
+    // Lupa & Reset Kata Sandi
+    Route::get('/forgot-password', [AuthController::class, 'showForgotPassword'])->name('password.request');
+    Route::post('/forgot-password', [AuthController::class, 'sendResetLink'])->name('password.email');
+    Route::get('/reset-password/{token}', [AuthController::class, 'showResetPassword'])->name('password.reset');
+    Route::post('/reset-password', [AuthController::class, 'resetPassword'])->name('password.update');
 });
 
 // Rute Internal Aplikasi (Wajib Autentikasi)
@@ -27,6 +38,13 @@ Route::middleware('auth')->group(function () {
 
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+    // Saldo Deposit Server & Aplikasi All Provider (Tunggal)
+    Route::get('/server-deposits/mutations', [\App\Http\Controllers\ServerDepositController::class, 'mutations'])->name('server-deposit.mutations');
+    Route::post('/server-deposit/topup', [\App\Http\Controllers\ServerDepositController::class, 'topup'])->name('server-deposit.topup');
+    Route::post('/server-deposit/adjust', [\App\Http\Controllers\ServerDepositController::class, 'adjust'])->name('server-deposit.adjust');
+    Route::put('/server-deposit/settings', [\App\Http\Controllers\ServerDepositController::class, 'updateSettings'])->name('server-deposit.settings');
+    Route::resource('server-deposits', \App\Http\Controllers\ServerDepositController::class)->only(['update']);
 
     // Pemasukan / Penjualan
     Route::resource('incomes', IncomeController::class);

@@ -9,3 +9,31 @@
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
 }
+
+/* Custom Micro-Animations untuk Tampilan Hidup & Interaktif */
+@keyframes shine {
+    0% { left: -100%; }
+    100% { left: 200%; }
+}
+
+@keyframes float-slow {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-8px); }
+}
+
+@keyframes pulse-glow {
+    0%, 100% { opacity: 0.2; transform: scale(1); }
+    50% { opacity: 0.35; transform: scale(1.06); }
+}
+
+.animate-shine {
+    animation: shine 2s ease-in-out infinite;
+}
+
+.animate-float {
+    animation: float-slow 4s ease-in-out infinite;
+}
+
+.animate-pulse-glow {
+    animation: pulse-glow 6s ease-in-out infinite;
+}

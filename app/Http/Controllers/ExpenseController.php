@@ -44,11 +44,33 @@ class ExpenseController extends Controller
 
         $expenses = $query->latest('transaction_date')->paginate(12)->withQueryString();
         
-        $categories = Category::where('type', 'transaction')
-            ->orWhere(function($q) {
-                $q->where('type', 'all')->whereNotIn('name', ['Transfer Uang', 'Tarik Tunai']);
-            })
+        // Pastikan kategori preset pengeluaran standar selalu tersedia
+        $standardPresets = [
+            ['name' => 'Beli Jajan', 'slug' => 'jajan'],
+            ['name' => 'Beli Kuota', 'slug' => 'beli-kuota'],
+            ['name' => 'Beli Mainan', 'slug' => 'beli-mainan'],
+            ['name' => 'Beli Bensin', 'slug' => 'beli-bensin'],
+            ['name' => 'Operasional Toko', 'slug' => 'operasional-toko'],
+        ];
+        foreach ($standardPresets as $preset) {
+            Category::firstOrCreate(
+                ['slug' => $preset['slug']],
+                ['name' => $preset['name'], 'type' => 'expense']
+            );
+        }
+
+        $categories = Category::whereIn('type', ['expense', 'transaction', 'all'])
+            ->whereNotIn('name', ['Transfer Uang', 'Tarik Tunai', 'Pulsa All Provider'])
+            ->orderBy('name')
             ->get();
+
+        $presetCategories = [
+            'jajan'       => $categories->first(fn($c) => str_contains(strtolower($c->name), 'jajan') || str_contains(strtolower($c->slug), 'jajan')),
+            'kuota'       => $categories->first(fn($c) => str_contains(strtolower($c->name), 'kuota') || str_contains(strtolower($c->slug), 'kuota')),
+            'mainan'      => $categories->first(fn($c) => str_contains(strtolower($c->name), 'mainan') || str_contains(strtolower($c->slug), 'mainan')),
+            'bensin'      => $categories->first(fn($c) => str_contains(strtolower($c->name), 'bensin') || str_contains(strtolower($c->slug), 'bensin')),
+            'operasional' => $categories->first(fn($c) => str_contains(strtolower($c->name), 'operasional') || str_contains(strtolower($c->slug), 'operasional')),
+        ];
 
         $totalAmount = (clone $query)->sum('total_amount');
 
@@ -66,6 +88,7 @@ class ExpenseController extends Controller
         return view('expenses.index', compact(
             'expenses', 
             'categories', 
+            'presetCategories',
             'totalAmount', 
             'todayAmount', 
             'monthAmount'
@@ -74,10 +97,24 @@ class ExpenseController extends Controller
 
     public function create(): View
     {
-        $categories = Category::where('type', 'transaction')
-            ->orWhere(function($q) {
-                $q->where('type', 'all')->whereNotIn('name', ['Transfer Uang', 'Tarik Tunai']);
-            })
+        // Pastikan kategori preset pengeluaran standar selalu tersedia
+        $standardPresets = [
+            ['name' => 'Beli Jajan', 'slug' => 'jajan'],
+            ['name' => 'Beli Kuota', 'slug' => 'beli-kuota'],
+            ['name' => 'Beli Mainan', 'slug' => 'beli-mainan'],
+            ['name' => 'Beli Bensin', 'slug' => 'beli-bensin'],
+            ['name' => 'Operasional Toko', 'slug' => 'operasional-toko'],
+        ];
+        foreach ($standardPresets as $preset) {
+            Category::firstOrCreate(
+                ['slug' => $preset['slug']],
+                ['name' => $preset['name'], 'type' => 'expense']
+            );
+        }
+
+        $categories = Category::whereIn('type', ['expense', 'transaction', 'all'])
+            ->whereNotIn('name', ['Transfer Uang', 'Tarik Tunai', 'Pulsa All Provider'])
+            ->orderBy('name')
             ->get();
 
         // 5 pengeluaran terakhir untuk referensi cepat kasir

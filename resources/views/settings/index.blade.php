@@ -437,6 +437,7 @@
                         <h3 class="text-sm font-black uppercase tracking-wider text-slate-900 dark:text-white">
                             Profil Pengguna Aktif
                         </h3>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Kelola informasi nama dan kontak akun yang sedang digunakan saat ini.</p>
                     </div>
 
                     <form method="POST" action="{{ route('settings.profile') }}" class="space-y-4">
@@ -445,13 +446,34 @@
 
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Nama Lengkap</label>
-                                <input type="text" name="name" value="{{ old('name', $user->name) }}" required class="w-full px-3 py-2 rounded-xl border text-xs">
+                                <x-input
+                                    label="Nama Lengkap"
+                                    name="name"
+                                    type="text"
+                                    value="{{ old('name', $user->name) }}"
+                                    required
+                                />
                             </div>
                             <div>
-                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Alamat Email</label>
-                                <input type="email" name="email" value="{{ old('email', $user->email) }}" required class="w-full px-3 py-2 rounded-xl border text-xs">
+                                <x-input
+                                    label="Alamat Email"
+                                    name="email"
+                                    type="email"
+                                    value="{{ old('email', $user->email) }}"
+                                    required
+                                />
                             </div>
+                        </div>
+
+                        <div>
+                            <x-input
+                                label="Nomor HP / WhatsApp"
+                                name="phone"
+                                type="tel"
+                                placeholder="081234567890"
+                                value="{{ old('phone', $user->phone) }}"
+                                helper="Nomor kontak pengelola konter."
+                            />
                         </div>
 
                         <div class="pt-3 flex justify-end">
@@ -468,6 +490,7 @@
                         <h3 class="text-sm font-black uppercase tracking-wider text-slate-900 dark:text-white">
                             Ganti Kata Sandi
                         </h3>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Pastikan kata sandi baru Anda aman dan tidak mudah ditebak oleh orang lain.</p>
                     </div>
 
                     <form method="POST" action="{{ route('settings.password') }}" class="space-y-4">
@@ -475,23 +498,39 @@
                         @method('PUT')
 
                         <div>
-                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Kata Sandi Saat Ini</label>
-                            <input type="password" name="current_password" required class="w-full px-3 py-2 rounded-xl border text-xs">
+                            <x-input
+                                label="Kata Sandi Saat Ini"
+                                name="current_password"
+                                type="password"
+                                placeholder="••••••••"
+                                required
+                            />
                         </div>
 
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Kata Sandi Baru</label>
-                                <input type="password" name="password" required class="w-full px-3 py-2 rounded-xl border text-xs">
+                                <x-input
+                                    label="Kata Sandi Baru"
+                                    name="password"
+                                    type="password"
+                                    placeholder="Minimal 6 karakter"
+                                    required
+                                    helper="Minimal 6 karakter."
+                                />
                             </div>
                             <div>
-                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Konfirmasi Sandi Baru</label>
-                                <input type="password" name="password_confirmation" required class="w-full px-3 py-2 rounded-xl border text-xs">
+                                <x-input
+                                    label="Konfirmasi Sandi Baru"
+                                    name="password_confirmation"
+                                    type="password"
+                                    placeholder="Ulangi kata sandi baru"
+                                    required
+                                />
                             </div>
                         </div>
 
                         <div class="pt-3 flex justify-end">
-                            <x-button type="submit" variant="danger" size="sm">
+                            <x-button type="submit" variant="primary" size="sm">
                                 Ganti Kata Sandi
                             </x-button>
                         </div>

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Kasbon;
 use App\Models\Product;
+use App\Models\ServerDeposit;
 use App\Models\Transaction;
 use App\Models\TransactionItem;
 use App\Services\ReportService;
@@ -93,6 +94,9 @@ class DashboardController extends Controller
         // 6. 5 Produk Terlaris
         $topProducts = $reportService->getTopProducts(5);
 
+        // 7. Catatan Saldo Deposit Server Aplikasi Tunggal
+        $serverDeposit = ServerDeposit::getPrimary();
+
         return view('dashboard.index', compact(
             'todayIncome',
             'todayExpense',
@@ -119,7 +123,8 @@ class DashboardController extends Controller
             'totalUnpaidKasbonCount',
             'totalUnpaidKasbonProfit',
             'overdueKasbonCount',
-            'recentUnpaidKasbons'
+            'recentUnpaidKasbons',
+            'serverDeposit'
         ));
     }
 }

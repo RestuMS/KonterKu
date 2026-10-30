@@ -94,11 +94,56 @@ class IncomeController extends Controller
 
             $invoiceNumber = 'TRX-' . $transactionDate->format('Ymd') . '-' . strtoupper(substr(uniqid(), -5));
 
+            // Otomatis tentukan identitas tujuan untuk voucher fisik & perdana jika kosong
+            $target = trim($request->customer_target ?? '');
+            if (empty($target)) {
+                $cat = Category::find($request->category_id);
+                $catName = strtolower($cat?->name ?? '');
+                $prodName = strtolower($request->product_name ?? '');
+
+                $detectedBrand = '';
+                $brands = ['Telkomsel', 'Indosat', 'Smartfren', 'Axis', 'By.U', 'Tri', 'XL'];
+                foreach ($brands as $b) {
+                    if (str_contains($catName, strtolower($b)) || str_contains($prodName, strtolower($b)) || ($b === 'Tri' && (str_contains($catName, 'three') || str_contains($prodName, 'three')))) {
+                        $detectedBrand = $b;
+                        break;
+                    }
+                }
+
+                if (str_contains($catName, 'voucher') || str_contains($prodName, 'voucher')) {
+                    $target = $detectedBrand ? "Voucher {$detectedBrand}" : "Voucher Fisik";
+                } elseif (str_contains($catName, 'perdana') || str_contains($prodName, 'perdana')) {
+                    $target = $detectedBrand ? "Perdana {$detectedBrand}" : "Kartu Perdana";
+                }
+            }
+
             $notes = trim(
-                ($request->customer_target ? 'No. Tujuan: ' . $request->customer_target : '') .
-                ($request->customer_target && $request->notes ? ' | ' : '') .
+                ($target ? 'No. Tujuan: ' . $target : '') .
+                ($target && $request->notes ? ' | ' : '') .
                 ($request->notes ?? '')
             ) ?: null;
+
+            $qty = max(1, (int) ($request->quantity ?? 1));
+            $rawAmount = (float) $request->amount;
+            $unitPrice = $request->filled('unit_price') ? (float) $request->unit_price : ($rawAmount / $qty);
+
+            // Deteksi & koreksi otomatis jika amount yang dikirim adalah harga satuan (safety fallback)
+            if ($qty > 1) {
+                if ($request->filled('unit_price') && (float) $request->unit_price > 0) {
+                    if (abs($rawAmount - (float) $request->unit_price) < 0.01) {
+                        $rawAmount = (float) $request->unit_price * $qty;
+                    }
+                } elseif ($request->filled('product_id')) {
+                    $catProd = Product::find($request->product_id);
+                    if ($catProd && abs($rawAmount - (float) $catProd->selling_price) < 0.01) {
+                        $rawAmount = (float) $catProd->selling_price * $qty;
+                        $unitPrice = (float) $catProd->selling_price;
+                    }
+                }
+            }
+
+            $totalAmount = $rawAmount;
+            $unitPrice = $totalAmount / $qty;
 
             $transaction = Transaction::create([
                 'invoice_number' => $invoiceNumber,
@@ -106,15 +151,17 @@ class IncomeController extends Controller
                 'category_id' => $request->category_id,
                 'user_id' => Auth::id(),
                 'transaction_date' => $transactionDate,
-                'total_amount' => $request->amount,
+                'total_amount' => $totalAmount,
                 'payment_method' => $request->payment_method,
                 'notes' => $notes,
             ]);
 
+            // Hitung modal HPP yang memotong saldo server aplikasi konter
+            $deductDepositAmount = 0;
+
             // Jika transaksi terkait produk dari katalog
             if ($request->filled('product_id')) {
                 $product = Product::lockForUpdate()->findOrFail($request->product_id);
-                $qty = (int) ($request->quantity ?? 1);
 
                 if ($product->stock < $qty) {
                     DB::rollBack();
@@ -122,6 +169,7 @@ class IncomeController extends Controller
                 }
 
                 $costPrice = $request->filled('cost_price') ? (float)$request->cost_price : (float)$product->cost_price;
+                $deductDepositAmount = $costPrice > 0 ? ($costPrice * $qty) : $totalAmount;
 
                 TransactionItem::create([
                     'transaction_id' => $transaction->id,
@@ -129,8 +177,8 @@ class IncomeController extends Controller
                     'product_name' => $product->name,
                     'quantity' => $qty,
                     'cost_price' => $costPrice,
-                    'unit_price' => $request->amount / $qty,
-                    'subtotal' => $request->amount,
+                    'unit_price' => $unitPrice,
+                    'subtotal' => $totalAmount,
                 ]);
 
                 // Kurangi stok produk secara atomik
@@ -144,8 +192,8 @@ class IncomeController extends Controller
                 );
             } elseif ($request->filled('product_name')) {
                 // Jika transaksi jasa / produk manual tanpa ID katalog
-                $qty = (int) ($request->quantity ?? 1);
                 $costPrice = (float) ($request->cost_price ?? 0);
+                $deductDepositAmount = $costPrice > 0 ? ($costPrice * $qty) : $totalAmount;
 
                 TransactionItem::create([
                     'transaction_id' => $transaction->id,
@@ -153,15 +201,29 @@ class IncomeController extends Controller
                     'product_name' => $request->product_name,
                     'quantity' => $qty,
                     'cost_price' => $costPrice,
-                    'unit_price' => $request->amount / $qty,
-                    'subtotal' => $request->amount,
+                    'unit_price' => $unitPrice,
+                    'subtotal' => $totalAmount,
                 ]);
+            }
+
+            // Otomatis kurangi saldo server deposit aplikasi konter
+            if ($deductDepositAmount > 0) {
+                \App\Models\ServerDeposit::deductBalance(
+                    $deductDepositAmount, 
+                    "Penjualan invoice: {$invoiceNumber}", 
+                    Transaction::class, 
+                    $transaction->id
+                );
             }
 
             DB::commit();
 
             return redirect()->route('incomes.index')
-                ->with('success', "Transaksi pemasukan {$invoiceNumber} berhasil dicatat.");
+                ->with('success', "Transaksi pemasukan {$invoiceNumber} berhasil dicatat.")
+                ->with('recent_invoice_id', $transaction->id)
+                ->with('recent_invoice_number', $invoiceNumber)
+                ->with('recent_invoice_amount', $transaction->total_amount)
+                ->with('recent_invoice_method', $transaction->payment_method);
         } catch (\Throwable $e) {
             DB::rollBack();
             return back()->withInput()->with('error', 'Gagal menyimpan transaksi pemasukan: ' . $e->getMessage());
@@ -240,18 +302,35 @@ class IncomeController extends Controller
         try {
             $income->load('items.product');
 
-            // Jika ada item produk yang terjual, kembalikan stoknya secara aman
+            // 1. Jika ada item produk fisik, kembalikan stok fisik & kurangi 'stok out' pada mutasi stok
+            $refundDepositAmount = 0;
             foreach ($income->items as $item) {
                 if ($item->product) {
-                    $stockService->addStock(
-                        $item->product,
-                        $item->quantity,
-                        Transaction::class,
-                        $income->id,
-                        "Pembatalan transaksi invoice: {$income->invoice_number}",
-                        Auth::id()
-                    );
+                    // Hapus pencatatan mutasi stok 'out' dari transaksi ini agar 'stok out' berkurang kembali
+                    \App\Models\StockMutation::where('product_id', $item->product_id)
+                        ->where('reference_type', Transaction::class)
+                        ->where('reference_id', $income->id)
+                        ->delete();
+
+                    // Kembalikan stok fisik produk ke inventaris toko
+                    $item->product->increment('stock', $item->quantity);
                 }
+                $refundDepositAmount += ($item->cost_price > 0 ? ($item->cost_price * $item->quantity) : $item->subtotal);
+            }
+
+            if ($refundDepositAmount == 0 && $income->total_amount > 0) {
+                $refundDepositAmount = (float) $income->total_amount;
+            }
+
+            // 2. Kembalikan saldo deposit server aplikasi
+            $deposit = null;
+            if ($refundDepositAmount > 0) {
+                $deposit = \App\Models\ServerDeposit::addBalance(
+                    $refundDepositAmount,
+                    "Pembatalan transaksi invoice: {$income->invoice_number}",
+                    Transaction::class,
+                    $income->id
+                );
             }
 
             $invoice = $income->invoice_number;
@@ -260,8 +339,14 @@ class IncomeController extends Controller
 
             DB::commit();
 
-            return redirect()->route('incomes.index')
-                ->with('success', "Transaksi {$invoice} berhasil dibatalkan dan stok dikembalikan ke inventaris.");
+            $msg = "Transaksi {$invoice} berhasil dibatalkan.";
+            if ($deposit && $refundDepositAmount > 0) {
+                $msg .= " Stok dikembalikan & Saldo Server sebesar Rp " . number_format($refundDepositAmount, 0, ',', '.') . " telah dikembalikan (Sisa saldo server: Rp " . number_format($deposit->balance, 0, ',', '.') . ").";
+            } else {
+                $msg .= " Stok telah dikembalikan ke inventaris.";
+            }
+
+            return redirect()->route('incomes.index')->with('success', $msg);
         } catch (\Throwable $e) {
             DB::rollBack();
             return back()->with('error', 'Gagal membatalkan transaksi: ' . $e->getMessage());

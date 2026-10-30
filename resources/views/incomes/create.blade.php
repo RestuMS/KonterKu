@@ -105,7 +105,7 @@
                 transferAdminFee: 5000,
                 transferAccount: '',
                 transferRecipient: '',
-                bankList: ['BRI', 'BNI', 'BCA', 'Mandiri', 'BSI', 'SeaBank', 'Bank Jago', 'DANA', 'GoPay', 'ShopeePay', 'OVO', 'Lainnya'],
+                bankList: ['BRI', 'BCA', 'BNI', 'Mandiri', 'BSI', 'SeaBank', 'Bank Jago', 'CIMB Niaga', 'Permata', 'Lainnya'],
                 nominalShortcuts: [50000, 100000, 200000, 300000, 500000, 1000000, 2000000],
                 feeShortcuts: [3000, 5000, 7000, 10000],
 
@@ -114,7 +114,8 @@
                 productName: '{{ old('product_name', '') }}',
                 customerTarget: '{{ old('customer_target', '') }}',
                 costPrice: {{ old('cost_price', 0) }},
-                sellingPrice: {{ old('amount', 0) }},
+                sellingPrice: {{ old('unit_price', old('amount') && old('quantity') ? ((float)old('amount') / (int)old('quantity')) : old('amount', 0)) }},
+                totalAmount: {{ old('amount', 0) }},
                 qty: {{ old('quantity', 1) }},
                 categoryId: '{{ old('category_id', '') }}',
                 paymentMethod: '{{ old('payment_method', 'cash') }}',
@@ -197,6 +198,16 @@
                     this.activeCategory = catId;
                     this.activeBrand = 'all';
                     this.autoMatchCategoryDb();
+                    this.autoFillTarget();
+                },
+
+                // Ganti Filter Brand
+                selectBrand(brand) {
+                    this.activeBrand = brand;
+                    this.autoMatchCategoryDb();
+                    if (this.isTargetAuto) {
+                        this.autoFillTarget();
+                    }
                 },
 
                 // Filter Produk Berdasarkan Kategori, Brand & Pencarian
@@ -246,17 +257,37 @@
                     });
                 },
 
+                // Sinkronisasi Harga Satuan & Total Bayar
+                updateTotalFromUnit() {
+                    const u = parseFloat(this.sellingPrice) || 0;
+                    const q = parseInt(this.qty) || 1;
+                    this.totalAmount = Math.round(u * q);
+                },
+
+                updateUnitFromTotal() {
+                    const tot = parseFloat(this.totalAmount) || 0;
+                    const q = parseInt(this.qty) || 1;
+                    this.sellingPrice = q > 0 ? Math.round((tot / q) * 100) / 100 : tot;
+                },
+
+                onQtyChange(newQty) {
+                    this.qty = Math.max(1, parseInt(newQty) || 1);
+                    this.updateTotalFromUnit();
+                },
+
                 // Pilih Produk dari Katalog
                 selectProduct(prod) {
                     if (!prod) return;
                     this.selectedProductId = prod.id;
                     this.productName = prod.name;
-                    this.costPrice = prod.cost_price;
-                    this.sellingPrice = prod.selling_price;
+                    this.costPrice = parseFloat(prod.cost_price) || 0;
+                    this.sellingPrice = parseFloat(prod.selling_price) || 0;
                     this.qty = 1;
+                    this.totalAmount = this.sellingPrice;
                     if (prod.category_id) {
                         this.categoryId = prod.category_id;
                     }
+                    this.autoFillTarget(prod);
                     this.validationErrors = [];
                 },
 
@@ -266,8 +297,9 @@
                     this.productName = '';
                     this.costPrice = 0;
                     this.sellingPrice = 0;
-                    this.customerTarget = '';
+                    this.totalAmount = 0;
                     this.validationErrors = [];
+                    this.autoFillTarget();
                 },
 
                 // Hitung Layanan Transfer & Tarik Tunai
@@ -281,6 +313,7 @@
                     this.costPrice = nom;
                     this.sellingPrice = nom + fee;
                     this.qty = 1;
+                    this.totalAmount = nom + fee;
                     this.customerTarget = this.transferAccount;
                     
                     let title = (isTransfer ? 'Transfer ' : 'Tarik Tunai ') + bank + ' Rp ' + this.formatRupiah(nom);
@@ -339,8 +372,8 @@
                     }
 
                     // 3. Validasi Total Bayar Pelanggan
-                    const jual = parseFloat(this.sellingPrice) || 0;
-                    if (jual <= 0) {
+                    const tot = parseFloat(this.totalAmount) || 0;
+                    if (tot <= 0) {
                         this.validationErrors.push('Total bayar pelanggan (harga jual) wajib diisi dan harus lebih besar dari Rp 0.');
                     }
 
@@ -367,7 +400,22 @@
                         }
                     }
 
-                    // 7. Validasi Ketersediaan Stok Katalog
+                    // 7. Validasi Nomor Tujuan Pelanggan (Pulsa, Paket Data, Token PLN, E-Wallet)
+                    if (this.isTargetRequired) {
+                        const targetVal = (this.customerTarget || '').trim();
+                        if (!targetVal) {
+                            let label = 'Nomor tujuan / No. HP';
+                            if (this.activeCategory === 'token_pln') label = 'Nomor meteran / ID Pelanggan PLN';
+                            else if (this.activeCategory === 'ewallet') label = 'Nomor HP tujuan akun E-Wallet';
+                            else if (this.activeCategory === 'pulsa') label = 'Nomor HP tujuan pulsa';
+                            else if (this.activeCategory === 'paket_data') label = 'Nomor HP tujuan paket data';
+                            else if (this.mode === 'transfer') label = 'Nomor rekening / nomor HP tujuan';
+
+                            this.validationErrors.push(`${label} wajib diisi untuk transaksi ini.`);
+                        }
+                    }
+
+                    // 8. Validasi Ketersediaan Stok Katalog
                     if (this.selectedProductId && this.currentSelectedProduct) {
                         if (this.currentSelectedProduct.stock < q) {
                             this.validationErrors.push('Stok produk ' + this.currentSelectedProduct.name + ' tidak mencukupi (sisa: ' + this.currentSelectedProduct.stock + ' ' + this.currentSelectedProduct.unit + ', diminta: ' + q + ' ' + this.currentSelectedProduct.unit + ').');
@@ -390,7 +438,80 @@
                     return true;
                 },
 
+                // Deteksi Brand dari Nama Produk / Kategori
+                detectBrand(text) {
+                    if (!text) return '';
+                    const lower = text.toLowerCase();
+                    const brands = ['Telkomsel', 'Indosat', 'Smartfren', 'Axis', 'By.U', 'Tri', 'XL'];
+                    for (const b of brands) {
+                        if (lower.includes(b.toLowerCase()) || (b === 'Tri' && (lower.includes('three') || /\b3\b/.test(lower)))) {
+                            return b;
+                        }
+                    }
+                    return '';
+                },
+
+                // Status Wajib / Otomatis Nomor Tujuan
+                get isTargetRequired() {
+                    if (this.mode === 'transfer') return true;
+                    return ['pulsa', 'paket_data', 'token_pln', 'ewallet'].includes(this.activeCategory);
+                },
+
+                get isTargetAuto() {
+                    return ['voucher', 'perdana'].includes(this.activeCategory);
+                },
+
+                get targetLabel() {
+                    if (this.mode === 'transfer') {
+                        return this.transferType === 'transfer' ? 'No. Rekening / No. HP Tujuan' : 'No. Rekening / No. HP Penarik';
+                    }
+                    if (this.activeCategory === 'pulsa') return 'No. HP Tujuan Pulsa';
+                    if (this.activeCategory === 'paket_data') return 'No. HP Penerima Paket Data';
+                    if (this.activeCategory === 'token_pln') return 'No. Meteran / ID Pelanggan PLN';
+                    if (this.activeCategory === 'ewallet') return 'No. HP Akun E-Wallet';
+                    if (this.activeCategory === 'voucher') return 'Identitas Voucher Fisik';
+                    if (this.activeCategory === 'perdana') return 'Identitas Kartu Perdana';
+                    return 'No. Tujuan / Rek / ID Pelanggan';
+                },
+
+                get targetPlaceholder() {
+                    if (this.mode === 'transfer') return '0812-xxxx / No. Rekening';
+                    if (this.activeCategory === 'pulsa') return 'Contoh: 081234567890 (No HP Pulsa)';
+                    if (this.activeCategory === 'paket_data') return 'Contoh: 081234567890 (No HP Paket)';
+                    if (this.activeCategory === 'token_pln') return 'Contoh: 1421xxxxxxxx (No Meter PLN)';
+                    if (this.activeCategory === 'ewallet') return 'Contoh: 081234567890 (No Akun E-Wallet)';
+                    if (this.activeCategory === 'voucher') return 'Voucher Tri / Fisik';
+                    if (this.activeCategory === 'perdana') return 'Perdana Tri / Kartu Perdana';
+                    return '0812-xxxx / No Tujuan';
+                },
+
+                // Otomatis Isi Target untuk Voucher Fisik & Kartu Perdana
+                autoFillTarget(prod = null) {
+                    if (this.mode === 'transfer') return;
+
+                    if (this.activeCategory === 'voucher') {
+                        const nameToScan = prod ? prod.name : (this.productName || '');
+                        const brand = this.detectBrand(nameToScan) || (this.activeBrand !== 'all' ? this.activeBrand : '');
+                        this.customerTarget = brand ? `Voucher ${brand}` : 'Voucher Fisik';
+                    } else if (this.activeCategory === 'perdana') {
+                        const nameToScan = prod ? prod.name : (this.productName || '');
+                        const brand = this.detectBrand(nameToScan) || (this.activeBrand !== 'all' ? this.activeBrand : '');
+                        this.customerTarget = brand ? `Perdana ${brand}` : 'Kartu Perdana';
+                    } else {
+                        // Jika sebelumnya terisi otomatis Voucher / Perdana, kosongkan agar kasir input nomor HP
+                        if (this.customerTarget && (this.customerTarget.startsWith('Voucher') || this.customerTarget.startsWith('Perdana'))) {
+                            this.customerTarget = '';
+                        }
+                    }
+                },
+
                 // Kalkulasi Laba & Omzet
+                get totalCost() {
+                    const modal = parseFloat(this.costPrice) || 0;
+                    const q = parseInt(this.qty) || 1;
+                    return modal * q;
+                },
+
                 get unitProfit() {
                     const jual = parseFloat(this.sellingPrice) || 0;
                     const modal = parseFloat(this.costPrice) || 0;
@@ -398,20 +519,18 @@
                 },
 
                 get totalProfit() {
-                    const q = parseInt(this.qty) || 1;
-                    return this.unitProfit * q;
+                    const tot = parseFloat(this.totalAmount) || 0;
+                    return tot - this.totalCost;
                 },
 
                 get profitMargin() {
-                    const jual = parseFloat(this.sellingPrice) || 0;
-                    if (jual <= 0) return '0';
-                    return ((this.unitProfit / jual) * 100).toFixed(1);
+                    const tot = parseFloat(this.totalAmount) || 0;
+                    if (tot <= 0) return '0';
+                    return ((this.totalProfit / tot) * 100).toFixed(1);
                 },
 
                 get totalRevenue() {
-                    const jual = parseFloat(this.sellingPrice) || 0;
-                    const q = parseInt(this.qty) || 1;
-                    return jual * q;
+                    return parseFloat(this.totalAmount) || 0;
                 },
 
                 get currentSelectedProduct() {
@@ -429,7 +548,15 @@
                         const p = this.products.find(item => item.id == this.selectedProductId);
                         if (p) this.selectProduct(p);
                     } else {
+                        if (!this.totalAmount && this.sellingPrice) {
+                            this.updateTotalFromUnit();
+                        } else if (this.totalAmount && !this.sellingPrice) {
+                            this.updateUnitFromTotal();
+                        }
                         this.autoMatchCategoryDb();
+                        if (!this.customerTarget && this.isTargetAuto) {
+                            this.autoFillTarget();
+                        }
                     }
                 }
             };
@@ -599,7 +726,7 @@
                                 <div class="flex items-center gap-1.5 flex-wrap">
                                     <button
                                         type="button"
-                                        @click="activeBrand = 'all'"
+                                        @click="selectBrand('all')"
                                         :class="activeBrand === 'all' 
                                             ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold shadow-xs' 
                                             : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 font-semibold'"
@@ -610,7 +737,7 @@
                                     <template x-for="brand in currentBrands" :key="brand">
                                         <button
                                             type="button"
-                                            @click="activeBrand = brand"
+                                            @click="selectBrand(brand)"
                                             :class="activeBrand === brand 
                                                 ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold shadow-xs' 
                                                 : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 font-semibold'"
@@ -747,10 +874,10 @@
                             </div>
                         </div>
 
-                        <!-- Pilihan Bank / Channel (BNI, BRI, BCA, Mandiri, dll.) -->
+                        <!-- Pilihan Bank Tujuan (BNI, BRI, BCA, Mandiri, dll.) -->
                         <div>
                             <label class="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
-                                Pilih Bank / E-Wallet Tujuan:
+                                Pilih Bank Tujuan:
                             </label>
                             <div class="flex items-center gap-1.5 flex-wrap">
                                 <template x-for="bank in bankList" :key="bank">
@@ -772,7 +899,7 @@
                                     type="text"
                                     x-model="customBank"
                                     @input="applyTransfer()"
-                                    placeholder="Ketik nama bank / channel..."
+                                    placeholder="Ketik nama bank lainnya..."
                                     class="w-full px-3.5 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-xs font-bold text-slate-900 dark:text-white"
                                 >
                             </div>
@@ -929,24 +1056,40 @@
                             <!-- No. Tujuan / Rekening Pelanggan -->
                             <div>
                                 <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
-                                    <span>No. Tujuan / Rek / ID Pelanggan</span>
-                                    <span class="text-slate-400 font-normal lowercase">(opsional)</span>
+                                    <span class="flex items-center gap-1">
+                                        <span x-text="targetLabel"></span>
+                                        <span x-show="isTargetRequired" class="text-rose-500 font-bold">*</span>
+                                    </span>
+                                    <span 
+                                        :class="isTargetRequired ? 'text-rose-600 dark:text-rose-400 font-bold' : (isTargetAuto ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-slate-400 font-normal')"
+                                        class="text-[10px] font-mono"
+                                        x-text="isTargetRequired ? 'Wajib diisi' : (isTargetAuto ? '⚡ Otomatis' : 'Opsional')"
+                                    ></span>
                                 </label>
                                 <div class="relative">
                                     <input
                                         type="text"
                                         name="customer_target"
                                         x-model="customerTarget"
-                                        placeholder="0812-xxxx / No Meteran / No Rekening"
+                                        :placeholder="targetPlaceholder"
+                                        :required="isTargetRequired"
                                         class="w-full pl-3.5 pr-10 py-2.5 rounded-xl border @error('customer_target') border-rose-500 ring-1 ring-rose-500 @else border-slate-300 dark:border-slate-600 @enderror bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-mono font-medium focus:ring-2 focus:ring-indigo-500 shadow-2xs"
                                     >
                                     <span class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 pointer-events-none text-xs">
-                                        📞
+                                        <span x-show="activeCategory === 'token_pln'">⚡</span>
+                                        <span x-show="['pulsa', 'paket_data'].includes(activeCategory)">📱</span>
+                                        <span x-show="activeCategory === 'ewallet'">👛</span>
+                                        <span x-show="activeCategory === 'voucher'">🎟️</span>
+                                        <span x-show="activeCategory === 'perdana'">💳</span>
+                                        <span x-show="mode === 'transfer'">🏦</span>
                                     </span>
                                 </div>
                                 @error('customer_target')
                                     <p class="text-[11px] text-rose-500 font-bold mt-1">{{ $message }}</p>
                                 @enderror
+                                <span x-show="isTargetAuto" class="text-[10px] text-indigo-600 dark:text-indigo-400 mt-1 block font-semibold">
+                                    Identitas nomor / jenis kartu terisi otomatis (bisa disesuaikan jika perlu).
+                                </span>
                             </div>
 
                             <!-- Kategori Transaksi -->
@@ -976,8 +1119,9 @@
                             <div class="grid grid-cols-2 gap-3 pt-1">
                                 <!-- Harga Modal -->
                                 <div>
-                                    <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
-                                        Modal / HPP (Rp)
+                                    <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1 flex items-center justify-between">
+                                        <span>Modal Satuan (HPP)</span>
+                                        <span class="text-[10px] text-amber-600 dark:text-amber-400 font-mono font-bold" x-show="qty > 1" x-text="'Total: Rp ' + formatRupiah(totalCost)"></span>
                                     </label>
                                     <div class="relative">
                                         <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 font-bold text-xs pointer-events-none">Rp</span>
@@ -1003,21 +1147,22 @@
                                     <div class="flex items-center">
                                         <button
                                             type="button"
-                                            @click="qty = Math.max(1, (parseInt(qty) || 1) - 1)"
-                                            class="px-2.5 py-2 rounded-l-xl border border-r-0 border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-750 text-slate-600 dark:text-slate-300 font-bold text-xs"
+                                            @click="onQtyChange((parseInt(qty) || 1) - 1)"
+                                            class="px-2.5 py-2 rounded-l-xl border border-r-0 border-slate-300 dark:border-slate-600 bg-slate-100 hover:bg-slate-200 dark:bg-slate-750 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold text-xs cursor-pointer transition-colors"
                                         >-</button>
                                         <input
                                             type="number"
                                             name="quantity"
                                             min="1"
                                             x-model.number="qty"
+                                            @input="onQtyChange(qty)"
                                             required
                                             class="w-full py-2 border-y @error('quantity') border-rose-500 ring-1 ring-rose-500 @else border-slate-300 dark:border-slate-600 @enderror bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-mono font-bold text-center"
                                         >
                                         <button
                                             type="button"
-                                            @click="qty = (parseInt(qty) || 1) + 1"
-                                            class="px-2.5 py-2 rounded-r-xl border border-l-0 border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-750 text-slate-600 dark:text-slate-300 font-bold text-xs"
+                                            @click="onQtyChange((parseInt(qty) || 1) + 1)"
+                                            class="px-2.5 py-2 rounded-r-xl border border-l-0 border-slate-300 dark:border-slate-600 bg-slate-100 hover:bg-slate-200 dark:bg-slate-750 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold text-xs cursor-pointer transition-colors"
                                         >+</button>
                                     </div>
                                     @error('quantity')
@@ -1026,28 +1171,54 @@
                                 </div>
                             </div>
 
-                            <!-- Total Bayar Pelanggan (Harga Jual Satuan) -->
-                            <div class="pt-1">
-                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
-                                    <span>Total Bayar Pelanggan <span class="text-rose-500">*</span></span>
-                                    <span class="text-[11px] text-indigo-600 dark:text-indigo-400 font-semibold font-mono" x-show="qty > 1" x-text="'Total: Rp ' + formatRupiah(totalRevenue)"></span>
-                                </label>
-                                <div class="relative">
-                                    <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-indigo-600 font-bold text-sm pointer-events-none">Rp</span>
-                                    <input
-                                        type="number"
-                                        name="amount"
-                                        min="0.01"
-                                        step="0.01"
-                                        x-model.number="sellingPrice"
-                                        required
-                                        placeholder="0"
-                                        class="w-full pl-11 pr-3.5 py-3 rounded-xl border @error('amount') border-rose-500 ring-1 ring-rose-500 @else border-indigo-300 dark:border-indigo-600 @enderror bg-indigo-50/30 dark:bg-indigo-950/30 text-indigo-700 dark:text-indigo-300 text-base font-mono font-black focus:ring-2 focus:ring-indigo-500 shadow-2xs"
-                                    >
+                            <!-- Harga Jual Satuan & Total Bayar Pelanggan -->
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                                <!-- Harga Jual Satuan -->
+                                <div>
+                                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1">
+                                        Harga Satuan (Rp)
+                                    </label>
+                                    <div class="relative">
+                                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 font-bold text-xs pointer-events-none">Rp</span>
+                                        <input
+                                            type="number"
+                                            name="unit_price"
+                                            min="0"
+                                            step="0.01"
+                                            x-model.number="sellingPrice"
+                                            @input="updateTotalFromUnit()"
+                                            placeholder="0"
+                                            class="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-xs font-mono font-bold focus:ring-2 focus:ring-indigo-500 shadow-2xs"
+                                        >
+                                    </div>
+                                    <span class="text-[10px] text-slate-400 mt-0.5 block">Harga per 1 unit/barang</span>
                                 </div>
-                                @error('amount')
-                                    <p class="text-[11px] text-rose-500 font-bold mt-1">{{ $message }}</p>
-                                @enderror
+
+                                <!-- Total Bayar Pelanggan (Omzet yang Masuk) -->
+                                <div>
+                                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
+                                        <span>Total Bayar <span class="text-rose-500">*</span></span>
+                                        <span class="text-[10px] text-indigo-600 dark:text-indigo-400 font-bold font-mono" x-show="qty > 1" x-text="qty + 'x @ Rp ' + formatRupiah(sellingPrice)"></span>
+                                    </label>
+                                    <div class="relative">
+                                        <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-indigo-600 font-bold text-sm pointer-events-none">Rp</span>
+                                        <input
+                                            type="number"
+                                            name="amount"
+                                            min="0.01"
+                                            step="0.01"
+                                            x-model.number="totalAmount"
+                                            @input="updateUnitFromTotal()"
+                                            required
+                                            placeholder="0"
+                                            class="w-full pl-11 pr-3.5 py-2.5 rounded-xl border @error('amount') border-rose-500 ring-1 ring-rose-500 @else border-indigo-300 dark:border-indigo-600 @enderror bg-indigo-50/30 dark:bg-indigo-950/30 text-indigo-700 dark:text-indigo-300 text-base font-mono font-black focus:ring-2 focus:ring-indigo-500 shadow-2xs"
+                                        >
+                                    </div>
+                                    @error('amount')
+                                        <p class="text-[11px] text-rose-500 font-bold mt-1">{{ $message }}</p>
+                                    @enderror
+                                    <span class="text-[10px] text-indigo-600/80 dark:text-indigo-400/80 mt-0.5 block font-semibold">Uang masuk yang dibayar pembeli</span>
+                                </div>
                             </div>
 
                             <!-- Kartu Laba Real-Time & Peringatan Rugi -->
@@ -1060,21 +1231,21 @@
                                 </div>
                                 <div class="text-right font-mono">
                                     <span 
-                                        :class="unitProfit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'"
+                                        :class="totalProfit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'"
                                         class="text-base font-black block" 
-                                        x-text="(unitProfit >= 0 ? '+ Rp ' : '- Rp ') + formatRupiah(Math.abs(totalProfit))"
+                                        x-text="(totalProfit >= 0 ? '+ Rp ' : '- Rp ') + formatRupiah(Math.abs(totalProfit))"
                                     ></span>
                                 </div>
                             </div>
 
                             <!-- Peringatan Jual di Bawah Modal (Jika Rugi) -->
                             <div 
-                                x-show="unitProfit < 0 && sellingPrice > 0" 
+                                x-show="totalProfit < 0 && totalAmount > 0" 
                                 class="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/50 border border-amber-300 dark:border-amber-800 text-[11px] text-amber-800 dark:text-amber-200 flex items-center gap-2 font-semibold"
                                 style="display: none;"
                             >
                                 <span class="text-sm">⚠️</span>
-                                <span>Peringatan: Harga jual lebih kecil dari modal kulakan (Potensi rugi Rp <strong x-text="formatRupiah(Math.abs(totalProfit))"></strong>).</span>
+                                <span>Peringatan: Total bayar lebih kecil dari modal kulakan (Potensi rugi Rp <strong x-text="formatRupiah(Math.abs(totalProfit))"></strong>).</span>
                             </div>
 
                             <!-- Metode Pembayaran -->

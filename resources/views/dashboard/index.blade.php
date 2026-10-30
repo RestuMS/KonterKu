@@ -247,6 +247,9 @@
         </div>
     </div>
 
+    <!-- WIDGET CATATAN SALDO APLIKASI & SERVER KONTER -->
+    @include('dashboard.partials.server-deposits-widget')
+
     <!-- 1. Row: Grafik Tren Laba Bersih 7 Hari Terakhir & Peringatan Stok Menipis -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         <!-- Grafik Tren Laba Bersih (Chart.js Modern Canvas) -->

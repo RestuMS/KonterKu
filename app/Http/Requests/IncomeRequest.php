@@ -31,6 +31,7 @@ class IncomeRequest extends FormRequest
             'category_id'      => ['required', 'exists:categories,id'],
             'payment_method'   => ['required', 'in:cash,transfer,qris'],
             'amount'           => ['required', 'numeric', 'gt:0'],
+            'unit_price'       => ['nullable', 'numeric', 'min:0'],
             'quantity'         => ['required', 'integer', 'min:1', 'max:10000'],
             'cost_price'       => ['nullable', 'numeric', 'min:0'],
             'customer_target'  => ['nullable', 'string', 'max:100'],
@@ -73,17 +74,38 @@ class IncomeRequest extends FormRequest
     {
         $validator->after(function ($validator) {
             if (!$this->isMethod('PUT') && !$this->isMethod('PATCH')) {
-                // 1. Validasi Layanan Transfer / Tarik Tunai di Backend
+                // 1. Validasi Nomor Tujuan / Rekening sesuai Kategori Transaksi
                 if ($this->filled('category_id')) {
                     $category = \App\Models\Category::find($this->category_id);
                     if ($category) {
                         $catName = strtolower($category->name);
-                        $isTransferService = str_contains($catName, 'transfer') || str_contains($catName, 'tarik tunai');
-                        if ($isTransferService && empty(trim($this->customer_target ?? ''))) {
-                            $validator->errors()->add(
-                                'customer_target',
-                                "Nomor rekening / nomor tujuan / ID pelanggan wajib diisi untuk transaksi {$category->name}."
-                            );
+                        $slug = strtolower($category->slug ?? '');
+                        $prodName = strtolower($this->product_name ?? '');
+
+                        $isVoucher = str_contains($catName, 'voucher') || str_contains($slug, 'voucher') || str_contains($prodName, 'voucher');
+                        $isPerdana = str_contains($catName, 'perdana') || str_contains($slug, 'perdana') || str_contains($prodName, 'perdana');
+
+                        // Voucher fisik & kartu perdana otomatis, tidak wajib nomor HP pembeli
+                        if (!$isVoucher && !$isPerdana) {
+                            $isTransfer = str_contains($catName, 'transfer') || str_contains($catName, 'tarik tunai') || str_contains($slug, 'transfer') || str_contains($slug, 'tarik');
+                            $isToken = str_contains($catName, 'token') || str_contains($catName, 'pln') || str_contains($slug, 'token') || str_contains($slug, 'pln');
+                            $isEwallet = str_contains($catName, 'wallet') || str_contains($catName, 'dana') || str_contains($catName, 'gopay') || str_contains($catName, 'shopee') || str_contains($catName, 'ovo') || str_contains($catName, 'seabank') || str_contains($slug, 'wallet') || str_contains($slug, 'ewallet');
+                            $isData = str_contains($catName, 'paket') || str_contains($catName, 'data') || str_contains($catName, 'kuota') || str_contains($catName, 'internet') || str_contains($slug, 'paket') || str_contains($slug, 'data') || str_contains($slug, 'internet');
+                            $isPulsa = str_contains($catName, 'pulsa') || str_contains($slug, 'pulsa');
+
+                            $targetVal = trim($this->customer_target ?? '');
+
+                            if ($isTransfer && empty($targetVal)) {
+                                $validator->errors()->add('customer_target', "Nomor rekening / nomor tujuan wajib diisi untuk transaksi {$category->name}.");
+                            } elseif ($isToken && empty($targetVal)) {
+                                $validator->errors()->add('customer_target', 'Nomor meteran / ID Pelanggan PLN wajib diisi untuk transaksi Token Listrik.');
+                            } elseif ($isEwallet && empty($targetVal)) {
+                                $validator->errors()->add('customer_target', 'Nomor HP tujuan akun E-Wallet wajib diisi.');
+                            } elseif ($isData && empty($targetVal)) {
+                                $validator->errors()->add('customer_target', 'Nomor HP tujuan paket data wajib diisi.');
+                            } elseif ($isPulsa && empty($targetVal)) {
+                                $validator->errors()->add('customer_target', 'Nomor HP tujuan pulsa wajib diisi.');
+                            }
                         }
                     }
                 }

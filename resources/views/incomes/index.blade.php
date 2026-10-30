@@ -26,6 +26,73 @@
     @endphp
 
     <div class="space-y-6">
+        @if(session('recent_invoice_id'))
+            <!-- ================================================================= -->
+            <!-- BANNER SUKSES KASIR DENGAN OPSI CETAK STRUK & TRANSAKSI BARU      -->
+            <!-- ================================================================= -->
+            <div 
+                x-data="{ show: true }" 
+                x-show="show" 
+                x-transition:enter="transition ease-out duration-300"
+                x-transition:enter-start="opacity-0 -translate-y-2 scale-98"
+                x-transition:enter-end="opacity-100 translate-y-0 scale-100"
+                class="p-5 sm:p-6 rounded-3xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 text-white shadow-xl shadow-emerald-600/20 border border-emerald-400/40 relative overflow-hidden"
+            >
+                <div class="absolute -right-10 -bottom-10 w-44 h-44 rounded-full bg-white/10 blur-2xl pointer-events-none"></div>
+                <div class="relative flex flex-col md:flex-row md:items-center md:justify-between gap-5">
+                    <div class="flex items-start sm:items-center gap-4">
+                        <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shrink-0 shadow-inner border border-white/25">
+                            <span class="text-2xl sm:text-3xl">🎉</span>
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2.5 flex-wrap">
+                                <h3 class="text-base sm:text-lg font-black tracking-tight">Transaksi Kasir Berhasil Dicatat!</h3>
+                                <span class="px-2.5 py-0.5 rounded-full bg-black/25 text-emerald-100 font-mono text-xs font-bold border border-white/20 tracking-wider">
+                                    {{ session('recent_invoice_number') }}
+                                </span>
+                            </div>
+                            <p class="text-xs sm:text-sm text-emerald-100 mt-1">
+                                Total Omzet Diterima: <span class="font-bold text-white text-sm sm:text-base">@rupiah(session('recent_invoice_amount'))</span>
+                                @if(session('recent_invoice_method'))
+                                    <span class="mx-1.5 opacity-60">&bull;</span>
+                                    Metode: <span class="font-bold uppercase tracking-wider text-white">{{ session('recent_invoice_method') }}</span>
+                                @endif
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Tombol Opsi Cepat Kasir -->
+                    <div class="flex items-center gap-2.5 flex-wrap self-start md:self-auto">
+                        <a 
+                            href="{{ route('incomes.show', session('recent_invoice_id')) }}?auto_print=1" 
+                            target="_blank"
+                            class="px-4 py-2.5 rounded-2xl bg-white text-emerald-900 hover:bg-emerald-50 font-black text-xs sm:text-sm shadow-lg shadow-black/15 hover:shadow-xl transition-all flex items-center gap-2 active:scale-95 cursor-pointer"
+                        >
+                            <span class="text-base">🖨️</span>
+                            <span>Langsung Cetak Struk</span>
+                        </a>
+
+                        <a 
+                            href="{{ route('incomes.create') }}" 
+                            class="px-4 py-2.5 rounded-2xl bg-emerald-800/80 hover:bg-emerald-800 text-white font-bold text-xs sm:text-sm border border-white/30 shadow-sm transition-all flex items-center gap-2 active:scale-95 cursor-pointer"
+                        >
+                            <span class="text-base">⚡</span>
+                            <span>Transaksi Kasir Baru</span>
+                        </a>
+
+                        <button 
+                            type="button" 
+                            @click="show = false" 
+                            class="w-9 h-9 rounded-xl bg-black/15 hover:bg-black/25 flex items-center justify-center text-white/80 hover:text-white transition-colors cursor-pointer"
+                            title="Tutup Banner"
+                        >
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        @endif
+
         <!-- ================================================================= -->
         <!-- 1. HEADER HALAMAN ELEGAN & CERAH (LIGHT & AIRY)                   -->
         <!-- ================================================================= -->
@@ -465,38 +532,11 @@
                                             type="button"
                                             @click="$dispatch('open-modal', 'cancel-income-{{ $inc->id }}')"
                                             class="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
-                                            title="Batalkan & Kembalikan Stok"
+                                            title="Batalkan & Kembalikan Saldo/Stok"
                                         >
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                                         </button>
                                     </div>
-
-                                    <!-- Modal Konfirmasi Pembatalan -->
-                                    <x-modal name="cancel-income-{{ $inc->id }}" title="Konfirmasi Pembatalan Transaksi">
-                                        <div class="text-left text-sm text-slate-600 dark:text-slate-400 space-y-3">
-                                            <p>Apakah Anda yakin ingin membatalkan transaksi pemasukan <strong>{{ $inc->invoice_number }}</strong> senilai <strong>@rupiah($inc->total_amount)</strong>?</p>
-                                            
-                                            @if($inc->items->isNotEmpty())
-                                                <div class="p-3.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-xl text-amber-800 dark:text-amber-300 text-xs flex items-start gap-2">
-                                                    <svg class="w-5 h-5 text-amber-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
-                                                    <span><strong>Perlindungan Stok:</strong> Stok produk pada transaksi ini akan secara otomatis dikembalikan ke inventaris fisik konter secara aman.</span>
-                                                </div>
-                                            @endif
-                                        </div>
-
-                                        <x-slot:footer>
-                                            <x-button type="button" variant="secondary" size="sm" @click="$dispatch('close-modal', 'cancel-income-{{ $inc->id }}')">
-                                                Tutup
-                                            </x-button>
-                                            <form method="POST" action="{{ route('incomes.destroy', $inc) }}">
-                                                @csrf
-                                                @method('DELETE')
-                                                <x-button type="submit" variant="danger" size="sm">
-                                                    Ya, Batalkan Transaksi
-                                                </x-button>
-                                            </form>
-                                        </x-slot:footer>
-                                    </x-modal>
                                 </td>
                             </tr>
                         @empty
@@ -579,6 +619,13 @@
                                 <a href="{{ route('incomes.edit', $inc) }}" class="px-3 py-1.5 text-xs rounded-xl border border-amber-200 dark:border-amber-800 font-bold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40">
                                     Edit
                                 </a>
+                                <button
+                                    type="button"
+                                    @click="$dispatch('open-modal', 'cancel-income-{{ $inc->id }}')"
+                                    class="px-3 py-1.5 text-xs rounded-xl border border-rose-200 dark:border-rose-800 font-bold text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 transition-colors cursor-pointer"
+                                >
+                                    Batal
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -594,5 +641,49 @@
                 {{ $incomes->links() }}
             </div>
         </div>
+
+        <!-- Modal Konfirmasi Pembatalan Transaksi (Desktop & Mobile) -->
+        @foreach($incomes as $inc)
+            @php
+                $refundAmount = $inc->cost_price > 0 ? $inc->cost_price : $inc->total_amount;
+            @endphp
+            <x-modal name="cancel-income-{{ $inc->id }}" title="Konfirmasi Pembatalan Transaksi">
+                <div class="text-left text-sm text-slate-600 dark:text-slate-400 space-y-3">
+                    <p>Apakah Anda yakin ingin membatalkan transaksi pemasukan <strong>{{ $inc->invoice_number }}</strong> senilai <strong>@rupiah($inc->total_amount)</strong>?</p>
+                    
+                    <!-- Informasi Pengembalian Saldo Server -->
+                    <div class="p-3.5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-xl text-emerald-800 dark:text-emerald-300 text-xs flex items-start gap-2.5">
+                        <svg class="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+                        <div>
+                            <strong class="font-bold">Pengembalian Saldo Server (Refund):</strong>
+                            <p class="mt-0.5">Saldo deposit server Anda sebesar <span class="font-bold font-mono">@rupiah($refundAmount)</span> akan secara otomatis <strong class="underline decoration-emerald-500">dikembalikan (refund)</strong> ke saldo server aplikasi.</p>
+                        </div>
+                    </div>
+
+                    @if($inc->items->isNotEmpty())
+                        <div class="p-3.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-xl text-amber-800 dark:text-amber-300 text-xs flex items-start gap-2.5">
+                            <svg class="w-5 h-5 text-amber-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                            <div>
+                                <strong class="font-bold">Perlindungan Stok:</strong>
+                                <p class="mt-0.5">Stok produk fisik pada transaksi ini akan secara otomatis dikembalikan ke inventaris konter secara aman.</p>
+                            </div>
+                        </div>
+                    @endif
+                </div>
+
+                <x-slot:footer>
+                    <x-button type="button" variant="secondary" size="sm" @click="$dispatch('close-modal', 'cancel-income-{{ $inc->id }}')">
+                        Tutup
+                    </x-button>
+                    <form method="POST" action="{{ route('incomes.destroy', $inc) }}">
+                        @csrf
+                        @method('DELETE')
+                        <x-button type="submit" variant="danger" size="sm">
+                            Ya, Batalkan & Kembalikan Saldo
+                        </x-button>
+                    </form>
+                </x-slot:footer>
+            </x-modal>
+        @endforeach
     </div>
 </x-layouts.app>

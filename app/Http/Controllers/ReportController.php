@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Category;
+use App\Models\Kasbon;
 use App\Models\Product;
 use App\Models\Setting;
 use App\Models\StockMutation;
@@ -28,6 +29,7 @@ class ReportController extends Controller
         $paymentMethod = $request->input('payment_method');
         $stockStatus = $request->input('stock_status', 'all');
         $mutationType = $request->input('mutation_type');
+        $kasbonStatus = $request->input('kasbon_status', 'all');
 
         $start = Carbon::parse($startDate)->startOfDay();
         $end = Carbon::parse($endDate)->endOfDay();
@@ -47,6 +49,8 @@ class ReportController extends Controller
         $productsSummary = [];
         $mutations = null;
         $mutationsSummary = [];
+        $kasbons = null;
+        $kasbonsSummary = [];
 
         if ($tab === 'pemasukan') {
             $incomesQuery = Transaction::with(['category', 'user', 'items'])
@@ -180,6 +184,45 @@ class ReportController extends Controller
             $mutations = $mutationsQuery->latest('created_at')->paginate(15)->withQueryString();
         }
 
+        if ($tab === 'kasbon') {
+            $kasbonsQuery = Kasbon::with(['product', 'user', 'transaction'])
+                ->whereBetween('debt_date', [$start->toDateString(), $end->toDateString()]);
+
+            if ($search) {
+                $kasbonsQuery->where(function ($q) use ($search) {
+                    $q->where('customer_name', 'like', "%{$search}%")
+                      ->orWhere('customer_phone', 'like', "%{$search}%")
+                      ->orWhere('product_name', 'like', "%{$search}%")
+                      ->orWhere('description', 'like', "%{$search}%")
+                      ->orWhere('notes', 'like', "%{$search}%");
+                });
+            }
+
+            if ($kasbonStatus === 'unpaid') {
+                $kasbonsQuery->where('status', 'unpaid');
+            } elseif ($kasbonStatus === 'paid') {
+                $kasbonsQuery->where('status', 'paid');
+            }
+
+            $allFilteredKasbons = (clone $kasbonsQuery)->get();
+            $todayDate = Carbon::today()->toDateString();
+
+            $kasbonsSummary = [
+                'total_amount' => (float) $allFilteredKasbons->sum('amount'),
+                'total_count' => $allFilteredKasbons->count(),
+                'unpaid_amount' => (float) $allFilteredKasbons->where('status', 'unpaid')->sum('amount'),
+                'unpaid_count' => $allFilteredKasbons->where('status', 'unpaid')->count(),
+                'paid_amount' => (float) $allFilteredKasbons->where('status', 'paid')->sum('amount'),
+                'paid_count' => $allFilteredKasbons->where('status', 'paid')->count(),
+                'overdue_count' => $allFilteredKasbons->filter(function($k) use ($todayDate) {
+                    return $k->status === 'unpaid' && !empty($k->due_date) && $k->due_date < $todayDate;
+                })->count(),
+                'total_profit' => (float) $allFilteredKasbons->sum('profit'),
+            ];
+
+            $kasbons = $kasbonsQuery->latest('debt_date')->latest('id')->paginate(15)->withQueryString();
+        }
+
         return view('reports.index', compact(
             'tab',
             'startDate',
@@ -189,6 +232,7 @@ class ReportController extends Controller
             'paymentMethod',
             'stockStatus',
             'mutationType',
+            'kasbonStatus',
             'categories',
             'financialSummary',
             'incomes',
@@ -198,7 +242,9 @@ class ReportController extends Controller
             'products',
             'productsSummary',
             'mutations',
-            'mutationsSummary'
+            'mutationsSummary',
+            'kasbons',
+            'kasbonsSummary'
         ));
     }
 
@@ -231,6 +277,25 @@ class ReportController extends Controller
 
         $products = Product::with('category')->orderBy('name')->get();
 
+        $kasbons = Kasbon::with(['product', 'user', 'transaction'])
+            ->whereBetween('debt_date', [$start->toDateString(), $end->toDateString()])
+            ->latest('debt_date')
+            ->latest('id')
+            ->get();
+
+        $todayDate = Carbon::today()->toDateString();
+        $kasbonsSummary = [
+            'total_amount' => (float) $kasbons->sum('amount'),
+            'total_count' => $kasbons->count(),
+            'unpaid_amount' => (float) $kasbons->where('status', 'unpaid')->sum('amount'),
+            'unpaid_count' => $kasbons->where('status', 'unpaid')->count(),
+            'paid_amount' => (float) $kasbons->where('status', 'paid')->sum('amount'),
+            'paid_count' => $kasbons->where('status', 'paid')->count(),
+            'overdue_count' => $kasbons->filter(function($k) use ($todayDate) {
+                return $k->status === 'unpaid' && !empty($k->due_date) && $k->due_date < $todayDate;
+            })->count(),
+        ];
+
         return view('reports.print', compact(
             'tab',
             'startDate',
@@ -239,6 +304,8 @@ class ReportController extends Controller
             'incomes',
             'expenses',
             'products',
+            'kasbons',
+            'kasbonsSummary',
             'shopName',
             'shopPhone',
             'shopAddress'
@@ -254,7 +321,11 @@ class ReportController extends Controller
         $start = Carbon::parse($startDate)->startOfDay();
         $end = Carbon::parse($endDate)->endOfDay();
 
-        $tabName = $tab === 'laba_rugi' ? 'Laba-Keuntungan' : $tab;
+        $tabName = match($tab) {
+            'laba_rugi' => 'Laba-Keuntungan',
+            'kasbon' => 'Buku-Piutang-Kasbon',
+            default => $tab,
+        };
         $filename = "Laporan-{$tabName}-{$startDate}-sd-{$endDate}.csv";
 
         $headers = [
@@ -363,6 +434,33 @@ class ReportController extends Controller
                         $m->stock_after,
                         $m->notes ?? '-',
                         $m->user->name ?? 'Sistem',
+                    ]);
+                }
+            } elseif ($tab === 'kasbon') {
+                fputcsv($handle, ['No', 'Tanggal Kasbon', 'Nama Pelanggan', 'No HP / WhatsApp', 'Barang / Layanan', 'Qty', 'Nominal Piutang', 'Estimasi Laba', 'Jatuh Tempo', 'Status', 'Tanggal Pelunasan', 'Metode Bayar', 'Kasir / Petugas', 'Catatan']);
+                $kasbons = Kasbon::with(['product', 'user'])
+                    ->whereBetween('debt_date', [$start->toDateString(), $end->toDateString()])
+                    ->latest('debt_date')
+                    ->latest('id')
+                    ->cursor();
+
+                $no = 1;
+                foreach ($kasbons as $k) {
+                    fputcsv($handle, [
+                        $no++,
+                        $k->debt_date ? Carbon::parse($k->debt_date)->format('d/m/Y') : '-',
+                        $k->customer_name,
+                        $k->customer_phone ?? '-',
+                        $k->product_name ?? ($k->description ?? 'Kasbon Toko'),
+                        $k->quantity ?? 1,
+                        $k->amount,
+                        $k->profit ?? 0,
+                        $k->due_date ? Carbon::parse($k->due_date)->format('d/m/Y') : '-',
+                        $k->status === 'paid' ? 'Lunas' : 'Belum Bayar',
+                        $k->paid_at ? Carbon::parse($k->paid_at)->format('d/m/Y H:i') : '-',
+                        strtoupper($k->payment_method ?? '-'),
+                        $k->user->name ?? 'Kasir',
+                        $k->notes ?? '-',
                     ]);
                 }
             } else {

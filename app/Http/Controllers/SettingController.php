@@ -87,7 +87,7 @@ class SettingController extends Controller
 
         $user->update($validated);
 
-        return redirect()->route('settings.index')
+        return redirect()->route('settings.index', ['tab' => 'keamanan'])
             ->with('success', 'Profil akun pengguna berhasil diperbarui.');
     }
 
@@ -108,7 +108,7 @@ class SettingController extends Controller
             'password' => Hash::make($validated['password']),
         ]);
 
-        return redirect()->route('settings.index')
+        return redirect()->route('settings.index', ['tab' => 'keamanan'])
             ->with('success', 'Kata sandi berhasil diubah.');
     }
 }

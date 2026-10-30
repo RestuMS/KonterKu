@@ -128,6 +128,15 @@
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg>
                 <span>Histori Pergerakan Stok</span>
             </a>
+
+            <!-- 7. Buku Piutang Kasbon -->
+            <a
+                href="{{ route('reports.index', array_merge(request()->except(['page']), ['tab' => 'kasbon'])) }}"
+                class="px-4 py-2.5 rounded-2xl flex items-center gap-2 transition-all shrink-0 {{ $tab === 'kasbon' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/25' : 'bg-white dark:bg-slate-850 text-slate-600 dark:text-slate-300 hover:bg-slate-100 border border-slate-200 dark:border-slate-800' }}"
+            >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+                <span>Buku Piutang Kasbon</span>
+            </a>
         </div>
 
         <!-- ================================================================= -->
@@ -213,22 +222,37 @@
                     </div>
                 @endif
 
-                <!-- Pencarian Kata Kunci (Untuk Tab Transaksi & Stok) -->
-                @if(in_array($tab, ['pemasukan', 'pengeluaran', 'produk_stok', 'mutasi_stok']))
-                    <div class="{{ $tab === 'produk_stok' ? 'lg:col-span-5' : 'lg:col-span-3' }}">
+                <!-- Pencarian Kata Kunci (Untuk Tab Transaksi, Stok, & Kasbon) -->
+                @if(in_array($tab, ['pemasukan', 'pengeluaran', 'produk_stok', 'mutasi_stok', 'kasbon']))
+                    <div class="{{ $tab === 'produk_stok' ? 'lg:col-span-5' : ($tab === 'kasbon' ? 'lg:col-span-4' : 'lg:col-span-3') }}">
                         <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Pencarian</label>
                         <div class="relative">
                             <input
                                 type="text"
                                 name="search"
                                 value="{{ $search }}"
-                                placeholder="Cari nama, invoice, kode..."
+                                placeholder="{{ $tab === 'kasbon' ? 'Cari nama pelanggan, no HP, rincian...' : 'Cari nama, invoice, kode...' }}"
                                 class="w-full pl-8 pr-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-medium focus:ring-2 focus:ring-indigo-500 shadow-2xs"
                             >
                             <span class="absolute inset-y-0 left-0 pl-2.5 flex items-center text-slate-400 pointer-events-none">
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                             </span>
                         </div>
+                    </div>
+                @endif
+
+                <!-- Filter Status Kasbon -->
+                @if($tab === 'kasbon')
+                    <div class="lg:col-span-3">
+                        <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Status Piutang</label>
+                        <select
+                            name="kasbon_status"
+                            class="block w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-medium py-2 px-3 focus:ring-2 focus:ring-indigo-500 shadow-2xs"
+                        >
+                            <option value="all" {{ $kasbonStatus === 'all' ? 'selected' : '' }}>Semua Status</option>
+                            <option value="unpaid" {{ $kasbonStatus === 'unpaid' ? 'selected' : '' }}>Belum Lunas (Piutang Aktif)</option>
+                            <option value="paid" {{ $kasbonStatus === 'paid' ? 'selected' : '' }}>Sudah Lunas</option>
+                        </select>
                     </div>
                 @endif
 
@@ -1253,6 +1277,254 @@
                     </div>
                     <div class="p-5 border-t border-slate-100 dark:border-slate-800">
                         {{ $mutations->links() }}
+                    </div>
+                </div>
+            </div>
+        @endif
+
+        <!-- ================================================================= -->
+        <!-- TAB 7: BUKU PIUTANG KASBON PELANGGAN                              -->
+        <!-- ================================================================= -->
+        @if($tab === 'kasbon' && $kasbons)
+            <div class="space-y-6">
+                <!-- 4 KARTU RINGKASAN METRIK KASBON -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <!-- 1. Total Kasbon Dicatat -->
+                    <div class="p-5 rounded-3xl bg-white dark:bg-slate-850 border border-slate-200/80 dark:border-slate-800 shadow-xs relative overflow-hidden">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Kasbon Dicatat</span>
+                            <span class="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+                            </span>
+                        </div>
+                        <h4 class="text-xl sm:text-2xl font-black text-slate-900 dark:text-white font-mono">
+                            @rupiah($kasbonsSummary['total_amount'])
+                        </h4>
+                        <div class="mt-2 flex items-center gap-1.5 text-xs text-slate-500">
+                            <span class="font-bold text-slate-700 dark:text-slate-300">{{ $kasbonsSummary['total_count'] }}</span>
+                            <span>catatan transaksi</span>
+                        </div>
+                    </div>
+
+                    <!-- 2. Total Piutang Belum Bayar -->
+                    <div class="p-5 rounded-3xl bg-white dark:bg-slate-850 border border-rose-200/80 dark:border-rose-900/60 shadow-xs relative overflow-hidden">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider">Piutang Belum Bayar</span>
+                            <span class="w-8 h-8 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            </span>
+                        </div>
+                        <h4 class="text-xl sm:text-2xl font-black text-rose-600 dark:text-rose-400 font-mono">
+                            @rupiah($kasbonsSummary['unpaid_amount'])
+                        </h4>
+                        <div class="mt-2 flex items-center gap-1.5 text-xs text-slate-500">
+                            <span class="font-bold text-rose-600 dark:text-rose-400">{{ $kasbonsSummary['unpaid_count'] }}</span>
+                            <span>pelanggan belum melunasi</span>
+                        </div>
+                    </div>
+
+                    <!-- 3. Total Sudah Lunas -->
+                    <div class="p-5 rounded-3xl bg-white dark:bg-slate-850 border border-emerald-200/80 dark:border-emerald-900/60 shadow-xs relative overflow-hidden">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Total Sudah Lunas</span>
+                            <span class="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            </span>
+                        </div>
+                        <h4 class="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono">
+                            @rupiah($kasbonsSummary['paid_amount'])
+                        </h4>
+                        <div class="mt-2 flex items-center gap-1.5 text-xs text-slate-500">
+                            <span class="font-bold text-emerald-600 dark:text-emerald-400">{{ $kasbonsSummary['paid_count'] }}</span>
+                            <span>catatan telah terlunasi</span>
+                        </div>
+                    </div>
+
+                    <!-- 4. Jatuh Tempo / Overdue -->
+                    <div class="p-5 rounded-3xl bg-white dark:bg-slate-850 border border-amber-200/80 dark:border-amber-900/60 shadow-xs relative overflow-hidden">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">Jatuh Tempo (Perlu Tagih)</span>
+                            <span class="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                            </span>
+                        </div>
+                        <h4 class="text-xl sm:text-2xl font-black text-amber-600 dark:text-amber-400 font-mono">
+                            {{ $kasbonsSummary['overdue_count'] }} <span class="text-sm font-sans font-bold text-slate-500">Tagihan</span>
+                        </h4>
+                        <div class="mt-2 flex items-center gap-1.5 text-xs text-slate-500">
+                            <span>Estimasi Laba: <strong class="text-emerald-600 dark:text-emerald-400 font-mono">+@rupiah($kasbonsSummary['total_profit'])</strong></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TABEL RINCIAN BUKU PIUTANG KASBON -->
+                <div class="rounded-3xl bg-white dark:bg-slate-850 border border-slate-200/90 dark:border-slate-800 shadow-xs overflow-hidden">
+                    <div class="p-5 sm:p-6 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        <div>
+                            <h3 class="text-base font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+                                <span>Buku Piutang & Catatan Kasbon Pelanggan</span>
+                                <span class="text-xs px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-bold">
+                                    {{ $kasbons->total() }} Data
+                                </span>
+                            </h3>
+                            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                                Rincian utang piutang pelanggan konter, status pembayaran, serta pengingat tagihan.
+                            </p>
+                        </div>
+
+                        <!-- Tombol Cetak & Ekspor Khusus Tab Kasbon -->
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <a
+                                href="{{ route('reports.print', array_merge(request()->all(), ['tab' => 'kasbon', 'start_date' => $startDate, 'end_date' => $endDate])) }}"
+                                target="_blank"
+                                class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md shadow-indigo-600/20 transition-all cursor-pointer"
+                                title="Cetak Laporan Buku Kasbon atau Simpan PDF"
+                            >
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+                                <span>Cetak Laporan Kasbon</span>
+                            </a>
+
+                            <a
+                                href="{{ route('reports.export', array_merge(request()->all(), ['tab' => 'kasbon', 'start_date' => $startDate, 'end_date' => $endDate])) }}"
+                                class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 font-bold text-xs transition-all cursor-pointer"
+                                title="Ekspor Data Kasbon ke Format CSV"
+                            >
+                                <svg class="w-3.5 h-3.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                                <span>Ekspor CSV</span>
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-slate-200/80 dark:divide-slate-800 text-left text-xs">
+                            <thead class="bg-slate-50 dark:bg-slate-800/60 text-slate-500 uppercase font-bold tracking-wider text-[11px]">
+                                <tr>
+                                    <th class="px-5 py-3.5">Tanggal Kasbon</th>
+                                    <th class="px-5 py-3.5">Pelanggan</th>
+                                    <th class="px-5 py-3.5">Barang / Layanan</th>
+                                    <th class="px-4 py-3.5 text-right">Nominal Kasbon</th>
+                                    <th class="px-4 py-3.5 text-right">Estimasi Laba</th>
+                                    <th class="px-4 py-3.5 text-center">Jatuh Tempo</th>
+                                    <th class="px-4 py-3.5 text-center">Status</th>
+                                    <th class="px-5 py-3.5">Kasir</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100 dark:divide-slate-800 font-medium">
+                                @forelse($kasbons as $k)
+                                    <tr class="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
+                                        <!-- Tanggal Kasbon -->
+                                        <td class="px-5 py-4 whitespace-nowrap">
+                                            <span class="font-bold text-slate-900 dark:text-white block">
+                                                @tanggal($k->debt_date)
+                                            </span>
+                                            <span class="text-[11px] text-slate-400 font-mono">
+                                                {{ $k->created_at->format('H:i') }} WIB
+                                            </span>
+                                        </td>
+
+                                        <!-- Pelanggan & WhatsApp Reminder -->
+                                        <td class="px-5 py-4">
+                                            <div class="font-bold text-slate-900 dark:text-white">
+                                                {{ $k->customer_name }}
+                                            </div>
+                                            @if($k->customer_phone)
+                                                <div class="flex items-center gap-1.5 mt-0.5">
+                                                    <span class="text-[11px] text-slate-500 font-mono">{{ $k->customer_phone }}</span>
+                                                    @if(!$k->is_paid && $k->whatsapp_reminder_url)
+                                                        <a 
+                                                            href="{{ $k->whatsapp_reminder_url }}" 
+                                                            target="_blank"
+                                                            class="inline-flex items-center px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 transition-colors"
+                                                            title="Kirim pesan penagihan via WhatsApp"
+                                                        >
+                                                            <span>WA Tagih</span>
+                                                        </a>
+                                                    @endif
+                                                </div>
+                                            @endif
+                                        </td>
+
+                                        <!-- Barang / Layanan -->
+                                        <td class="px-5 py-4">
+                                            <span class="font-bold text-slate-800 dark:text-slate-200 block">
+                                                {{ $k->product_name ?? ($k->description ?? 'Kasbon') }}
+                                            </span>
+                                            @if($k->quantity > 1)
+                                                <span class="text-[11px] text-slate-400 font-mono block">
+                                                    Qty: {{ $k->quantity }} unit
+                                                </span>
+                                            @endif
+                                            @if($k->notes)
+                                                <span class="text-[11px] text-slate-400 block truncate max-w-xs mt-0.5">
+                                                    {{ $k->notes }}
+                                                </span>
+                                            @endif
+                                        </td>
+
+                                        <!-- Nominal Kasbon -->
+                                        <td class="px-4 py-4 text-right font-mono font-black text-slate-900 dark:text-white whitespace-nowrap">
+                                            @rupiah($k->amount)
+                                        </td>
+
+                                        <!-- Estimasi Laba -->
+                                        <td class="px-4 py-4 text-right font-mono font-bold whitespace-nowrap {{ $k->profit > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400' }}">
+                                            +@rupiah($k->profit)
+                                        </td>
+
+                                        <!-- Jatuh Tempo -->
+                                        <td class="px-4 py-4 text-center whitespace-nowrap">
+                                            @if($k->due_date)
+                                                <span class="block {{ $k->is_overdue ? 'text-rose-600 dark:text-rose-400 font-bold' : 'text-slate-600 dark:text-slate-300 font-medium' }}">
+                                                    @tanggal($k->due_date)
+                                                </span>
+                                                @if($k->is_overdue)
+                                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-black bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300">
+                                                        Jatuh Tempo
+                                                    </span>
+                                                @endif
+                                            @else
+                                                <span class="text-slate-400">-</span>
+                                            @endif
+                                        </td>
+
+                                        <!-- Status Pembayaran -->
+                                        <td class="px-4 py-4 text-center whitespace-nowrap">
+                                            @if($k->is_paid)
+                                                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100/90 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                                                    <span>Lunas</span>
+                                                </span>
+                                                @if($k->paid_at)
+                                                    <span class="text-[10px] text-slate-400 block mt-0.5 font-mono">
+                                                        {{ \Carbon\Carbon::parse($k->paid_at)->format('d/m/Y') }}
+                                                    </span>
+                                                @endif
+                                            @else
+                                                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100/90 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                                                    <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                                                    <span>Belum Bayar</span>
+                                                </span>
+                                            @endif
+                                        </td>
+
+                                        <!-- Kasir -->
+                                        <td class="px-5 py-4 whitespace-nowrap text-slate-500 dark:text-slate-400 font-medium">
+                                            {{ $k->user->name ?? 'Kasir' }}
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="8" class="px-6 py-12 text-center text-slate-400">
+                                            Tidak ada data catatan kasbon pada filter atau rentang tanggal ini.
+                                        </td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="p-5 border-t border-slate-100 dark:border-slate-800">
+                        {{ $kasbons->links() }}
                     </div>
                 </div>
             </div>
