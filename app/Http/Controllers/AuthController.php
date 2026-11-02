@@ -58,6 +58,12 @@ class AuthController extends Controller
             return redirect()->route('dashboard');
         }
 
+        // Di mode produksi, jika sudah ada user terdaftar, kunci pendaftaran publik demi keamanan
+        if (app()->environment('production') && User::exists()) {
+            return redirect()->route('login')
+                ->with('warning', 'Pendaftaran akun publik dinonaktifkan demi keamanan toko. Silakan masuk menggunakan akun Anda.');
+        }
+
         return view('auth.register');
     }
 
@@ -66,6 +72,12 @@ class AuthController extends Controller
      */
     public function register(RegisterRequest $request): RedirectResponse
     {
+        // Di mode produksi, jika sudah ada user terdaftar, kunci pendaftaran publik demi keamanan
+        if (app()->environment('production') && User::exists()) {
+            return redirect()->route('login')
+                ->with('warning', 'Pendaftaran akun publik dinonaktifkan demi keamanan toko.');
+        }
+
         $validated = $request->validated();
 
         $user = User::create([

@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('name')->index();
             $table->string('slug')->unique();
-            $table->enum('type', ['product', 'transaction', 'all'])->default('product')->index();
+            $table->string('type', 50)->default('product')->index();
             $table->text('description')->nullable();
             $table->timestamps();
         });

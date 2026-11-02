@@ -57,12 +57,34 @@
                             type="number"
                             name="amount"
                             min="1"
-                            step="0.01"
+                            step="any"
                             x-model.number="amount"
                             required
                             placeholder="0"
                             class="w-full pl-11 pr-3.5 py-3 rounded-xl border @error('amount') border-rose-500 ring-1 ring-rose-500 @else border-rose-200 dark:border-rose-900/60 @enderror bg-rose-50/20 dark:bg-rose-950/20 text-rose-700 dark:text-rose-300 text-lg font-mono font-black focus:ring-2 focus:ring-rose-500 shadow-2xs"
                         >
+                    </div>
+
+                    <!-- Pilihan Cepat Nominal -->
+                    <div class="mt-2">
+                        <div class="flex items-center justify-between mb-1.5">
+                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Pilihan Cepat Nominal:</span>
+                            <button type="button" @click="amount = 0" class="text-[10px] font-bold text-slate-400 hover:text-rose-600 transition-colors cursor-pointer">
+                                Reset (Rp 0)
+                            </button>
+                        </div>
+                        <div class="flex items-center gap-1.5 flex-wrap text-xs font-mono font-bold">
+                            @foreach([5000, 10000, 20000, 50000, 100000] as $preset)
+                                <button 
+                                    type="button" 
+                                    @click="amount = {{ $preset }}" 
+                                    :class="amount === {{ $preset }} ? 'border-rose-500 bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 ring-2 ring-rose-500/30 shadow-xs' : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:border-rose-400 hover:text-rose-600'"
+                                    class="px-2.5 py-1 rounded-lg border transition-all cursor-pointer shadow-2xs text-[11px]"
+                                >
+                                    {{ number_format($preset, 0, ',', '.') }}
+                                </button>
+                            @endforeach
+                        </div>
                     </div>
                     @error('amount')
                         <p class="text-[11px] text-rose-500 font-bold mt-1">{{ $message }}</p>

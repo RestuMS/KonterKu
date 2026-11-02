@@ -34,11 +34,16 @@ class ExpenseController extends Controller
             $query->where('payment_method', $request->payment_method);
         }
 
-        if ($request->filled('start_date')) {
+        if ($request->filled('start_date') && $request->filled('end_date')) {
+            $startDate = Carbon::parse($request->start_date)->startOfDay();
+            $endDate = Carbon::parse($request->end_date)->endOfDay();
+            if ($startDate->gt($endDate)) {
+                [$startDate, $endDate] = [$endDate->copy()->startOfDay(), $startDate->copy()->endOfDay()];
+            }
+            $query->whereBetween('transaction_date', [$startDate, $endDate]);
+        } elseif ($request->filled('start_date')) {
             $query->where('transaction_date', '>=', Carbon::parse($request->start_date)->startOfDay());
-        }
-
-        if ($request->filled('end_date')) {
+        } elseif ($request->filled('end_date')) {
             $query->where('transaction_date', '<=', Carbon::parse($request->end_date)->endOfDay());
         }
 
@@ -156,10 +161,9 @@ class ExpenseController extends Controller
             abort(404);
         }
 
-        $categories = Category::where('type', 'transaction')
-            ->orWhere(function($q) {
-                $q->where('type', 'all')->whereNotIn('name', ['Transfer Uang', 'Tarik Tunai']);
-            })
+        $categories = Category::whereIn('type', ['expense', 'transaction', 'all'])
+            ->whereNotIn('name', ['Transfer Uang', 'Tarik Tunai', 'Pulsa All Provider'])
+            ->orderBy('name')
             ->get();
 
         return view('expenses.edit', compact('expense', 'categories'));

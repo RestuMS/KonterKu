@@ -69,7 +69,14 @@
                 </div>
                 <div class="text-right">
                     <span class="text-slate-400 block text-[11px] uppercase font-bold tracking-wider">Waktu Transaksi</span>
-                    <span class="font-bold text-slate-800 dark:text-slate-200">@tanggalWaktu($income->transaction_date)</span>
+                    <div class="flex items-center justify-end gap-1.5 flex-wrap">
+                        <span class="font-bold text-slate-800 dark:text-slate-200">@tanggalWaktu($income->transaction_date)</span>
+                        @if($income->isBackdated())
+                            <span class="inline-flex items-center gap-1 text-[10px] font-extrabold px-1.5 py-0.2 rounded-md bg-amber-50 dark:bg-amber-950/80 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800" title="Dicatat susulan ke sistem pada @tanggalWaktu($income->created_at)">
+                                🕒 Susulan
+                            </span>
+                        @endif
+                    </div>
                 </div>
                 <div>
                     <span class="text-slate-400 block text-[11px] uppercase font-bold tracking-wider">Kasir / Operator</span>

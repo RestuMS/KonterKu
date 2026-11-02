@@ -29,11 +29,16 @@ class StockController extends Controller
             $query->where('type', $request->type);
         }
 
-        if ($request->filled('start_date')) {
+        if ($request->filled('start_date') && $request->filled('end_date')) {
+            $startDate = \Carbon\Carbon::parse($request->start_date)->startOfDay();
+            $endDate = \Carbon\Carbon::parse($request->end_date)->endOfDay();
+            if ($startDate->gt($endDate)) {
+                [$startDate, $endDate] = [$endDate->copy()->startOfDay(), $startDate->copy()->endOfDay()];
+            }
+            $query->whereBetween('created_at', [$startDate, $endDate]);
+        } elseif ($request->filled('start_date')) {
             $query->where('created_at', '>=', \Carbon\Carbon::parse($request->start_date)->startOfDay());
-        }
-
-        if ($request->filled('end_date')) {
+        } elseif ($request->filled('end_date')) {
             $query->where('created_at', '<=', \Carbon\Carbon::parse($request->end_date)->endOfDay());
         }
 

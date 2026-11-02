@@ -99,6 +99,8 @@
                 LAPORAN LABA KEUNTUNGAN TOKO
             @elseif(($tab ?? request('tab')) === 'kasbon')
                 BUKU LAPORAN PIUTANG KASBON PELANGGAN
+            @elseif(($tab ?? request('tab')) === 'saldo_server')
+                LAPORAN MUTASI SALDO SERVER APLIKASI
             @else
                 LAPORAN KEUANGAN DAN ARUS KAS
             @endif
@@ -106,7 +108,77 @@
         <p>Periode: {{ \Carbon\Carbon::parse($startDate)->format('d F Y') }} s.d. {{ \Carbon\Carbon::parse($endDate)->format('d F Y') }}</p>
     </div>
 
-    @if(($tab ?? request('tab')) === 'kasbon')
+    @if(($tab ?? request('tab')) === 'saldo_server')
+        <!-- Ringkasan Mutasi Saldo Server -->
+        <div class="summary-box">
+            <div class="summary-item">
+                <span>SISA SALDO SERVER</span>
+                <strong style="color: #4f46e5;">Rp {{ number_format($serverDeposit->balance, 0, ',', '.') }}</strong>
+                <small style="display: block; color: #64748b; font-size: 9px;">Deposit All Provider</small>
+            </div>
+            <div class="summary-item">
+                <span>TOTAL SALDO MASUK (+)</span>
+                <strong style="color: #16a34a;">+Rp {{ number_format($serverMutations->where('type', 'in')->sum('amount'), 0, ',', '.') }}</strong>
+                <small style="display: block; color: #64748b; font-size: 9px;">Top-Up & Refund</small>
+            </div>
+            <div class="summary-item">
+                <span>TOTAL SALDO TERPOTONG (-)</span>
+                <strong style="color: #dc2626;">-Rp {{ number_format($serverMutations->where('type', 'out')->sum('amount'), 0, ',', '.') }}</strong>
+                <small style="display: block; color: #64748b; font-size: 9px;">Modal Kasir Digital</small>
+            </div>
+            <div class="summary-item">
+                <span>TOTAL AKTIVITAS MUTASI</span>
+                <strong style="color: #0f172a;">{{ $serverMutations->count() }}</strong>
+                <small style="display: block; color: #64748b; font-size: 9px;">Pergerakan Tercatat</small>
+            </div>
+        </div>
+
+        <h3 style="margin-bottom: 6px; font-size: 12px;">Rincian Mutasi Saldo Server Aplikasi All Provider</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 25px;" class="text-center">No</th>
+                    <th>Waktu Mutasi</th>
+                    <th class="text-center">Tipe</th>
+                    <th class="text-right">Nominal</th>
+                    <th class="text-right">Saldo Sebelum &rarr; Sesudah</th>
+                    <th>Keterangan</th>
+                    <th>Operator</th>
+                </tr>
+            </thead>
+            <tbody>
+                @forelse($serverMutations as $idx => $sm)
+                    <tr>
+                        <td class="text-center">{{ $idx + 1 }}</td>
+                        <td class="font-mono">{{ $sm->created_at ? $sm->created_at->format('d/m/Y H:i') : '-' }}</td>
+                        <td class="text-center">
+                            @if($sm->type === 'in')
+                                <strong style="color: #16a34a;">MASUK (+)</strong>
+                            @elseif($sm->type === 'out')
+                                <strong style="color: #dc2626;">TERPOTONG (-)</strong>
+                            @else
+                                <strong style="color: #4f46e5;">KOREKSI</strong>
+                            @endif
+                        </td>
+                        <td class="text-right font-mono font-bold">
+                            Rp {{ number_format($sm->amount, 0, ',', '.') }}
+                        </td>
+                        <td class="text-right font-mono" style="font-size: 10px;">
+                            Rp {{ number_format($sm->balance_before, 0, ',', '.') }} &rarr; Rp {{ number_format($sm->balance_after, 0, ',', '.') }}
+                        </td>
+                        <td>{{ $sm->notes ?? '-' }}</td>
+                        <td>{{ $sm->user->name ?? 'Sistem' }}</td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="7" class="text-center" style="padding: 12px; color: #94a3b8;">
+                            Tidak ada riwayat mutasi saldo server pada periode ini.
+                        </td>
+                    </tr>
+                @endforelse
+            </tbody>
+        </table>
+    @elseif(($tab ?? request('tab')) === 'kasbon')
         <!-- Ringkasan Khusus Kasbon / Piutang -->
         <div class="summary-box">
             <div class="summary-item">

@@ -57,9 +57,57 @@ class ServerDeposit extends Model
     }
 
     /**
+     * Tentukan apakah transaksi / produk ini menggunakan saldo server all provider.
+     * Produk fisik konter (aksesoris hp, casing, tempered glass, charger, kabel data, jasa servis) TIDAK memotong saldo server.
+     */
+    public static function isServerProduct(?Category $category = null, ?string $productName = null): bool
+    {
+        $catText = strtolower(($category?->name ?? '') . ' ' . ($category?->slug ?? ''));
+        $prodText = strtolower($productName ?? '');
+        $combined = trim($catText . ' ' . $prodText);
+
+        if (empty($combined)) {
+            return false;
+        }
+
+        // Kategori fisik / jasa servis konter yang BUKAN saldo server
+        $nonServerKeywords = [
+            'aksesoris', 'casing', 'case', 'kabel', 'charger', 'headset', 
+            'earphone', 'tempered', 'servis', 'service', 'jasa', 'sparepart', 
+            'baterai', 'lcd', 'mainan', 'jajan', 'bensin', 'operasional'
+        ];
+        foreach ($nonServerKeywords as $kw) {
+            if (str_contains($combined, $kw)) {
+                return false;
+            }
+        }
+
+        // Layanan server digital all provider konter
+        $serverKeywords = [
+            'pulsa', 'paket', 'data', 'kuota', 'internet', 'token', 'pln', 'listrik', 
+            'wallet', 'ewallet', 'dana', 'gopay', 'shopee', 'ovo', 'seabank', 
+            'transfer', 'tarik', 'voucher', 'perdana', 'game', 'bpjs', 'pajak', 'ppob'
+        ];
+        foreach ($serverKeywords as $kw) {
+            if (str_contains($combined, $kw)) {
+                return true;
+            }
+        }
+
+        // Default: jika tidak ada kata kunci server, jangan potong saldo server
+        return false;
+    }
+
+    /**
      * Kurangi saldo server saat ada transaksi pemasukan / penjualan kasir.
      */
-    public static function deductBalance(float $amount, string $reason = '', ?string $refType = null, ?int $refId = null): ?self
+    public static function deductBalance(
+        float $amount, 
+        string $reason = '', 
+        ?string $refType = null, 
+        ?int $refId = null,
+        ?\Carbon\Carbon $mutationDate = null
+    ): ?self
     {
         if ($amount <= 0) {
             return null;
@@ -73,7 +121,7 @@ class ServerDeposit extends Model
         $deposit->last_checked_at = now();
         $deposit->save();
 
-        ServerDepositMutation::create([
+        $mutation = new ServerDepositMutation([
             'server_deposit_id' => $deposit->id,
             'user_id' => auth()->id(),
             'type' => 'out',
@@ -84,6 +132,13 @@ class ServerDeposit extends Model
             'reference_type' => $refType,
             'reference_id' => $refId,
         ]);
+
+        if ($mutationDate) {
+            $mutation->created_at = $mutationDate;
+            $mutation->updated_at = $mutationDate;
+        }
+
+        $mutation->save();
 
         return $deposit;
     }

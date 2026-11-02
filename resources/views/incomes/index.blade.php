@@ -419,9 +419,16 @@
                                     <a href="{{ route('incomes.show', $inc) }}" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 font-mono font-black border border-indigo-200/80 dark:border-indigo-800/60 text-xs hover:bg-indigo-100 transition-colors">
                                         <span>{{ $inc->invoice_number }}</span>
                                     </a>
-                                    <div class="flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400 mt-1 font-normal">
-                                        <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                        <span>@tanggalWaktu($inc->transaction_date)</span>
+                                    <div class="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400 mt-1 font-normal flex-wrap">
+                                        <div class="flex items-center gap-1">
+                                            <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                            <span>@tanggalWaktu($inc->transaction_date)</span>
+                                        </div>
+                                        @if($inc->isBackdated())
+                                            <span class="inline-flex items-center gap-1 text-[10px] font-extrabold px-1.5 py-0.2 rounded-md bg-amber-50 dark:bg-amber-950/80 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800" title="Dicatat susulan ke sistem pada @tanggalWaktu($inc->created_at)">
+                                                🕒 Susulan
+                                            </span>
+                                        @endif
                                     </div>
                                 </td>
 
@@ -567,9 +574,16 @@
                             <a href="{{ route('incomes.show', $inc) }}" class="font-mono font-black text-xs text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 px-2 py-0.5 rounded-lg border border-indigo-200 dark:border-indigo-800">
                                 {{ $inc->invoice_number }}
                             </a>
-                            <div class="flex items-center gap-1 text-[11px] text-slate-400 font-medium">
-                                <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                <span>@tanggalWaktu($inc->transaction_date)</span>
+                            <div class="flex items-center gap-1.5 text-[11px] text-slate-400 font-medium flex-wrap justify-end">
+                                <div class="flex items-center gap-1">
+                                    <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                    <span>@tanggalWaktu($inc->transaction_date)</span>
+                                </div>
+                                @if($inc->isBackdated())
+                                    <span class="inline-flex items-center gap-1 text-[9px] font-extrabold px-1.5 py-0.2 rounded-md bg-amber-50 dark:bg-amber-950/80 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800" title="Dicatat susulan ke sistem pada @tanggalWaktu($inc->created_at)">
+                                        🕒 Susulan
+                                    </span>
+                                @endif
                             </div>
                         </div>
 

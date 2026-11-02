@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Category;
 use App\Models\Kasbon;
 use App\Models\Product;
+use App\Models\ServerDeposit;
+use App\Models\ServerDepositMutation;
 use App\Models\Setting;
 use App\Models\StockMutation;
 use App\Models\Transaction;
@@ -33,6 +35,9 @@ class ReportController extends Controller
 
         $start = Carbon::parse($startDate)->startOfDay();
         $end = Carbon::parse($endDate)->endOfDay();
+        if ($start->gt($end)) {
+            [$start, $end] = [$end->copy()->startOfDay(), $start->copy()->endOfDay()];
+        }
 
         // Kategori untuk dropdown filter
         $categories = Category::orderBy('name')->get();
@@ -51,6 +56,8 @@ class ReportController extends Controller
         $mutationsSummary = [];
         $kasbons = null;
         $kasbonsSummary = [];
+        $serverMutations = null;
+        $serverSummary = [];
 
         if ($tab === 'pemasukan') {
             $incomesQuery = Transaction::with(['category', 'user', 'items'])
@@ -223,6 +230,32 @@ class ReportController extends Controller
             $kasbons = $kasbonsQuery->latest('debt_date')->latest('id')->paginate(15)->withQueryString();
         }
 
+        if ($tab === 'saldo_server') {
+            $depositQuery = ServerDepositMutation::with('user')
+                ->whereBetween('created_at', [$start, $end]);
+
+            if ($search) {
+                $depositQuery->where('notes', 'like', "%{$search}%");
+            }
+
+            if ($mutationType) {
+                $depositQuery->where('type', $mutationType);
+            }
+
+            $totalIn = (float) (clone $depositQuery)->where('type', 'in')->sum('amount');
+            $totalOut = (float) (clone $depositQuery)->where('type', 'out')->sum('amount');
+            $serverDeposit = ServerDeposit::getPrimary();
+
+            $serverSummary = [
+                'current_balance' => (float) $serverDeposit->balance,
+                'total_in' => $totalIn,
+                'total_out' => $totalOut,
+                'mutation_count' => (clone $depositQuery)->count(),
+            ];
+
+            $serverMutations = $depositQuery->latest('id')->paginate(15)->withQueryString();
+        }
+
         return view('reports.index', compact(
             'tab',
             'startDate',
@@ -244,7 +277,9 @@ class ReportController extends Controller
             'mutations',
             'mutationsSummary',
             'kasbons',
-            'kasbonsSummary'
+            'kasbonsSummary',
+            'serverMutations',
+            'serverSummary'
         ));
     }
 
@@ -256,6 +291,9 @@ class ReportController extends Controller
 
         $start = Carbon::parse($startDate)->startOfDay();
         $end = Carbon::parse($endDate)->endOfDay();
+        if ($start->gt($end)) {
+            [$start, $end] = [$end->copy()->startOfDay(), $start->copy()->endOfDay()];
+        }
 
         $financialSummary = $this->calculateFinancialSummary($start, $end);
 
@@ -296,6 +334,12 @@ class ReportController extends Controller
             })->count(),
         ];
 
+        $serverDeposit = ServerDeposit::getPrimary();
+        $serverMutations = ServerDepositMutation::with('user')
+            ->whereBetween('created_at', [$start, $end])
+            ->latest('id')
+            ->get();
+
         return view('reports.print', compact(
             'tab',
             'startDate',
@@ -306,6 +350,8 @@ class ReportController extends Controller
             'products',
             'kasbons',
             'kasbonsSummary',
+            'serverDeposit',
+            'serverMutations',
             'shopName',
             'shopPhone',
             'shopAddress'
@@ -320,10 +366,14 @@ class ReportController extends Controller
 
         $start = Carbon::parse($startDate)->startOfDay();
         $end = Carbon::parse($endDate)->endOfDay();
+        if ($start->gt($end)) {
+            [$start, $end] = [$end->copy()->startOfDay(), $start->copy()->endOfDay()];
+        }
 
         $tabName = match($tab) {
             'laba_rugi' => 'Laba-Keuntungan',
             'kasbon' => 'Buku-Piutang-Kasbon',
+            'saldo_server' => 'Mutasi-Saldo-Server',
             default => $tab,
         };
         $filename = "Laporan-{$tabName}-{$startDate}-sd-{$endDate}.csv";
@@ -461,6 +511,33 @@ class ReportController extends Controller
                         strtoupper($k->payment_method ?? '-'),
                         $k->user->name ?? 'Kasir',
                         $k->notes ?? '-',
+                    ]);
+                }
+            } elseif ($tab === 'saldo_server') {
+                fputcsv($handle, ['No', 'Waktu Mutasi', 'Tipe Mutasi', 'Nominal Perubahan', 'Saldo Sebelum', 'Saldo Sesudah', 'Keterangan', 'Pencatat / Sistem']);
+                $mutations = ServerDepositMutation::with('user')
+                    ->whereBetween('created_at', [$start, $end])
+                    ->latest('id')
+                    ->cursor();
+
+                $no = 1;
+                foreach ($mutations as $m) {
+                    $typeLabel = match($m->type) {
+                        'in' => 'MASUK / TOP-UP (+)',
+                        'out' => 'TERPOTONG PENJUALAN (-)',
+                        'set' => 'KOREKSI SALDO',
+                        default => strtoupper($m->type),
+                    };
+
+                    fputcsv($handle, [
+                        $no++,
+                        $m->created_at ? $m->created_at->format('d/m/Y H:i') : '-',
+                        $typeLabel,
+                        $m->amount,
+                        $m->balance_before,
+                        $m->balance_after,
+                        $m->notes ?? '-',
+                        $m->user->name ?? 'Sistem / Kasir',
                     ]);
                 }
             } else {

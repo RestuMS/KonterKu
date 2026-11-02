@@ -4,14 +4,17 @@
         email: '{{ old('email') }}',
         password: '',
         demoCopied: false,
+        @if(!app()->isProduction())
         fillDemo() {
             this.email = 'admin@konterku.com';
             this.password = 'admin123';
             this.demoCopied = true;
             setTimeout(() => { this.demoCopied = false; }, 3000);
         }
+        @endif
     }">
         <!-- Segmented Tab Navigasi Masuk / Daftar -->
+        @if(!app()->isProduction() || !\App\Models\User::exists())
         <div class="flex items-center p-1 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 mb-6">
             <a
                 href="{{ route('login') }}"
@@ -26,6 +29,7 @@
                 Daftar Akun Baru
             </a>
         </div>
+        @endif
 
         <!-- Header Form -->
         <div class="mb-6">
@@ -164,7 +168,10 @@
 
         <!-- ============================================================= -->
         <!-- KOTAK AKUN PENGUJIAN DENGAN TOAST NOTIFIKASI SUKSES ISI       -->
+        <!-- Hanya muncul di lingkungan pengembangan lokal (Laragon/Local) -->
+        <!-- Otomatis disembunyikan saat di-hosting (Production)           -->
         <!-- ============================================================= -->
+        @if(!app()->isProduction())
         <div class="mt-5 p-4 rounded-2xl bg-gradient-to-r from-indigo-50/80 via-white to-sky-50/80 dark:from-slate-800/90 dark:via-indigo-950/30 dark:to-slate-800/90 border border-indigo-100 dark:border-indigo-900/60 shadow-xs relative overflow-hidden">
             <!-- Feedback Toast saat klik Isi Otomatis -->
             <div
@@ -214,5 +221,6 @@
                 *Akun pengujian tetap aktif untuk uji coba lokal di Laragon. Untuk keperluan hosting kedepannya, gunakan tombol "Daftar Akun Baru" di atas.
             </p>
         </div>
+        @endif
     </div>
 </x-layouts.auth>

@@ -137,6 +137,15 @@
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
                 <span>Buku Piutang Kasbon</span>
             </a>
+
+            <!-- 8. Saldo Server Digital -->
+            <a
+                href="{{ route('reports.index', array_merge(request()->except(['page']), ['tab' => 'saldo_server'])) }}"
+                class="px-4 py-2.5 rounded-2xl flex items-center gap-2 transition-all shrink-0 {{ $tab === 'saldo_server' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/25' : 'bg-white dark:bg-slate-850 text-slate-600 dark:text-slate-300 hover:bg-slate-100 border border-slate-200 dark:border-slate-800' }}"
+            >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                <span>Mutasi Saldo Server</span>
+            </a>
         </div>
 
         <!-- ================================================================= -->
@@ -252,6 +261,22 @@
                             <option value="all" {{ $kasbonStatus === 'all' ? 'selected' : '' }}>Semua Status</option>
                             <option value="unpaid" {{ $kasbonStatus === 'unpaid' ? 'selected' : '' }}>Belum Lunas (Piutang Aktif)</option>
                             <option value="paid" {{ $kasbonStatus === 'paid' ? 'selected' : '' }}>Sudah Lunas</option>
+                        </select>
+                    </div>
+                @endif
+
+                <!-- Filter Tipe Mutasi Saldo Server -->
+                @if($tab === 'saldo_server')
+                    <div class="lg:col-span-3">
+                        <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Tipe Mutasi Saldo</label>
+                        <select
+                            name="mutation_type"
+                            class="block w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-medium py-2 px-3 focus:ring-2 focus:ring-indigo-500 shadow-2xs"
+                        >
+                            <option value="">Semua Tipe Mutasi</option>
+                            <option value="in" {{ request('mutation_type') === 'in' ? 'selected' : '' }}>Saldo Masuk / Top-Up (+)</option>
+                            <option value="out" {{ request('mutation_type') === 'out' ? 'selected' : '' }}>Saldo Terpotong Kasir (-)</option>
+                            <option value="set" {{ request('mutation_type') === 'set' ? 'selected' : '' }}>Koreksi Saldo Manual</option>
                         </select>
                     </div>
                 @endif
@@ -1525,6 +1550,167 @@
 
                     <div class="p-5 border-t border-slate-100 dark:border-slate-800">
                         {{ $kasbons->links() }}
+                    </div>
+                </div>
+            </div>
+        @endif
+
+        <!-- ================================================================= -->
+        <!-- TAB 8: MUTASI SALDO SERVER APLIKASI ALL PROVIDER                  -->
+        <!-- ================================================================= -->
+        @if($tab === 'saldo_server' && $serverMutations)
+            <div class="space-y-6">
+                <!-- 4 KARTU RINGKASAN METRIK SALDO SERVER -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <!-- 1. Sisa Saldo Server Saat Ini -->
+                    <div class="p-5 rounded-3xl bg-white dark:bg-slate-850 border border-slate-200/80 dark:border-slate-800 shadow-xs relative overflow-hidden">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Sisa Saldo Server</span>
+                            <div class="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-sm font-bold">
+                                ⚡
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <div class="text-2xl font-black text-indigo-600 dark:text-indigo-400 font-mono tracking-tight">
+                                @rupiah($serverSummary['current_balance'] ?? 0)
+                            </div>
+                            <span class="text-[11px] text-slate-500 mt-1 block">Saldo induk aplikasi all-provider</span>
+                        </div>
+                    </div>
+
+                    <!-- 2. Total Saldo Masuk (Top-Up / Refund) -->
+                    <div class="p-5 rounded-3xl bg-white dark:bg-slate-850 border border-slate-200/80 dark:border-slate-800 shadow-xs relative overflow-hidden">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Saldo Masuk (+)</span>
+                            <div class="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-sm font-bold">
+                                ↗
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <div class="text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono tracking-tight">
+                                +@rupiah($serverSummary['total_in'] ?? 0)
+                            </div>
+                            <span class="text-[11px] text-slate-500 mt-1 block">Top-up & pengembalian batal</span>
+                        </div>
+                    </div>
+
+                    <!-- 3. Total Saldo Terpotong Kasir (-) -->
+                    <div class="p-5 rounded-3xl bg-white dark:bg-slate-850 border border-slate-200/80 dark:border-slate-800 shadow-xs relative overflow-hidden">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Saldo Terpotong (-)</span>
+                            <div class="w-9 h-9 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center text-sm font-bold">
+                                ↘
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <div class="text-2xl font-black text-rose-600 dark:text-rose-400 font-mono tracking-tight">
+                                -@rupiah($serverSummary['total_out'] ?? 0)
+                            </div>
+                            <span class="text-[11px] text-slate-500 mt-1 block">Modal transaksi pulsa/kuota/token</span>
+                        </div>
+                    </div>
+
+                    <!-- 4. Jumlah Mutasi Tercatat -->
+                    <div class="p-5 rounded-3xl bg-white dark:bg-slate-850 border border-slate-200/80 dark:border-slate-800 shadow-xs relative overflow-hidden">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Aktivitas Mutasi</span>
+                            <div class="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 flex items-center justify-center text-sm font-bold">
+                                📋
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <div class="text-2xl font-black text-slate-900 dark:text-white font-mono tracking-tight">
+                                {{ $serverSummary['mutation_count'] ?? 0 }}
+                            </div>
+                            <span class="text-[11px] text-slate-500 mt-1 block">Pergerakan pada periode ini</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TABEL DATA MUTASI SALDO SERVER -->
+                <div class="bg-white dark:bg-slate-850 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs overflow-hidden">
+                    <div class="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                        <h4 class="text-sm font-bold text-slate-900 dark:text-white">Rincian Pergerakan Saldo Server</h4>
+                        <a
+                            href="{{ route('server-deposit.mutations') }}"
+                            class="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
+                        >
+                            <span>Buka Menu Saldo Server &rarr;</span>
+                        </a>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-xs">
+                            <thead>
+                                <tr class="border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 text-slate-500 font-bold uppercase tracking-wider text-[11px]">
+                                    <th class="px-5 py-4">Waktu</th>
+                                    <th class="px-4 py-4 text-center">Tipe</th>
+                                    <th class="px-5 py-4 text-right">Perubahan Saldo</th>
+                                    <th class="px-5 py-4 text-right">Saldo Sebelum &rarr; Sesudah</th>
+                                    <th class="px-5 py-4">Keterangan / Referensi</th>
+                                    <th class="px-5 py-4">Operator</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+                                @forelse($serverMutations as $sm)
+                                    <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
+                                        <!-- Waktu -->
+                                        <td class="px-5 py-4 whitespace-nowrap font-mono text-slate-600 dark:text-slate-300">
+                                            {{ $sm->created_at ? $sm->created_at->format('d/m/Y H:i') : '-' }}
+                                        </td>
+
+                                        <!-- Tipe Mutasi -->
+                                        <td class="px-4 py-4 text-center whitespace-nowrap">
+                                            @if($sm->type === 'in')
+                                                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300/80">
+                                                    <span>+ Saldo Masuk</span>
+                                                </span>
+                                            @elseif($sm->type === 'out')
+                                                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 border border-rose-300/80">
+                                                    <span>- Terpotong</span>
+                                                </span>
+                                            @else
+                                                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300 border border-indigo-300/80">
+                                                    <span>⚙️ Koreksi</span>
+                                                </span>
+                                            @endif
+                                        </td>
+
+                                        <!-- Nominal Perubahan -->
+                                        <td class="px-5 py-4 text-right font-mono font-bold whitespace-nowrap {{ $sm->type === 'in' ? 'text-emerald-600 dark:text-emerald-400' : ($sm->type === 'out' ? 'text-rose-600 dark:text-rose-400' : 'text-indigo-600 dark:text-indigo-400') }}">
+                                            {{ $sm->type === 'in' ? '+' : ($sm->type === 'out' ? '-' : '•') }} @rupiah($sm->amount)
+                                        </td>
+
+                                        <!-- Transisi Saldo -->
+                                        <td class="px-5 py-4 text-right font-mono text-xs whitespace-nowrap text-slate-500 dark:text-slate-400">
+                                            <span>@rupiah($sm->balance_before)</span>
+                                            <span class="text-slate-400 mx-1">&rarr;</span>
+                                            <span class="font-bold text-slate-800 dark:text-slate-200">@rupiah($sm->balance_after)</span>
+                                        </td>
+
+                                        <!-- Keterangan -->
+                                        <td class="px-5 py-4 text-slate-700 dark:text-slate-300">
+                                            {{ $sm->notes ?? '-' }}
+                                        </td>
+
+                                        <!-- Operator -->
+                                        <td class="px-5 py-4 whitespace-nowrap text-slate-500 font-medium">
+                                            {{ $sm->user->name ?? 'Sistem' }}
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="6" class="px-6 py-12 text-center text-slate-400">
+                                            Tidak ada riwayat mutasi saldo server pada filter atau periode tanggal ini.
+                                        </td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="p-5 border-t border-slate-100 dark:border-slate-800">
+                        {{ $serverMutations->links() }}
                     </div>
                 </div>
             </div>

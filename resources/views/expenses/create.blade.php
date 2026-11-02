@@ -260,36 +260,61 @@
                                 name="amount"
                                 x-model.number="amount"
                                 min="1"
-                                step="100"
+                                step="any"
                                 required
                                 placeholder="0"
                                 class="w-full pl-13 pr-4 py-3.5 rounded-2xl border @error('amount') border-rose-500 ring-2 ring-rose-500/20 @else border-rose-200 dark:border-rose-900/60 @enderror bg-rose-50/30 dark:bg-rose-950/20 text-slate-900 dark:text-white font-mono font-black text-2xl focus:ring-3 focus:ring-rose-500/30 focus:border-rose-500 shadow-2xs transition-all"
                             >
                         </div>
 
-                        <!-- Tombol Cepat Nominal (+ 5rb, + 10rb, + 20rb, + 50rb, + 100rb) -->
+                        <!-- Pilihan Cepat Nominal (Langsung Atur Nominal: 5rb, 10rb, 20rb, 50rb, 100rb) -->
                         <div>
                             <div class="flex items-center justify-between mb-2">
-                                <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Tombol Cepat Tambah Nominal:</span>
-                                <button type="button" @click="amount = 0" class="text-[11px] font-bold text-slate-400 hover:text-rose-600 transition-colors">
+                                <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Pilihan Cepat Nominal:</span>
+                                <button type="button" @click="amount = 0" class="text-[11px] font-bold text-slate-400 hover:text-rose-600 transition-colors cursor-pointer">
                                     Reset (Rp 0)
                                 </button>
                             </div>
                             <div class="flex items-center gap-2 flex-wrap text-xs font-mono font-bold">
-                                <button type="button" @click="addAmount(5000)" class="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:border-rose-400 hover:text-rose-600 transition-colors cursor-pointer">
-                                    +5.000
+                                <button 
+                                    type="button" 
+                                    @click="setAmount(5000)" 
+                                    :class="amount === 5000 ? 'border-rose-500 bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 ring-2 ring-rose-500/30 shadow-xs' : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:border-rose-400 hover:text-rose-600'"
+                                    class="px-3.5 py-1.5 rounded-xl border transition-all cursor-pointer shadow-2xs"
+                                >
+                                    5.000
                                 </button>
-                                <button type="button" @click="addAmount(10000)" class="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:border-rose-400 hover:text-rose-600 transition-colors cursor-pointer">
-                                    +10.000
+                                <button 
+                                    type="button" 
+                                    @click="setAmount(10000)" 
+                                    :class="amount === 10000 ? 'border-rose-500 bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 ring-2 ring-rose-500/30 shadow-xs' : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:border-rose-400 hover:text-rose-600'"
+                                    class="px-3.5 py-1.5 rounded-xl border transition-all cursor-pointer shadow-2xs"
+                                >
+                                    10.000
                                 </button>
-                                <button type="button" @click="addAmount(20000)" class="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:border-rose-400 hover:text-rose-600 transition-colors cursor-pointer">
-                                    +20.000
+                                <button 
+                                    type="button" 
+                                    @click="setAmount(20000)" 
+                                    :class="amount === 20000 ? 'border-rose-500 bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 ring-2 ring-rose-500/30 shadow-xs' : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:border-rose-400 hover:text-rose-600'"
+                                    class="px-3.5 py-1.5 rounded-xl border transition-all cursor-pointer shadow-2xs"
+                                >
+                                    20.000
                                 </button>
-                                <button type="button" @click="addAmount(50000)" class="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:border-rose-400 hover:text-rose-600 transition-colors cursor-pointer">
-                                    +50.000
+                                <button 
+                                    type="button" 
+                                    @click="setAmount(50000)" 
+                                    :class="amount === 50000 ? 'border-rose-500 bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 ring-2 ring-rose-500/30 shadow-xs' : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:border-rose-400 hover:text-rose-600'"
+                                    class="px-3.5 py-1.5 rounded-xl border transition-all cursor-pointer shadow-2xs"
+                                >
+                                    50.000
                                 </button>
-                                <button type="button" @click="addAmount(100000)" class="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:border-rose-400 hover:text-rose-600 transition-colors cursor-pointer">
-                                    +100.000
+                                <button 
+                                    type="button" 
+                                    @click="setAmount(100000)" 
+                                    :class="amount === 100000 ? 'border-rose-500 bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 ring-2 ring-rose-500/30 shadow-xs' : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:border-rose-400 hover:text-rose-600'"
+                                    class="px-3.5 py-1.5 rounded-xl border transition-all cursor-pointer shadow-2xs"
+                                >
+                                    100.000
                                 </button>
                             </div>
                         </div>
@@ -586,8 +611,12 @@
                     // Ketika dropdown diubah manual
                 },
 
+                setAmount(val) {
+                    this.amount = Number(val);
+                },
+
                 addAmount(val) {
-                    this.amount = Number(this.amount || 0) + Number(val);
+                    this.amount = Number(val);
                 },
 
                 formatRupiah(number) {

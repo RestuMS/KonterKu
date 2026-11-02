@@ -28,6 +28,16 @@ class DashboardController extends Controller
             ->whereNotNull('due_date')
             ->whereDate('due_date', '<', $today)
             ->count();
+        $dueTodayKasbonCount = (clone $unpaidKasbonQuery)
+            ->whereNotNull('due_date')
+            ->whereDate('due_date', $today)
+            ->count();
+        $urgentKasbons = Kasbon::unpaid()
+            ->whereNotNull('due_date')
+            ->whereDate('due_date', '<=', $today)
+            ->orderBy('due_date')
+            ->take(5)
+            ->get();
         $recentUnpaidKasbons = Kasbon::unpaid()
             ->latest('debt_date')
             ->take(4)
@@ -123,6 +133,8 @@ class DashboardController extends Controller
             'totalUnpaidKasbonCount',
             'totalUnpaidKasbonProfit',
             'overdueKasbonCount',
+            'dueTodayKasbonCount',
+            'urgentKasbons',
             'recentUnpaidKasbons',
             'serverDeposit'
         ));

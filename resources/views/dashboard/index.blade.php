@@ -89,31 +89,76 @@
 
     <!-- Alert Notifikasi Piutang Kasbon (Jika Ada Hutang Menggantung) -->
     @if($totalUnpaidKasbon > 0)
-        <div class="mb-8 p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-300/80 dark:border-amber-700/60 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 shadow-xs">
-            <div class="flex items-center gap-3.5">
-                <div class="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-md shadow-amber-500/25">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
+        <div class="mb-8 p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-300/80 dark:border-amber-700/60 shadow-xs space-y-3">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div class="flex items-center gap-3.5">
+                    <div class="w-10 h-10 rounded-xl {{ ($overdueKasbonCount > 0 || ($dueTodayKasbonCount ?? 0) > 0) ? 'bg-rose-500 shadow-rose-500/25' : 'bg-amber-500 shadow-amber-500/25' }} text-white flex items-center justify-center shrink-0 shadow-md">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h4 class="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2 flex-wrap">
+                            <span>Piutang Kasbon Belum Lunas: @rupiah($totalUnpaidKasbon)</span>
+                            @if(($dueTodayKasbonCount ?? 0) > 0)
+                                <span class="px-2 py-0.5 rounded-full text-[11px] font-extrabold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300/80">
+                                    {{ $dueTodayKasbonCount }} Jatuh Tempo Hari Ini
+                                </span>
+                            @endif
+                            @if($overdueKasbonCount > 0)
+                                <span class="px-2 py-0.5 rounded-full text-[11px] font-extrabold bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300 border border-rose-300/80 animate-pulse">
+                                    ⚠️ {{ $overdueKasbonCount }} Lewat Jatuh Tempo
+                                </span>
+                            @endif
+                        </h4>
+                        <p class="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+                            Tercatat <strong>{{ $totalUnpaidKasbonCount }} transaksi kasbon pelanggan</strong> yang belum melunasi pembayaran (potensi laba tertahan: <strong class="text-amber-600 dark:text-amber-400 font-mono">+@rupiah($totalUnpaidKasbonProfit)</strong>).
+                        </p>
+                    </div>
                 </div>
-                <div>
-                    <h4 class="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2 flex-wrap">
-                        <span>Perhatian: Ada Piutang Kasbon Belum Lunas Sebesar @rupiah($totalUnpaidKasbon)</span>
-                        @if($overdueKasbonCount > 0)
-                            <span class="px-2 py-0.5 rounded-full text-[11px] font-extrabold bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300 border border-rose-300/80">
-                                {{ $overdueKasbonCount }} Lewat Jatuh Tempo
-                            </span>
-                        @endif
-                    </h4>
-                    <p class="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
-                        Tercatat <strong>{{ $totalUnpaidKasbonCount }} transaksi kasbon pelanggan</strong> yang belum melunasi pembayaran (potensi laba tertahan: <strong class="text-amber-600 dark:text-amber-400 font-mono">+@rupiah($totalUnpaidKasbonProfit)</strong>).
-                    </p>
-                </div>
+                <a href="{{ route('kasbons.index') }}" class="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold shadow-sm shadow-amber-500/30 transition-all shrink-0">
+                    <span>Buka Buku Kasbon</span>
+                    <span>&rarr;</span>
+                </a>
             </div>
-            <a href="{{ route('kasbons.index') }}" class="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold shadow-sm shadow-amber-500/30 transition-all shrink-0">
-                <span>Buka Buku Kasbon</span>
-                <span>&rarr;</span>
-            </a>
+
+            <!-- List Cepat Kasbon Jatuh Tempo & Tombol WhatsApp -->
+            @if(isset($urgentKasbons) && $urgentKasbons->isNotEmpty())
+                <div class="mt-2 pt-3 border-t border-amber-200/60 dark:border-amber-800/60">
+                    <div class="text-[11px] font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300 mb-2 flex items-center gap-1.5">
+                        <span>⏰</span>
+                        <span>Pelanggan Jatuh Tempo Wajib Ditagih:</span>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                        @foreach($urgentKasbons as $uk)
+                            <div class="p-2.5 rounded-xl bg-white/90 dark:bg-slate-800/90 border border-amber-200/80 dark:border-amber-700/60 flex items-center justify-between gap-2 shadow-2xs">
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex items-center gap-1.5">
+                                        <p class="text-xs font-bold text-slate-900 dark:text-white truncate">{{ $uk->customer_name }}</p>
+                                        @if($uk->is_overdue)
+                                            <span class="text-[10px] text-rose-600 dark:text-rose-400 font-bold shrink-0">Lewat tempo</span>
+                                        @else
+                                            <span class="text-[10px] text-amber-600 dark:text-amber-400 font-bold shrink-0">Hari ini</span>
+                                        @endif
+                                    </div>
+                                    <p class="text-xs font-black font-mono text-amber-600 dark:text-amber-400 mt-0.5">@rupiah($uk->amount)</p>
+                                </div>
+                                @if($uk->clean_phone)
+                                    <a
+                                        href="https://wa.me/{{ $uk->clean_phone }}?text={{ urlencode('Halo Kak ' . $uk->customer_name . ', mengingatkan pembayaran kasbon konter sebesar Rp ' . number_format($uk->amount, 0, ',', '.') . ' yang jatuh tempo pada ' . \Carbon\Carbon::parse($uk->due_date)->format('d/m/Y') . '. Terima kasih!') }}"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        class="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold shrink-0 transition-colors inline-flex items-center gap-1"
+                                        title="Kirim Pesan WhatsApp Tagihan"
+                                    >
+                                        <span>💬 WA Tagih</span>
+                                    </a>
+                                @endif
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
         </div>
     @endif
 

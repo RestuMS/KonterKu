@@ -18,20 +18,21 @@ class StockService
         ?string $referenceType = null,
         ?int $referenceId = null,
         ?string $notes = null,
-        ?int $userId = null
+        ?int $userId = null,
+        ?\Carbon\Carbon $mutationDate = null
     ): StockMutation {
         if ($quantity <= 0) {
             throw new InvalidArgumentException('Jumlah pengurangan stok harus lebih dari 0.');
         }
 
-        return DB::transaction(function () use ($product, $quantity, $referenceType, $referenceId, $notes, $userId) {
+        return DB::transaction(function () use ($product, $quantity, $referenceType, $referenceId, $notes, $userId, $mutationDate) {
             $product->refresh();
             $stockBefore = $product->stock;
             $stockAfter = $stockBefore - $quantity;
 
             $product->update(['stock' => $stockAfter]);
 
-            return StockMutation::create([
+            $mutation = new StockMutation([
                 'product_id' => $product->id,
                 'user_id' => $userId,
                 'type' => 'out',
@@ -42,6 +43,15 @@ class StockService
                 'reference_id' => $referenceId,
                 'notes' => $notes,
             ]);
+
+            if ($mutationDate) {
+                $mutation->created_at = $mutationDate;
+                $mutation->updated_at = $mutationDate;
+            }
+
+            $mutation->save();
+
+            return $mutation;
         });
     }
 

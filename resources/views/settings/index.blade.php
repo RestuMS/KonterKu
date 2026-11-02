@@ -78,6 +78,15 @@
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
                 <span>Profil Akun & Sandi</span>
             </a>
+
+            <!-- 6. Database & Backup -->
+            <a
+                href="{{ route('settings.index', ['tab' => 'backup']) }}"
+                class="px-4 py-2.5 rounded-2xl flex items-center gap-2 transition-all shrink-0 {{ $activeTab === 'backup' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/25' : 'bg-white dark:bg-slate-850 text-slate-600 dark:text-slate-300 hover:bg-slate-100 border border-slate-200 dark:border-slate-800' }}"
+            >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"/></svg>
+                <span>Cadangan Data (Backup)</span>
+            </a>
         </div>
 
         <!-- ================================================================= -->
@@ -535,6 +544,113 @@
                             </x-button>
                         </div>
                     </form>
+                </div>
+            </div>
+        @endif
+
+        <!-- ================================================================= -->
+        <!-- TAB 6: CADANGAN DATA & DATABASE BACKUP                            -->
+        <!-- ================================================================= -->
+        @if($activeTab === 'backup')
+            <div class="space-y-6">
+                <!-- Banner Utama Backup -->
+                <div class="p-6 rounded-3xl bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white border border-indigo-900/40 shadow-xl relative overflow-hidden">
+                    <div class="absolute -right-8 -top-8 w-48 h-48 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none"></div>
+                    <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                        <div class="max-w-xl space-y-2">
+                            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-xs font-bold">
+                                <span>🛡️ Perlindungan Data Konter</span>
+                            </div>
+                            <h3 class="text-xl sm:text-2xl font-black text-white tracking-tight">
+                                Cadangan Database Sekali Klik
+                            </h3>
+                            <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                                Unduh seluruh rekaman transaksi, stok barang, kasbon pelanggan, mutasi saldo server, dan pengaturan konter ke dalam file <span class="text-emerald-400 font-mono font-bold">.sql</span> standar. Anda dapat menyimpan file ini di komputer lokal, flashdisk, atau Google Drive sebagai antisipasi jika hosting gratis atau komputer kasir Anda mengalami kendala.
+                            </p>
+                        </div>
+                        <div class="shrink-0">
+                            <a
+                                href="{{ route('settings.backup') }}"
+                                class="inline-flex items-center justify-center gap-2.5 px-6 py-4 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold text-sm uppercase tracking-wider shadow-lg shadow-emerald-500/30 transition-all hover:scale-105 cursor-pointer"
+                            >
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                                </svg>
+                                <span>Unduh Database (.sql)</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4 Statistik Data yang Akan Dicadangkan -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="p-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 shadow-xs">
+                        <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Total Transaksi</span>
+                        <div class="mt-2 flex items-baseline gap-1.5">
+                            <span class="text-2xl font-black text-slate-900 dark:text-white font-mono">{{ number_format($databaseStats['total_transactions'] ?? 0, 0, ',', '.') }}</span>
+                            <span class="text-xs font-semibold text-slate-500">Record</span>
+                        </div>
+                        <p class="text-[11px] text-slate-400 mt-1">Pemasukan & Pengeluaran</p>
+                    </div>
+
+                    <div class="p-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 shadow-xs">
+                        <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Katalog Produk & Stok</span>
+                        <div class="mt-2 flex items-baseline gap-1.5">
+                            <span class="text-2xl font-black text-slate-900 dark:text-white font-mono">{{ number_format($databaseStats['total_products'] ?? 0, 0, ',', '.') }}</span>
+                            <span class="text-xs font-semibold text-slate-500">Produk</span>
+                        </div>
+                        <p class="text-[11px] text-slate-400 mt-1">{{ number_format($databaseStats['total_stock_mutations'] ?? 0, 0, ',', '.') }} riwayat mutasi stok</p>
+                    </div>
+
+                    <div class="p-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 shadow-xs">
+                        <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Buku Piutang Kasbon</span>
+                        <div class="mt-2 flex items-baseline gap-1.5">
+                            <span class="text-2xl font-black text-slate-900 dark:text-white font-mono">{{ number_format($databaseStats['total_kasbons'] ?? 0, 0, ',', '.') }}</span>
+                            <span class="text-xs font-semibold text-slate-500">Pelanggan</span>
+                        </div>
+                        <p class="text-[11px] text-slate-400 mt-1">Status lunas & belum lunas</p>
+                    </div>
+
+                    <div class="p-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 shadow-xs">
+                        <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Saldo Server Utama</span>
+                        <div class="mt-2 flex items-baseline gap-1.5">
+                            <span class="text-lg font-black text-emerald-600 dark:text-emerald-400 font-mono">Rp {{ number_format($databaseStats['server_balance'] ?? 0, 0, ',', '.') }}</span>
+                        </div>
+                        <p class="text-[11px] text-slate-400 mt-1">{{ number_format($databaseStats['total_server_mutations'] ?? 0, 0, ',', '.') }} riwayat mutasi saldo</p>
+                    </div>
+                </div>
+
+                <!-- Panduan Cara Restore Data -->
+                <div class="p-6 rounded-3xl bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 shadow-xs space-y-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold">
+                            📖
+                        </div>
+                        <div>
+                            <h4 class="text-sm font-bold text-slate-900 dark:text-white">Panduan Cara Memulihkan (Restore) Data</h4>
+                            <p class="text-xs text-slate-500">Langkah mudah mengembalikan data konter jika database Anda kosong atau tereset.</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2 text-xs">
+                        <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-700/60 space-y-1.5">
+                            <span class="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-[11px]">1</span>
+                            <h5 class="font-bold text-slate-900 dark:text-white pt-1">Buka Database Manager</h5>
+                            <p class="text-slate-500 dark:text-slate-400 leading-relaxed">Buka phpMyAdmin (di Laragon: klik kanan &rarr; MySQL &rarr; phpMyAdmin, atau di cPanel Hosting: Menu phpMyAdmin).</p>
+                        </div>
+
+                        <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-700/60 space-y-1.5">
+                            <span class="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-[11px]">2</span>
+                            <h5 class="font-bold text-slate-900 dark:text-white pt-1">Pilih Database & Tab Import</h5>
+                            <p class="text-slate-500 dark:text-slate-400 leading-relaxed">Klik nama database aplikasi Anda pada kolom kiri, kemudian klik tab <strong>Import</strong> di bilah atas.</p>
+                        </div>
+
+                        <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-700/60 space-y-1.5">
+                            <span class="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-[11px]">3</span>
+                            <h5 class="font-bold text-slate-900 dark:text-white pt-1">Upload File .sql</h5>
+                            <p class="text-slate-500 dark:text-slate-400 leading-relaxed">Pilih file <code class="text-indigo-600 dark:text-indigo-400">Backup-konterku-*.sql</code> yang telah Anda unduh, lalu tekan tombol <strong>Go / Kirim</strong>. Data Anda kembali utuh!</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         @endif

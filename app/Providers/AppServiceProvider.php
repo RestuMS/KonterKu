@@ -7,6 +7,7 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\View;
+use Illuminate\Support\Facades\URL;
 use App\Models\Product;
 
 class AppServiceProvider extends ServiceProvider
@@ -24,6 +25,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Paksa HTTPS saat di lingkungan produksi / domain ber-SSL agar tidak terjadi masalah Mixed Content
+        if (app()->environment('production') || str_starts_with(config('app.url'), 'https://')) {
+            URL::forceScheme('https');
+        }
         Blade::directive('rupiah', function ($expression) {
             return "<?php echo 'Rp ' . number_format((float) ($expression), 0, ',', '.'); ?>";
         });

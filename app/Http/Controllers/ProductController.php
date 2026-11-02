@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use App\Http\Requests\ProductRequest;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\StockMutation;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
@@ -55,8 +57,23 @@ class ProductController extends Controller
             DB::transaction(function () use ($request, &$count) {
                 foreach ($request->items as $item) {
                     $item['is_active'] = isset($item['is_active']) && $item['is_active'];
-                    Product::create($item);
+                    $product = Product::create($item);
                     $count++;
+
+                    // Catat mutasi stok masuk awal jika ada stok
+                    if ($product->stock > 0) {
+                        StockMutation::create([
+                            'product_id' => $product->id,
+                            'user_id' => Auth::id(),
+                            'type' => 'in',
+                            'quantity' => $product->stock,
+                            'stock_before' => 0,
+                            'stock_after' => $product->stock,
+                            'reference_type' => Product::class,
+                            'reference_id' => $product->id,
+                            'notes' => 'Stok awal produk baru',
+                        ]);
+                    }
                 }
             });
 
@@ -67,7 +84,24 @@ class ProductController extends Controller
         $data = $request->validated();
         $data['is_active'] = $request->has('is_active');
 
-        Product::create($data);
+        DB::transaction(function () use ($data) {
+            $product = Product::create($data);
+
+            // Catat mutasi stok masuk awal jika ada stok
+            if ($product->stock > 0) {
+                StockMutation::create([
+                    'product_id' => $product->id,
+                    'user_id' => Auth::id(),
+                    'type' => 'in',
+                    'quantity' => $product->stock,
+                    'stock_before' => 0,
+                    'stock_after' => $product->stock,
+                    'reference_type' => Product::class,
+                    'reference_id' => $product->id,
+                    'notes' => 'Stok awal produk baru',
+                ]);
+            }
+        });
 
         return redirect()->route('products.index')
             ->with('success', "Produk {$data['name']} berhasil ditambahkan.");

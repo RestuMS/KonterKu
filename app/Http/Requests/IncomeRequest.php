@@ -20,13 +20,13 @@ class IncomeRequest extends FormRequest
                 'amount'           => ['required', 'numeric', 'gt:0'],
                 'category_id'      => ['required', 'exists:categories,id'],
                 'payment_method'   => ['required', 'in:cash,transfer,qris'],
-                'transaction_date' => ['nullable', 'date'],
+                'transaction_date' => ['nullable', 'date', 'before_or_equal:now', 'after:2020-01-01'],
             ];
         }
 
         // Aturan validasi untuk transaksi penjualan baru (store)
         return [
-            'transaction_date' => ['nullable', 'date'],
+            'transaction_date' => ['nullable', 'date', 'before_or_equal:now', 'after:2020-01-01'],
             'product_name'     => ['required', 'string', 'max:255'],
             'category_id'      => ['required', 'exists:categories,id'],
             'payment_method'   => ['required', 'in:cash,transfer,qris'],
@@ -50,7 +50,9 @@ class IncomeRequest extends FormRequest
             'category_id.exists'        => 'Kategori yang dipilih tidak valid atau tidak ditemukan dalam sistem.',
             'payment_method.required'   => 'Metode pembayaran wajib dipilih.',
             'payment_method.in'         => 'Metode pembayaran harus berupa Tunai (Cash), QRIS, atau Transfer Bank.',
-            'transaction_date.date'     => 'Format tanggal transaksi tidak valid.',
+            'transaction_date.date'            => 'Format tanggal transaksi tidak valid.',
+            'transaction_date.before_or_equal' => 'Tanggal transaksi tidak boleh melebihi waktu sekarang (tidak bisa mencatat transaksi masa depan).',
+            'transaction_date.after'           => 'Tanggal transaksi tidak boleh lebih lampau dari tahun 2020.',
             'product_name.required'     => 'Nama produk / item transaksi penjualan wajib diisi.',
             'product_name.max'          => 'Nama produk maksimal 255 karakter.',
             'cost_price.numeric'        => 'Harga modal / HPP harus berupa angka.',

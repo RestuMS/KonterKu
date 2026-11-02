@@ -42,10 +42,16 @@ class IncomeController extends Controller
         }
 
         if ($request->filled('start_date') && $request->filled('end_date')) {
-            $query->whereBetween('transaction_date', [
-                Carbon::parse($request->start_date)->startOfDay(),
-                Carbon::parse($request->end_date)->endOfDay(),
-            ]);
+            $startDate = Carbon::parse($request->start_date)->startOfDay();
+            $endDate = Carbon::parse($request->end_date)->endOfDay();
+            if ($startDate->gt($endDate)) {
+                [$startDate, $endDate] = [$endDate->copy()->startOfDay(), $startDate->copy()->endOfDay()];
+            }
+            $query->whereBetween('transaction_date', [$startDate, $endDate]);
+        } elseif ($request->filled('start_date')) {
+            $query->where('transaction_date', '>=', Carbon::parse($request->start_date)->startOfDay());
+        } elseif ($request->filled('end_date')) {
+            $query->where('transaction_date', '<=', Carbon::parse($request->end_date)->endOfDay());
         }
 
         // Hitung total finansial langsung dari database (Pemasukan TIDAK SAMA dengan Laba)
@@ -67,8 +73,9 @@ class IncomeController extends Controller
     {
         $categories = Category::whereIn('type', ['product', 'transaction', 'all'])->orderBy('name')->get();
         $products = Product::where('is_active', true)->with('category')->orderBy('name')->get();
+        $serverDeposit = \App\Models\ServerDeposit::getPrimary();
 
-        return view('incomes.create', compact('categories', 'products'));
+        return view('incomes.create', compact('categories', 'products', 'serverDeposit'));
     }
 
     public function store(IncomeRequest $request, StockService $stockService): RedirectResponse
@@ -92,13 +99,16 @@ class IncomeController extends Controller
                 ? Carbon::parse($request->transaction_date) 
                 : now();
 
+            $isBackdated = $transactionDate->lt(Carbon::today());
+
             $invoiceNumber = 'TRX-' . $transactionDate->format('Ymd') . '-' . strtoupper(substr(uniqid(), -5));
+
+            $cat = Category::find($request->category_id);
+            $catName = strtolower($cat?->name ?? '');
 
             // Otomatis tentukan identitas tujuan untuk voucher fisik & perdana jika kosong
             $target = trim($request->customer_target ?? '');
             if (empty($target)) {
-                $cat = Category::find($request->category_id);
-                $catName = strtolower($cat?->name ?? '');
                 $prodName = strtolower($request->product_name ?? '');
 
                 $detectedBrand = '';
@@ -181,14 +191,15 @@ class IncomeController extends Controller
                     'subtotal' => $totalAmount,
                 ]);
 
-                // Kurangi stok produk secara atomik
+                // Kurangi stok produk secara atomik dengan menyertakan tanggal mutasi sesuai tanggal transaksi
                 $stockService->reduceStock(
                     $product,
                     $qty,
                     Transaction::class,
                     $transaction->id,
-                    "Penjualan invoice: {$invoiceNumber}",
-                    Auth::id()
+                    "Penjualan invoice: {$invoiceNumber}" . ($isBackdated ? " (Transaksi susulan tgl {$transactionDate->format('d/m/Y')})" : ''),
+                    Auth::id(),
+                    $transactionDate
                 );
             } elseif ($request->filled('product_name')) {
                 // Jika transaksi jasa / produk manual tanpa ID katalog
@@ -206,20 +217,30 @@ class IncomeController extends Controller
                 ]);
             }
 
-            // Otomatis kurangi saldo server deposit aplikasi konter
-            if ($deductDepositAmount > 0) {
-                \App\Models\ServerDeposit::deductBalance(
+            // Otomatis kurangi saldo server deposit aplikasi konter jika produk/layanan digital server
+            $deposit = null;
+            $isServerProduct = \App\Models\ServerDeposit::isServerProduct($cat, $request->product_name);
+            if ($isServerProduct && $deductDepositAmount > 0) {
+                $deposit = \App\Models\ServerDeposit::deductBalance(
                     $deductDepositAmount, 
-                    "Penjualan invoice: {$invoiceNumber}", 
+                    "Penjualan invoice: {$invoiceNumber}" . ($isBackdated ? " (Susulan {$transactionDate->format('d/m/Y')})" : ''), 
                     Transaction::class, 
-                    $transaction->id
+                    $transaction->id,
+                    $transactionDate
                 );
             }
 
             DB::commit();
 
+            $successMsg = $isBackdated
+                ? "Transaksi pemasukan {$invoiceNumber} berhasil dicatat untuk tanggal {$transactionDate->format('d/m/Y H:i')} (Transaksi Susulan)."
+                : "Transaksi pemasukan {$invoiceNumber} berhasil dicatat.";
+            if ($deposit && $deposit->isLow()) {
+                $successMsg .= " ⚠️ Perhatian: Sisa saldo server menipis (Rp " . number_format($deposit->balance, 0, ',', '.') . "). Segera lakukan top up.";
+            }
+
             return redirect()->route('incomes.index')
-                ->with('success', "Transaksi pemasukan {$invoiceNumber} berhasil dicatat.")
+                ->with('success', $successMsg)
                 ->with('recent_invoice_id', $transaction->id)
                 ->with('recent_invoice_number', $invoiceNumber)
                 ->with('recent_invoice_amount', $transaction->total_amount)
@@ -264,14 +285,25 @@ class IncomeController extends Controller
             $income->load('items');
 
             // 1. Perbarui data transaksi utama (Hanya yang diizinkan untuk diedit)
+            $newTransactionDate = $request->filled('transaction_date') ? Carbon::parse($request->transaction_date) : $income->transaction_date;
             $income->update([
-                'transaction_date' => $request->filled('transaction_date') ? Carbon::parse($request->transaction_date) : $income->transaction_date,
+                'transaction_date' => $newTransactionDate,
                 'category_id'      => $request->category_id,
                 'total_amount'     => $request->amount,
                 'payment_method'   => $request->payment_method,
             ]);
 
+            // Sinkronisasi tanggal mutasi stok & mutasi saldo server jika tanggal transaksi diperbarui
+            \App\Models\StockMutation::where('reference_type', Transaction::class)
+                ->where('reference_id', $income->id)
+                ->update(['created_at' => $newTransactionDate, 'updated_at' => $newTransactionDate]);
+
+            \App\Models\ServerDepositMutation::where('reference_type', Transaction::class)
+                ->where('reference_id', $income->id)
+                ->update(['created_at' => $newTransactionDate, 'updated_at' => $newTransactionDate]);
+
             // 2. Sesuaikan unit_price & subtotal pada item transaksi yang sudah ada
+            $firstItem = $income->items->first();
             if ($income->items->isNotEmpty()) {
                 foreach ($income->items as $item) {
                     $qty = (int) ($item->quantity ?: 1);
@@ -280,6 +312,42 @@ class IncomeController extends Controller
                         'subtotal'   => $request->amount,
                     ]);
                 }
+            }
+
+            // 3. Sinkronisasi perubahan ke Saldo Server jika transaksi menggunakan saldo server
+            $existingMutation = \App\Models\ServerDepositMutation::where('reference_type', Transaction::class)
+                ->where('reference_id', $income->id)
+                ->where('type', 'out')
+                ->first();
+
+            $newCategory = Category::find($request->category_id);
+            $productName = $firstItem?->product_name ?? '';
+            $isServerProduct = \App\Models\ServerDeposit::isServerProduct($newCategory, $productName);
+
+            if ($existingMutation) {
+                $prevDeducted = (float) $existingMutation->amount;
+                if ($isServerProduct) {
+                    $newCost = $firstItem && (float)$firstItem->cost_price > 0 
+                        ? ((float)$firstItem->cost_price * (int)($firstItem->quantity ?: 1)) 
+                        : (float)$request->amount;
+                    $diff = $newCost - $prevDeducted;
+
+                    if ($diff > 0) {
+                        \App\Models\ServerDeposit::deductBalance($diff, "Koreksi penambahan nominal invoice: {$income->invoice_number}", Transaction::class, $income->id);
+                    } elseif ($diff < 0) {
+                        \App\Models\ServerDeposit::addBalance(abs($diff), "Koreksi pengurangan nominal invoice: {$income->invoice_number}", Transaction::class, $income->id);
+                    }
+                    $existingMutation->update(['amount' => $newCost]);
+                } else {
+                    // Jika diubah menjadi non-server (aksesoris), kembalikan saldo server yang sempat terpotong
+                    \App\Models\ServerDeposit::addBalance($prevDeducted, "Koreksi ganti kategori non-server invoice: {$income->invoice_number}", Transaction::class, $income->id);
+                    $existingMutation->delete();
+                }
+            } elseif ($isServerProduct && (float)$request->amount > 0) {
+                $newCost = $firstItem && (float)$firstItem->cost_price > 0 
+                    ? ((float)$firstItem->cost_price * (int)($firstItem->quantity ?: 1)) 
+                    : (float)$request->amount;
+                \App\Models\ServerDeposit::deductBalance($newCost, "Koreksi ganti kategori server invoice: {$income->invoice_number}", Transaction::class, $income->id);
             }
 
             DB::commit();
@@ -303,7 +371,6 @@ class IncomeController extends Controller
             $income->load('items.product');
 
             // 1. Jika ada item produk fisik, kembalikan stok fisik & kurangi 'stok out' pada mutasi stok
-            $refundDepositAmount = 0;
             foreach ($income->items as $item) {
                 if ($item->product) {
                     // Hapus pencatatan mutasi stok 'out' dari transaksi ini agar 'stok out' berkurang kembali
@@ -315,16 +382,18 @@ class IncomeController extends Controller
                     // Kembalikan stok fisik produk ke inventaris toko
                     $item->product->increment('stock', $item->quantity);
                 }
-                $refundDepositAmount += ($item->cost_price > 0 ? ($item->cost_price * $item->quantity) : $item->subtotal);
             }
 
-            if ($refundDepositAmount == 0 && $income->total_amount > 0) {
-                $refundDepositAmount = (float) $income->total_amount;
-            }
-
-            // 2. Kembalikan saldo deposit server aplikasi
+            // 2. Kembalikan saldo deposit server aplikasi jika transaksi ini memotong saldo server
             $deposit = null;
-            if ($refundDepositAmount > 0) {
+            $refundDepositAmount = 0;
+            $serverMutation = \App\Models\ServerDepositMutation::where('reference_type', Transaction::class)
+                ->where('reference_id', $income->id)
+                ->where('type', 'out')
+                ->first();
+
+            if ($serverMutation && (float)$serverMutation->amount > 0) {
+                $refundDepositAmount = (float) $serverMutation->amount;
                 $deposit = \App\Models\ServerDeposit::addBalance(
                     $refundDepositAmount,
                     "Pembatalan transaksi invoice: {$income->invoice_number}",

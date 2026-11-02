@@ -77,4 +77,16 @@ class Transaction extends Model
 
         return $this->selling_price - $this->cost_price;
     }
+
+    /**
+     * Cek apakah transaksi dicatat mundur (tanggal transaksi lebih lampau dari tanggal input sistem).
+     */
+    public function isBackdated(): bool
+    {
+        if (!$this->transaction_date || !$this->created_at) {
+            return false;
+        }
+
+        return $this->transaction_date->toDateString() < $this->created_at->toDateString();
+    }
 }

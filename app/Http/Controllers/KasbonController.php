@@ -61,11 +61,16 @@ class KasbonController extends Controller
             });
         }
 
-        if ($startDate) {
+        if ($startDate && $endDate) {
+            $s = Carbon::parse($startDate)->startOfDay();
+            $e = Carbon::parse($endDate)->endOfDay();
+            if ($s->gt($e)) {
+                [$s, $e] = [$e->copy()->startOfDay(), $s->copy()->endOfDay()];
+            }
+            $query->whereBetween('debt_date', [$s, $e]);
+        } elseif ($startDate) {
             $query->whereDate('debt_date', '>=', Carbon::parse($startDate)->startOfDay());
-        }
-
-        if ($endDate) {
+        } elseif ($endDate) {
             $query->whereDate('debt_date', '<=', Carbon::parse($endDate)->endOfDay());
         }
 
@@ -161,10 +166,16 @@ class KasbonController extends Controller
                 ]);
             }
 
-            // Kurangi saldo server deposit aplikasi konter
+            // Kurangi saldo server deposit aplikasi konter jika produk digital server
+            $isServer = \App\Models\ServerDeposit::isServerProduct($product?->category, $productName);
             $deductDeposit = ($costPrice > 0) ? ($costPrice * $quantity) : $amount;
-            if ($deductDeposit > 0) {
-                \App\Models\ServerDeposit::deductBalance($deductDeposit, "Kasbon an. {$validated['customer_name']}");
+            if ($isServer && $deductDeposit > 0) {
+                \App\Models\ServerDeposit::deductBalance(
+                    $deductDeposit, 
+                    "Kasbon an. {$validated['customer_name']}",
+                    \App\Models\Kasbon::class,
+                    $kasbon->id
+                );
             }
         });
 
@@ -182,16 +193,66 @@ class KasbonController extends Controller
 
         $validated = $request->validated();
 
-        $quantity = (int) ($validated['quantity'] ?? $kasbon->quantity ?: 1);
+        $oldQty = (int) ($kasbon->quantity ?: 1);
+        $newQty = (int) ($validated['quantity'] ?? $oldQty);
         $amount = (float) $validated['amount'];
         $costPrice = isset($validated['cost_price']) ? (float) $validated['cost_price'] : (float) $kasbon->cost_price;
-        $profit = max(0, $amount - ($costPrice * $quantity));
+        $profit = max(0, $amount - ($costPrice * $newQty));
 
-        $validated['quantity'] = $quantity;
+        $validated['quantity'] = $newQty;
         $validated['cost_price'] = $costPrice;
         $validated['profit'] = $profit;
 
-        $kasbon->update($validated);
+        DB::transaction(function () use ($kasbon, $validated, $oldQty, $newQty, $amount, $costPrice) {
+            // 1. Penyesuaian stok produk jika ada produk katalog terkait
+            if ($kasbon->product_id && $product = Product::find($kasbon->product_id)) {
+                $qtyDiff = $newQty - $oldQty;
+                if ($qtyDiff > 0) {
+                    $product->decrement('stock', $qtyDiff);
+                    StockMutation::create([
+                        'product_id' => $product->id,
+                        'user_id' => auth()->id(),
+                        'type' => 'out',
+                        'quantity' => $qtyDiff,
+                        'stock_before' => $product->stock + $qtyDiff,
+                        'stock_after' => $product->stock,
+                        'reference_type' => \App\Models\Kasbon::class,
+                        'reference_id' => $kasbon->id,
+                        'notes' => "Koreksi penambahan kuantitas kasbon an. {$kasbon->customer_name} (+{$qtyDiff})",
+                    ]);
+                } elseif ($qtyDiff < 0) {
+                    $restoreQty = abs($qtyDiff);
+                    $product->increment('stock', $restoreQty);
+                    StockMutation::create([
+                        'product_id' => $product->id,
+                        'user_id' => auth()->id(),
+                        'type' => 'in',
+                        'quantity' => $restoreQty,
+                        'stock_before' => $product->stock - $restoreQty,
+                        'stock_after' => $product->stock,
+                        'reference_type' => \App\Models\Kasbon::class,
+                        'reference_id' => $kasbon->id,
+                        'notes' => "Koreksi pengurangan kuantitas kasbon an. {$kasbon->customer_name} (-{$restoreQty})",
+                    ]);
+                }
+            }
+
+            // 2. Penyesuaian saldo server jika kasbon ini layanan digital server
+            $isServer = \App\Models\ServerDeposit::isServerProduct($kasbon->product?->category, $kasbon->product_name);
+            if ($isServer) {
+                $oldDeduct = ($kasbon->cost_price > 0) ? ($kasbon->cost_price * $oldQty) : (float) $kasbon->amount;
+                $newDeduct = ($costPrice > 0) ? ($costPrice * $newQty) : $amount;
+                $diff = $newDeduct - $oldDeduct;
+
+                if ($diff > 0) {
+                    \App\Models\ServerDeposit::deductBalance($diff, "Koreksi penambahan kasbon an. {$kasbon->customer_name}", \App\Models\Kasbon::class, $kasbon->id);
+                } elseif ($diff < 0) {
+                    \App\Models\ServerDeposit::addBalance(abs($diff), "Koreksi pengurangan kasbon an. {$kasbon->customer_name}", \App\Models\Kasbon::class, $kasbon->id);
+                }
+            }
+
+            $kasbon->update($validated);
+        });
 
         return redirect()->route('kasbons.index')
             ->with('success', "Catatan kasbon an. {$kasbon->customer_name} berhasil diperbarui.");
@@ -303,14 +364,14 @@ class KasbonController extends Controller
     public function destroy(Kasbon $kasbon): RedirectResponse
     {
         DB::transaction(function () use ($kasbon) {
-            // Jika ada transaksi pemasukan pelunasan, hapus
+            // 1. Jika ada transaksi pemasukan pelunasan, hapus
             if ($kasbon->transaction_id) {
                 TransactionItem::where('transaction_id', $kasbon->transaction_id)->delete();
                 Transaction::where('id', $kasbon->transaction_id)->delete();
             }
 
-            // Jika kasbon belum lunas dan punya produk stok fisik, kembalikan stok fisik & kurangi 'stok out'
-            if ($kasbon->status === 'unpaid' && $kasbon->product_id && $product = Product::find($kasbon->product_id)) {
+            // 2. Kembalikan stok fisik jika kasbon memiliki produk katalog
+            if ($kasbon->product_id && $product = Product::find($kasbon->product_id)) {
                 // Hapus mutasi keluar agar total 'stok out' otomatis berkurang kembali
                 StockMutation::where('product_id', $product->id)
                     ->where(function ($q) use ($kasbon) {
@@ -324,13 +385,19 @@ class KasbonController extends Controller
                 $product->increment('stock', $kasbon->quantity ?: 1);
             }
 
-            // Kembalikan saldo server jika kasbon dibatalkan saat status masih unpaid
-            if ($kasbon->status === 'unpaid') {
-                $cost = (float) $kasbon->cost_price;
-                $refundDeposit = $cost > 0 ? ($cost * ($kasbon->quantity ?: 1)) : (float) $kasbon->amount;
-                if ($refundDeposit > 0) {
-                    \App\Models\ServerDeposit::addBalance($refundDeposit);
-                }
+            // 3. Kembalikan saldo server jika kasbon ini memotong saldo server
+            $serverMutation = \App\Models\ServerDepositMutation::where('reference_type', \App\Models\Kasbon::class)
+                ->where('reference_id', $kasbon->id)
+                ->where('type', 'out')
+                ->first();
+
+            if ($serverMutation && (float)$serverMutation->amount > 0) {
+                \App\Models\ServerDeposit::addBalance(
+                    (float)$serverMutation->amount,
+                    "Pembatalan kasbon an. {$kasbon->customer_name}",
+                    \App\Models\Kasbon::class,
+                    $kasbon->id
+                );
             }
 
             $kasbon->delete();
