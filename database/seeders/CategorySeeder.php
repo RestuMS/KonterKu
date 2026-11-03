@@ -243,6 +243,56 @@ class CategorySeeder extends Seeder
                 'description' => 'Layanan tarik tunai saldo rekening bank & saldo e-wallet agen konter',
             ],
 
+            // Tagihan Listrik & Pajak PLN
+            [
+                'name' => 'Tagihan / Pajak Listrik PLN',
+                'slug' => 'tagihan-pajak-listrik-pln',
+                'type' => 'all',
+                'description' => 'Pembayaran tagihan listrik pascabayar PLN, non-taglis & pajak penerangan jalan listrik',
+            ],
+
+            // BPJS Kesehatan
+            [
+                'name' => 'BPJS Kesehatan',
+                'slug' => 'bpjs-kesehatan',
+                'type' => 'all',
+                'description' => 'Pembayaran iuran jaminan kesehatan BPJS bulanan keluarga & badan usaha',
+            ],
+
+            // Tagihan WiFi & Internet Rumah
+            [
+                'name' => 'Tagihan WiFi IndiHome',
+                'slug' => 'tagihan-indihome',
+                'type' => 'all',
+                'description' => 'Pembayaran tagihan bulanan internet WiFi Telkom IndiHome / IndiHome TV',
+            ],
+            [
+                'name' => 'Tagihan WiFi ICONNET',
+                'slug' => 'tagihan-iconnet',
+                'type' => 'all',
+                'description' => 'Pembayaran tagihan bulanan internet WiFi ICONNET (PLN Icon Plus)',
+            ],
+            [
+                'name' => 'Tagihan WiFi MyRepublic',
+                'slug' => 'tagihan-myrepublic',
+                'type' => 'all',
+                'description' => 'Pembayaran tagihan bulanan internet fiber MyRepublic',
+            ],
+            [
+                'name' => 'Tagihan WiFi First Media',
+                'slug' => 'tagihan-firstmedia',
+                'type' => 'all',
+                'description' => 'Pembayaran tagihan bulanan internet & TV kabel First Media',
+            ],
+
+            // Top Up Game Online
+            [
+                'name' => 'Top Up Game',
+                'slug' => 'top-up-game',
+                'type' => 'all',
+                'description' => 'Top up diamond & voucher game online (Free Fire, Mobile Legends, dan game baru lainnya)',
+            ],
+
             // Produk Fisik & Jasa Tambahan
             [
                 'name' => 'Aksesoris HP',

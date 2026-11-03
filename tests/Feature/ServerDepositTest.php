@@ -225,4 +225,53 @@ class ServerDepositTest extends TestCase
         $responseSearch->assertOk();
         $responseSearch->assertSee('Penjualan pulsa 50k');
     }
+
+    public function test_is_server_product_identifies_new_categories_properly(): void
+    {
+        $catPln = Category::factory()->create(['name' => 'Tagihan / Pajak Listrik PLN', 'slug' => 'tagihan-pajak-listrik-pln']);
+        $catBpjs = Category::factory()->create(['name' => 'BPJS Kesehatan', 'slug' => 'bpjs-kesehatan']);
+        $catIndihome = Category::factory()->create(['name' => 'Tagihan WiFi IndiHome', 'slug' => 'tagihan-indihome']);
+        $catIconnet = Category::factory()->create(['name' => 'Tagihan WiFi ICONNET', 'slug' => 'tagihan-iconnet']);
+        $catMyrep = Category::factory()->create(['name' => 'Tagihan WiFi MyRepublic', 'slug' => 'tagihan-myrepublic']);
+        $catFirstMedia = Category::factory()->create(['name' => 'Tagihan WiFi First Media', 'slug' => 'tagihan-firstmedia']);
+        $catGame = Category::factory()->create(['name' => 'Top Up Game', 'slug' => 'top-up-game']);
+
+        // Check isServerProduct for each
+        $this->assertTrue(ServerDeposit::isServerProduct($catPln, 'Tagihan Listrik Pascabayar'));
+        $this->assertTrue(ServerDeposit::isServerProduct($catBpjs, 'Tagihan Iuran BPJS Kesehatan'));
+        $this->assertTrue(ServerDeposit::isServerProduct($catIndihome, 'Tagihan Bulanan WiFi IndiHome'));
+        $this->assertTrue(ServerDeposit::isServerProduct($catIconnet, 'Tagihan WiFi ICONNET 20 Mbps'));
+        $this->assertTrue(ServerDeposit::isServerProduct($catMyrep, 'Tagihan WiFi MyRepublic'));
+        $this->assertTrue(ServerDeposit::isServerProduct($catFirstMedia, 'Tagihan WiFi First Media Family'));
+
+        // Games: Free Fire, Mobile Legends, and manual game (e.g. PUBG)
+        $this->assertTrue(ServerDeposit::isServerProduct($catGame, 'Top Up Game Free Fire 140 Diamond'));
+        $this->assertTrue(ServerDeposit::isServerProduct($catGame, 'Top Up Game Mobile Legends 86 Diamond'));
+        $this->assertTrue(ServerDeposit::isServerProduct($catGame, 'Top Up Game PUBG Mobile 60 UC'));
+        $this->assertTrue(ServerDeposit::isServerProduct($catGame, 'Top Up Game Roblox 100 Robux'));
+    }
+
+    public function test_game_sale_automatically_deducts_server_deposit_balance(): void
+    {
+        $user = User::factory()->create();
+        ServerDeposit::setBalance(1000000);
+
+        $catGame = Category::factory()->create(['name' => 'Top Up Game', 'slug' => 'top-up-game', 'type' => 'all']);
+
+        $response = $this->actingAs($user)->post('/incomes', [
+            'product_name' => 'Top Up Game Free Fire 140 Diamond',
+            'category_id' => $catGame->id,
+            'payment_method' => 'cash',
+            'amount' => 20000,
+            'quantity' => 1,
+            'cost_price' => 18000,
+            'customer_target' => 'ID: 123456789',
+        ]);
+
+        $response->assertRedirect('/incomes');
+        $response->assertSessionHas('success');
+
+        // Saldo server harus otomatis terpotong 18.000: 1.000.000 - 18.000 = 982.000
+        $this->assertEquals(982000, (float) ServerDeposit::getPrimary()->balance);
+    }
 }

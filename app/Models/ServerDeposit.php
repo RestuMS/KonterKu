@@ -86,7 +86,9 @@ class ServerDeposit extends Model
         $serverKeywords = [
             'pulsa', 'paket', 'data', 'kuota', 'internet', 'token', 'pln', 'listrik', 
             'wallet', 'ewallet', 'dana', 'gopay', 'shopee', 'ovo', 'seabank', 
-            'transfer', 'tarik', 'voucher', 'perdana', 'game', 'bpjs', 'pajak', 'ppob'
+            'transfer', 'tarik', 'voucher', 'perdana', 'game', 'bpjs', 'pajak', 'ppob',
+            'wifi', 'indihome', 'iconnet', 'myrepublic', 'firstmedia', 'tagihan',
+            'free fire', 'mobile legends', 'diamond'
         ];
         foreach ($serverKeywords as $kw) {
             if (str_contains($combined, $kw)) {

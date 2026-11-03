@@ -9,14 +9,28 @@
         $paketCats = $categories->filter(fn($c) => str_starts_with(strtolower($c->name), 'paket internet'));
         $perdanaCats = $categories->filter(fn($c) => str_starts_with(strtolower($c->name), 'kartu perdana'));
         $ewalletCats = $categories->filter(fn($c) => str_starts_with(strtolower($c->name), 'e-wallet'));
-        $tokenCats = $categories->filter(fn($c) => str_contains(strtolower($c->name), 'token'));
+        $tokenCats = $categories->filter(fn($c) => str_contains(strtolower($c->name), 'token') || (str_contains(strtolower($c->name), 'listrik') && !str_contains(strtolower($c->name), 'tagihan') && !str_contains(strtolower($c->name), 'pajak')));
+        $plnPascaCats = $categories->filter(fn($c) => str_contains(strtolower($c->name), 'pajak') || (str_contains(strtolower($c->name), 'listrik') && (str_contains(strtolower($c->name), 'tagihan') || str_contains(strtolower($c->name), 'pajak'))));
+        $bpjsCats = $categories->filter(fn($c) => str_contains(strtolower($c->name), 'bpjs'));
+        $wifiCats = $categories->filter(fn($c) => str_contains(strtolower($c->name), 'wifi') || str_contains(strtolower($c->name), 'indihome') || str_contains(strtolower($c->name), 'iconnet') || str_contains(strtolower($c->name), 'myrepublic') || str_contains(strtolower($c->name), 'first media') || str_contains(strtolower($c->name), 'firstmedia'));
+        $gameCats = $categories->filter(fn($c) => str_contains(strtolower($c->name), 'game'));
         $otherCats = $categories->reject(fn($c) => 
             str_starts_with(strtolower($c->name), 'pulsa') || 
             str_starts_with(strtolower($c->name), 'voucher') || 
             str_starts_with(strtolower($c->name), 'paket internet') || 
             str_starts_with(strtolower($c->name), 'kartu perdana') || 
             str_starts_with(strtolower($c->name), 'e-wallet') || 
-            str_contains(strtolower($c->name), 'token')
+            str_contains(strtolower($c->name), 'token') ||
+            str_contains(strtolower($c->name), 'listrik') ||
+            str_contains(strtolower($c->name), 'pajak') ||
+            str_contains(strtolower($c->name), 'bpjs') ||
+            str_contains(strtolower($c->name), 'wifi') ||
+            str_contains(strtolower($c->name), 'indihome') ||
+            str_contains(strtolower($c->name), 'iconnet') ||
+            str_contains(strtolower($c->name), 'myrepublic') ||
+            str_contains(strtolower($c->name), 'first media') ||
+            str_contains(strtolower($c->name), 'firstmedia') ||
+            str_contains(strtolower($c->name), 'game')
         );
     @endphp
 
@@ -49,7 +63,46 @@
             isDigital() {
                 if (!this.categoryName) return false;
                 const lower = this.categoryName.toLowerCase();
-                return lower.includes('pulsa') || lower.includes('paket') || lower.includes('token') || lower.includes('e-wallet') || lower.includes('transfer') || lower.includes('tarik') || lower.includes('jasa');
+                return lower.includes('pulsa') || 
+                       lower.includes('paket') || 
+                       lower.includes('token') || 
+                       lower.includes('listrik') || 
+                       lower.includes('pajak') || 
+                       lower.includes('pln') || 
+                       lower.includes('bpjs') || 
+                       lower.includes('wifi') || 
+                       lower.includes('indihome') || 
+                       lower.includes('iconnet') || 
+                       lower.includes('myrepublic') || 
+                       lower.includes('firstmedia') || 
+                       lower.includes('first media') || 
+                       lower.includes('game') || 
+                       lower.includes('e-wallet') || 
+                       lower.includes('transfer') || 
+                       lower.includes('tarik') || 
+                       lower.includes('jasa');
+            },
+
+            isGame() {
+                return (this.categoryName || '').toLowerCase().includes('game');
+            },
+
+            setGamePreset(gameKey) {
+                if (gameKey === 'ff') {
+                    this.name = 'Top Up Game Free Fire ';
+                } else if (gameKey === 'ml') {
+                    this.name = 'Top Up Game Mobile Legends ';
+                } else {
+                    this.name = 'Top Up Game ';
+                }
+                this.$nextTick(() => {
+                    const input = document.getElementById('name_input');
+                    if (input) {
+                        input.focus();
+                        const len = input.value.length;
+                        input.setSelectionRange(len, len);
+                    }
+                });
             },
 
             selectCategory(cat) {
@@ -59,7 +112,7 @@
                 this.categorySlug = cat.slug;
 
                 const lower = cat.name.toLowerCase();
-                const isDigital = lower.includes('pulsa') || lower.includes('paket') || lower.includes('token') || lower.includes('e-wallet') || lower.includes('transfer') || lower.includes('tarik') || lower.includes('jasa');
+                const isDigital = this.isDigital();
                 if (isDigital) {
                     this.unit = 'transaksi';
                 } else if (lower.includes('voucher')) {
@@ -301,11 +354,11 @@
                         </div>
                     </div>
 
-                    <!-- 6. Kategori: Token Listrik PLN & Lainnya -->
+                    <!-- 6. Kategori: Token & Tagihan Listrik PLN -->
                     <div class="space-y-2 pt-2">
                         <div class="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
                             <span class="w-5 h-5 rounded-md bg-orange-100 dark:bg-orange-950/60 text-orange-600 dark:text-orange-400 inline-flex items-center justify-center text-[11px]">⚡</span>
-                            <span>Token Listrik PLN & Lainnya:</span>
+                            <span>Token & Tagihan Listrik PLN:</span>
                         </div>
                         <div class="flex flex-wrap gap-2">
                             @foreach($tokenCats as $cat)
@@ -321,6 +374,88 @@
                                     <span>⚡ {{ $cat->name }}</span>
                                 </button>
                             @endforeach
+                            @foreach($plnPascaCats as $cat)
+                                <button
+                                    type="button"
+                                    @click="selectCategory({{ Js::from($cat) }})"
+                                    :class="categoryId == {{ $cat->id }} 
+                                        ? 'bg-amber-600 text-white shadow-md shadow-amber-600/20 ring-2 ring-amber-500 ring-offset-2 dark:ring-offset-slate-800' 
+                                        : 'bg-slate-50 dark:bg-slate-750 text-slate-700 dark:text-slate-200 hover:bg-amber-50 hover:text-amber-800 hover:border-amber-300 dark:hover:bg-amber-950/40 border border-slate-200/80 dark:border-slate-700'"
+                                    class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all duration-150 flex items-center gap-1.5 cursor-pointer active:scale-95"
+                                >
+                                    <span x-show="categoryId == {{ $cat->id }}">✓</span>
+                                    <span>📄 {{ $cat->name }}</span>
+                                </button>
+                            @endforeach
+                        </div>
+                    </div>
+
+                    <!-- 7. Kategori: BPJS Kesehatan -->
+                    <div class="space-y-2 pt-2">
+                        <div class="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
+                            <span class="w-5 h-5 rounded-md bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 inline-flex items-center justify-center text-[11px]">🏥</span>
+                            <span>BPJS Kesehatan:</span>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            @foreach($bpjsCats as $cat)
+                                <button
+                                    type="button"
+                                    @click="selectCategory({{ Js::from($cat) }})"
+                                    :class="categoryId == {{ $cat->id }} 
+                                        ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20 ring-2 ring-emerald-500 ring-offset-2 dark:ring-offset-slate-800' 
+                                        : 'bg-slate-50 dark:bg-slate-750 text-slate-700 dark:text-slate-200 hover:bg-emerald-50 hover:text-emerald-800 hover:border-emerald-300 dark:hover:bg-emerald-950/40 border border-slate-200/80 dark:border-slate-700'"
+                                    class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all duration-150 flex items-center gap-1.5 cursor-pointer active:scale-95"
+                                >
+                                    <span x-show="categoryId == {{ $cat->id }}">✓</span>
+                                    <span>🏥 {{ $cat->name }}</span>
+                                </button>
+                            @endforeach
+                        </div>
+                    </div>
+
+                    <!-- 8. Kategori: Tagihan WiFi Internet Rumah -->
+                    <div class="space-y-2 pt-2">
+                        <div class="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
+                            <span class="w-5 h-5 rounded-md bg-teal-100 dark:bg-teal-950/60 text-teal-600 dark:text-teal-400 inline-flex items-center justify-center text-[11px]">📡</span>
+                            <span>Tagihan WiFi & Internet Rumah:</span>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            @foreach($wifiCats as $cat)
+                                <button
+                                    type="button"
+                                    @click="selectCategory({{ Js::from($cat) }})"
+                                    :class="categoryId == {{ $cat->id }} 
+                                        ? 'bg-teal-600 text-white shadow-md shadow-teal-600/20 ring-2 ring-teal-500 ring-offset-2 dark:ring-offset-slate-800' 
+                                        : 'bg-slate-50 dark:bg-slate-750 text-slate-700 dark:text-slate-200 hover:bg-teal-50 hover:text-teal-800 hover:border-teal-300 dark:hover:bg-teal-950/40 border border-slate-200/80 dark:border-slate-700'"
+                                    class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all duration-150 flex items-center gap-1.5 cursor-pointer active:scale-95"
+                                >
+                                    <span x-show="categoryId == {{ $cat->id }}">✓</span>
+                                    <span>📡 {{ $cat->name }}</span>
+                                </button>
+                            @endforeach
+                        </div>
+                    </div>
+
+                    <!-- 9. Kategori: Top Up Game Online -->
+                    <div class="space-y-2 pt-2">
+                        <div class="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
+                            <span class="w-5 h-5 rounded-md bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 inline-flex items-center justify-center text-[11px]">🎮</span>
+                            <span>Top Up Game Online (Free Fire, Mobile Legends, & Game Baru):</span>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            @foreach($gameCats as $cat)
+                                <button
+                                    type="button"
+                                    @click="selectCategory({{ Js::from($cat) }})"
+                                    :class="categoryId == {{ $cat->id }} 
+                                        ? 'bg-rose-600 text-white shadow-md shadow-rose-600/20 ring-2 ring-rose-500 ring-offset-2 dark:ring-offset-slate-800' 
+                                        : 'bg-slate-50 dark:bg-slate-750 text-slate-700 dark:text-slate-200 hover:bg-rose-50 hover:text-rose-800 hover:border-rose-300 dark:hover:bg-rose-950/40 border border-slate-200/80 dark:border-slate-700'"
+                                    class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all duration-150 flex items-center gap-1.5 cursor-pointer active:scale-95"
+                                >
+                                    <span x-show="categoryId == {{ $cat->id }}">✓</span>
+                                    <span>🎮 {{ $cat->name }}</span>
+                                </button>
+                            @endforeach
 
                             @foreach($otherCats as $cat)
                                 <button
@@ -332,7 +467,7 @@
                                     class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all duration-150 flex items-center gap-1.5 cursor-pointer active:scale-95"
                                 >
                                     <span x-show="categoryId == {{ $cat->id }}">✓</span>
-                                    <span>{{ $cat->name }}</span>
+                                    <span>📦 {{ $cat->name }}</span>
                                 </button>
                             @endforeach
                         </div>
@@ -406,6 +541,42 @@
                                         @endforeach
                                     </optgroup>
                                 @endif
+                                @if($plnPascaCats->isNotEmpty())
+                                    <optgroup label="⚡ Tagihan & Pajak Listrik PLN">
+                                        @foreach($plnPascaCats as $cat)
+                                            <option value="{{ $cat->id }}" {{ old('category_id', $product->category_id) == $cat->id ? 'selected' : '' }}>
+                                                {{ $cat->name }}
+                                            </option>
+                                        @endforeach
+                                    </optgroup>
+                                @endif
+                                @if($bpjsCats->isNotEmpty())
+                                    <optgroup label="🏥 BPJS Kesehatan">
+                                        @foreach($bpjsCats as $cat)
+                                            <option value="{{ $cat->id }}" {{ old('category_id', $product->category_id) == $cat->id ? 'selected' : '' }}>
+                                                {{ $cat->name }}
+                                            </option>
+                                        @endforeach
+                                    </optgroup>
+                                @endif
+                                @if($wifiCats->isNotEmpty())
+                                    <optgroup label="📡 Tagihan WiFi & Internet Rumah">
+                                        @foreach($wifiCats as $cat)
+                                            <option value="{{ $cat->id }}" {{ old('category_id', $product->category_id) == $cat->id ? 'selected' : '' }}>
+                                                {{ $cat->name }}
+                                            </option>
+                                        @endforeach
+                                    </optgroup>
+                                @endif
+                                @if($gameCats->isNotEmpty())
+                                    <optgroup label="🎮 Top Up Game Online">
+                                        @foreach($gameCats as $cat)
+                                            <option value="{{ $cat->id }}" {{ old('category_id', $product->category_id) == $cat->id ? 'selected' : '' }}>
+                                                {{ $cat->name }}
+                                            </option>
+                                        @endforeach
+                                    </optgroup>
+                                @endif
                                 @if($otherCats->isNotEmpty())
                                     <optgroup label="📦 Aksesoris, Jasa & Lainnya">
                                         @foreach($otherCats as $cat)
@@ -434,9 +605,42 @@
 
                     <!-- Input Nama Produk dengan Prefix Cerdas -->
                     <div class="pt-2">
-                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1.5">
-                            Nama Lengkap Produk <span class="text-rose-500">*</span>
-                        </label>
+                        <div class="flex items-center justify-between mb-1.5 flex-wrap gap-2">
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
+                                Nama Lengkap Produk <span class="text-rose-500">*</span>
+                            </label>
+
+                            <!-- Pilihan Cepat Khusus Game -->
+                            <template x-if="isGame()">
+                                <div class="flex items-center gap-1">
+                                    <button
+                                        type="button"
+                                        @click="setGamePreset('ff')"
+                                        :class="name.toLowerCase().includes('free fire') ? 'bg-amber-500 text-white font-bold' : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300'"
+                                        class="px-2 py-0.5 rounded text-[10px] cursor-pointer hover:bg-amber-400"
+                                    >
+                                        🔥 Free Fire
+                                    </button>
+                                    <button
+                                        type="button"
+                                        @click="setGamePreset('ml')"
+                                        :class="name.toLowerCase().includes('mobile legends') ? 'bg-blue-600 text-white font-bold' : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300'"
+                                        class="px-2 py-0.5 rounded text-[10px] cursor-pointer hover:bg-blue-500"
+                                    >
+                                        ⚔️ Mobile Legends
+                                    </button>
+                                    <button
+                                        type="button"
+                                        @click="setGamePreset('custom')"
+                                        :class="!name.toLowerCase().includes('free fire') && !name.toLowerCase().includes('mobile legends') ? 'bg-indigo-600 text-white font-bold' : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300'"
+                                        class="px-2 py-0.5 rounded text-[10px] cursor-pointer hover:bg-indigo-500"
+                                    >
+                                        🎮 Game Baru (Manual)
+                                    </button>
+                                </div>
+                            </template>
+                        </div>
+
                         <input
                             type="text"
                             id="name_input"
@@ -448,18 +652,70 @@
                         
                         <!-- Quick Denomination Buttons (Nominal Cepat) -->
                         <div class="mt-3 flex items-center gap-1.5 flex-wrap">
-                            <span class="text-[11px] font-semibold text-slate-400">Pilihan Nominal Cepat:</span>
-                            @foreach(['5.000', '10.000', '15.000', '20.000', '25.000', '50.000', '100.000'] as $denom)
-                                <button
-                                    type="button"
-                                    @click="appendDenom('{{ $denom }}')"
-                                    class="px-2.5 py-1 rounded-lg text-[11px] font-bold font-mono bg-slate-100 hover:bg-indigo-100 hover:text-indigo-700 dark:bg-slate-700 dark:hover:bg-indigo-950/60 dark:hover:text-indigo-300 text-slate-700 dark:text-slate-300 transition-colors cursor-pointer"
-                                >
-                                    + {{ $denom }}
-                                </button>
-                            @endforeach
+                            <!-- Jika Kategori Game -->
+                            <template x-if="isGame()">
+                                <div class="flex items-center gap-1.5 flex-wrap">
+                                    <span class="text-[11px] font-semibold text-slate-400">Pilihan Cepat Game:</span>
+                                    <template x-if="name.toLowerCase().includes('free fire')">
+                                        <div class="flex items-center gap-1 flex-wrap">
+                                            @foreach(['50 Diamond', '70 Diamond', '140 Diamond', '355 Diamond', '720 Diamond', 'Member Mingguan'] as $denom)
+                                                <button
+                                                    type="button"
+                                                    @click="appendDenom('{{ $denom }}')"
+                                                    class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 dark:border-amber-800 transition-colors cursor-pointer"
+                                                >
+                                                    + {{ $denom }}
+                                                </button>
+                                            @endforeach
+                                        </div>
+                                    </template>
+
+                                    <template x-if="name.toLowerCase().includes('mobile legends')">
+                                        <div class="flex items-center gap-1 flex-wrap">
+                                            @foreach(['86 Diamond', '172 Diamond', '257 Diamond', '706 Diamond', 'Weekly Diamond Pass'] as $denom)
+                                                <button
+                                                    type="button"
+                                                    @click="appendDenom('{{ $denom }}')"
+                                                    class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 dark:border-blue-800 transition-colors cursor-pointer"
+                                                >
+                                                    + {{ $denom }}
+                                                </button>
+                                            @endforeach
+                                        </div>
+                                    </template>
+
+                                    <template x-if="!name.toLowerCase().includes('free fire') && !name.toLowerCase().includes('mobile legends')">
+                                        <div class="flex items-center gap-1 flex-wrap">
+                                            @foreach(['60 UC', '300 UC', '100 Robux', '400 Robux', 'Voucher'] as $denom)
+                                                <button
+                                                    type="button"
+                                                    @click="appendDenom('{{ $denom }}')"
+                                                    class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 dark:border-indigo-800 transition-colors cursor-pointer"
+                                                >
+                                                    + {{ $denom }}
+                                                </button>
+                                            @endforeach
+                                        </div>
+                                    </template>
+                                </div>
+                            </template>
+
+                            <!-- Jika Bukan Game (Pulsa, Paket, Voucher, PLN, dll) -->
+                            <template x-if="!isGame()">
+                                <div class="flex items-center gap-1.5 flex-wrap">
+                                    <span class="text-[11px] font-semibold text-slate-400">Pilihan Nominal Cepat:</span>
+                                    @foreach(['5.000', '10.000', '15.000', '20.000', '25.000', '50.000', '100.000'] as $denom)
+                                        <button
+                                            type="button"
+                                            @click="appendDenom('{{ $denom }}')"
+                                            class="px-2.5 py-1 rounded-lg text-[11px] font-bold font-mono bg-slate-100 hover:bg-indigo-100 hover:text-indigo-700 dark:bg-slate-700 dark:hover:bg-indigo-950/60 dark:hover:text-indigo-300 text-slate-700 dark:text-slate-300 transition-colors cursor-pointer"
+                                        >
+                                            + {{ $denom }}
+                                        </button>
+                                    @endforeach
+                                </div>
+                            </template>
                         </div>
-                    </div>
                 </div>
 
                 <!-- CARD 2: PENETAPAN HARGA & MANAJEMEN STOK -->

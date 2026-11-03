@@ -19,10 +19,19 @@
     $combinedText = strtolower($catSlug . ' ' . $catName . ' ' . $name);
 
     // Deteksi tipe icon spesifik konter
-    if (str_contains($combinedText, 'dana') || str_contains($combinedText, 'gopay') || str_contains($combinedText, 'shopeepay') || str_contains($combinedText, 'seabank') || str_contains($combinedText, 'ovo') || str_contains($combinedText, 'wallet')) {
+    if (str_contains($combinedText, 'game') || str_contains($combinedText, 'diamond') || str_contains($combinedText, 'free fire') || str_contains($combinedText, 'mobile legends')) {
+        $type = 'game';
+        $bg = 'bg-gradient-to-br from-rose-500 via-pink-600 to-indigo-600 shadow-pink-500/25 text-white';
+    } elseif (str_contains($combinedText, 'wifi') || str_contains($combinedText, 'indihome') || str_contains($combinedText, 'iconnet') || str_contains($combinedText, 'myrepublic') || str_contains($combinedText, 'first media') || str_contains($combinedText, 'firstmedia')) {
+        $type = 'wifi';
+        $bg = 'bg-gradient-to-br from-teal-500 to-cyan-600 shadow-teal-500/25 text-white';
+    } elseif (str_contains($combinedText, 'bpjs')) {
+        $type = 'bpjs';
+        $bg = 'bg-gradient-to-br from-emerald-600 to-green-700 shadow-emerald-600/25 text-white';
+    } elseif (str_contains($combinedText, 'dana') || str_contains($combinedText, 'gopay') || str_contains($combinedText, 'shopeepay') || str_contains($combinedText, 'seabank') || str_contains($combinedText, 'ovo') || str_contains($combinedText, 'wallet')) {
         $type = 'ewallet';
         $bg = 'bg-gradient-to-br from-blue-600 to-indigo-700 shadow-blue-600/25 text-white';
-    } elseif (str_contains($combinedText, 'token') || str_contains($combinedText, 'pln') || str_contains($combinedText, 'listrik')) {
+    } elseif (str_contains($combinedText, 'token') || str_contains($combinedText, 'pln') || str_contains($combinedText, 'listrik') || str_contains($combinedText, 'pajak')) {
         $type = 'token';
         $bg = 'bg-gradient-to-br from-amber-500 to-orange-600 shadow-amber-500/25 text-white';
     } elseif (str_contains($combinedText, 'paket internet') || str_contains($combinedText, 'kuota') || str_contains($combinedText, 'data')) {
@@ -59,7 +68,24 @@
 @endphp
 
 <div class="inline-flex items-center justify-center shrink-0 shadow-md {{ $bg }} {{ $sizeClasses }} {{ $class }}">
-    @if($type === 'ewallet')
+    @if($type === 'game')
+        <!-- Game Top Up (Gamepad / Controller) -->
+        <svg class="{{ $iconSize }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+            <circle cx="9" cy="12" r="1" fill="currentColor" />
+            <circle cx="15" cy="12" r="1" fill="currentColor" />
+        </svg>
+    @elseif($type === 'wifi')
+        <!-- WiFi / Internet Fiber (Wi-Fi Broadcast) -->
+        <svg class="{{ $iconSize }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
+        </svg>
+    @elseif($type === 'bpjs')
+        <!-- BPJS Kesehatan (Heart / Shield Health) -->
+        <svg class="{{ $iconSize }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+        </svg>
+    @elseif($type === 'ewallet')
         <!-- E-Wallet & Bank Digital (Wallet / Card) -->
         <svg class="{{ $iconSize }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />

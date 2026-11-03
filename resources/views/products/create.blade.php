@@ -10,14 +10,28 @@
         $paketCats = $categories->filter(fn($c) => str_starts_with(strtolower($c->name), 'paket internet'));
         $perdanaCats = $categories->filter(fn($c) => str_starts_with(strtolower($c->name), 'kartu perdana'));
         $ewalletCats = $categories->filter(fn($c) => str_starts_with(strtolower($c->name), 'e-wallet'));
-        $tokenCats = $categories->filter(fn($c) => str_contains(strtolower($c->name), 'token'));
+        $tokenCats = $categories->filter(fn($c) => str_contains(strtolower($c->name), 'token') || (str_contains(strtolower($c->name), 'listrik') && !str_contains(strtolower($c->name), 'tagihan') && !str_contains(strtolower($c->name), 'pajak')));
+        $plnPascaCats = $categories->filter(fn($c) => str_contains(strtolower($c->name), 'pajak') || (str_contains(strtolower($c->name), 'listrik') && (str_contains(strtolower($c->name), 'tagihan') || str_contains(strtolower($c->name), 'pajak'))));
+        $bpjsCats = $categories->filter(fn($c) => str_contains(strtolower($c->name), 'bpjs'));
+        $wifiCats = $categories->filter(fn($c) => str_contains(strtolower($c->name), 'wifi') || str_contains(strtolower($c->name), 'indihome') || str_contains(strtolower($c->name), 'iconnet') || str_contains(strtolower($c->name), 'myrepublic') || str_contains(strtolower($c->name), 'first media') || str_contains(strtolower($c->name), 'firstmedia'));
+        $gameCats = $categories->filter(fn($c) => str_contains(strtolower($c->name), 'game'));
         $otherCats = $categories->reject(fn($c) => 
             str_starts_with(strtolower($c->name), 'pulsa') || 
             str_starts_with(strtolower($c->name), 'voucher') || 
             str_starts_with(strtolower($c->name), 'paket internet') || 
             str_starts_with(strtolower($c->name), 'kartu perdana') || 
             str_starts_with(strtolower($c->name), 'e-wallet') || 
-            str_contains(strtolower($c->name), 'token')
+            str_contains(strtolower($c->name), 'token') ||
+            str_contains(strtolower($c->name), 'listrik') ||
+            str_contains(strtolower($c->name), 'pajak') ||
+            str_contains(strtolower($c->name), 'bpjs') ||
+            str_contains(strtolower($c->name), 'wifi') ||
+            str_contains(strtolower($c->name), 'indihome') ||
+            str_contains(strtolower($c->name), 'iconnet') ||
+            str_contains(strtolower($c->name), 'myrepublic') ||
+            str_contains(strtolower($c->name), 'first media') ||
+            str_contains(strtolower($c->name), 'firstmedia') ||
+            str_contains(strtolower($c->name), 'game')
         );
     @endphp
 
@@ -30,10 +44,11 @@
             // State Generator Seri Cepat
             batchGen: {
                 categoryId: '',
+                gameType: 'ff', // 'ff' = Free Fire, 'ml' = Mobile Legends
                 selectedDenoms: ['5.000', '10.000', '25.000', '50.000', '100.000'],
                 baseMargin: 2000,
-                defaultStock: 10,
-                defaultMinStock: 3
+                defaultStock: 0,
+                defaultMinStock: 0
             },
 
             init() {
@@ -134,7 +149,42 @@
                 const cat = this.categories.find(c => c.id == catId);
                 if (!cat) return false;
                 const lower = cat.name.toLowerCase();
-                return lower.includes('pulsa') || lower.includes('paket') || lower.includes('token') || lower.includes('e-wallet') || lower.includes('transfer') || lower.includes('tarik') || lower.includes('jasa');
+                return lower.includes('pulsa') || 
+                       lower.includes('paket') || 
+                       lower.includes('token') || 
+                       lower.includes('listrik') || 
+                       lower.includes('pajak') || 
+                       lower.includes('pln') || 
+                       lower.includes('bpjs') || 
+                       lower.includes('wifi') || 
+                       lower.includes('indihome') || 
+                       lower.includes('iconnet') || 
+                       lower.includes('myrepublic') || 
+                       lower.includes('firstmedia') || 
+                       lower.includes('first media') || 
+                       lower.includes('game') || 
+                       lower.includes('e-wallet') || 
+                       lower.includes('transfer') || 
+                       lower.includes('tarik') || 
+                       lower.includes('jasa');
+            },
+
+            isGameCategory(catId) {
+                if (!catId) return false;
+                const cat = this.categories.find(c => c.id == catId);
+                return cat ? cat.name.toLowerCase().includes('game') : false;
+            },
+
+            setRowGamePreset(index, gameKey) {
+                const item = this.items[index];
+                if (gameKey === 'ff') {
+                    item.name = 'Top Up Game Free Fire ';
+                } else if (gameKey === 'ml') {
+                    item.name = 'Top Up Game Mobile Legends ';
+                } else {
+                    item.name = 'Top Up Game ';
+                }
+                this.generateItemSku(index);
             },
 
             onRowCategorySelect(index, cat) {
@@ -143,9 +193,26 @@
                 const oldCatName = oldCat ? oldCat.name : '';
 
                 item.category_id = cat.id;
+                const lower = cat.name.toLowerCase();
 
-                // Auto-fill awalan nama produk
-                if (!item.name || item.name.trim() === '') {
+                // Auto-fill awalan nama produk spesifik
+                if (lower.includes('game')) {
+                    if (!item.name || item.name.trim() === '' || (oldCatName && item.name.startsWith(oldCatName))) {
+                        item.name = 'Top Up Game Free Fire ';
+                    }
+                } else if (lower.includes('bpjs')) {
+                    item.name = 'Tagihan BPJS Kesehatan';
+                } else if (lower.includes('pajak') || (lower.includes('listrik') && lower.includes('tagihan'))) {
+                    item.name = 'Tagihan Listrik Pascabayar PLN';
+                } else if (lower.includes('indihome')) {
+                    item.name = 'Tagihan WiFi Telkom IndiHome';
+                } else if (lower.includes('iconnet')) {
+                    item.name = 'Tagihan WiFi ICONNET PLN';
+                } else if (lower.includes('myrepublic')) {
+                    item.name = 'Tagihan WiFi MyRepublic';
+                } else if (lower.includes('first media') || lower.includes('firstmedia')) {
+                    item.name = 'Tagihan WiFi First Media';
+                } else if (!item.name || item.name.trim() === '') {
                     item.name = cat.name + ' ';
                 } else if (oldCatName && item.name.startsWith(oldCatName)) {
                     item.name = cat.name + item.name.substring(oldCatName.length);
@@ -164,8 +231,7 @@
                 }
 
                 // Saran satuan & penyesuaian stok otomatis (Fisik vs Digital/Server)
-                const lower = cat.name.toLowerCase();
-                const isDigital = lower.includes('pulsa') || lower.includes('paket') || lower.includes('token') || lower.includes('e-wallet') || lower.includes('transfer') || lower.includes('tarik') || lower.includes('jasa');
+                const isDigital = this.isDigitalCategory(cat.id);
 
                 if (isDigital) {
                     item.unit = 'transaksi';
@@ -199,12 +265,16 @@
 
             appendRowDenom(index, denom) {
                 const item = this.items[index];
-                const trimmed = item.name.trim();
-                if (/\d+[\.\d]*/.test(trimmed)) {
-                    item.name = trimmed.replace(/\d+[\.\d]*/, denom);
-                } else {
-                    item.name = trimmed + ' ' + denom;
+                let current = (item.name || '').trim();
+
+                // Jika sudah ada nominal di bagian belakang, bersihkan dulu
+                if (/\s\d+[\.\d]*(\s*(Diamond|DM|UC|Robux|K))?$/i.test(current)) {
+                    current = current.replace(/\s\d+[\.\d]*(\s*(Diamond|DM|UC|Robux|K))?$/i, '').trim();
+                } else if (/(Member Mingguan|Member Bulanan|Weekly Diamond Pass|WDP)$/i.test(current)) {
+                    current = current.replace(/\s*(Member Mingguan|Member Bulanan|Weekly Diamond Pass|WDP)$/i, '').trim();
                 }
+
+                item.name = current + (current.length > 0 ? ' ' : '') + denom;
                 this.generateItemSku(index);
             },
 
@@ -214,40 +284,69 @@
                 if (!cat) return;
 
                 let prefix = 'PROD';
-                const lower = cat.name.toLowerCase();
+                const lowerCat = cat.name.toLowerCase();
+                const lowerName = (item.name || '').toLowerCase();
 
                 let prov = 'GEN';
-                if (lower.includes('telkomsel')) prov = 'TSEL';
-                else if (lower.includes('indosat')) prov = 'ISAT';
-                else if (lower.includes('tri')) prov = 'TRI';
-                else if (lower.includes('xl')) prov = 'XL';
-                else if (lower.includes('axis')) prov = 'AXIS';
-                else if (lower.includes('smartfren')) prov = 'SMART';
-                else if (lower.includes('by.u') || lower.includes('byu')) prov = 'BYU';
+                if (lowerCat.includes('telkomsel') || lowerName.includes('telkomsel')) prov = 'TSEL';
+                else if (lowerCat.includes('indosat') || lowerName.includes('indosat') || lowerName.includes('im3')) prov = 'ISAT';
+                else if (lowerCat.includes('tri') || lowerName.includes('tri') || lowerName.includes(' 3')) prov = 'TRI';
+                else if (lowerCat.includes('xl') || lowerName.includes('xl')) prov = 'XL';
+                else if (lowerCat.includes('axis') || lowerName.includes('axis')) prov = 'AXIS';
+                else if (lowerCat.includes('smartfren') || lowerName.includes('smartfren')) prov = 'SMART';
+                else if (lowerCat.includes('by.u') || lowerCat.includes('byu') || lowerName.includes('by.u') || lowerName.includes('byu')) prov = 'BYU';
 
-                if (lower.includes('pulsa')) prefix = 'PULSA-' + prov;
-                else if (lower.includes('voucher')) prefix = 'VCR-' + prov;
-                else if (lower.includes('paket internet') || lower.includes('paket data')) prefix = 'DATA-' + prov;
-                else if (lower.includes('kartu perdana')) prefix = 'SIM-' + prov;
-                else if (lower.includes('token')) prefix = 'PLN';
-                else if (lower.includes('dana')) prefix = 'DANA';
-                else if (lower.includes('gopay')) prefix = 'GOPAY';
-                else if (lower.includes('shopeepay')) prefix = 'SPAY';
-                else if (lower.includes('seabank')) prefix = 'SEABANK';
-                else if (lower.includes('ovo')) prefix = 'OVO';
-                else if (cat.slug) prefix = cat.slug.toUpperCase().substring(0, 8);
-
-                const match = item.name.match(/\d+[\.\d]*/);
-                let denomPart = '';
-                if (match) {
-                    const rawNum = match[0].replace(/\./g, '');
-                    if (rawNum >= 1000) {
-                        denomPart = (rawNum / 1000) + 'K';
+                if (lowerCat.includes('pulsa')) prefix = 'PULSA-' + prov;
+                else if (lowerCat.includes('voucher')) prefix = 'VCR-' + prov;
+                else if (lowerCat.includes('paket internet') || lowerCat.includes('paket data')) prefix = 'DATA-' + prov;
+                else if (lowerCat.includes('kartu perdana')) prefix = 'SIM-' + prov;
+                else if (lowerCat.includes('token')) prefix = 'PLN';
+                else if (lowerCat.includes('dana') || lowerName.includes('dana')) prefix = 'DANA';
+                else if (lowerCat.includes('gopay') || lowerName.includes('gopay')) prefix = 'GOPAY';
+                else if (lowerCat.includes('shopeepay') || lowerName.includes('shopee')) prefix = 'SPAY';
+                else if (lowerCat.includes('seabank') || lowerName.includes('seabank')) prefix = 'SEABANK';
+                else if (lowerCat.includes('ovo') || lowerName.includes('ovo')) prefix = 'OVO';
+                else if (lowerCat.includes('bpjs')) prefix = 'BPJS-KES';
+                else if (lowerCat.includes('pajak') || (lowerCat.includes('listrik') && lowerCat.includes('tagihan'))) prefix = 'PLN-PASCA';
+                else if (lowerCat.includes('indihome') || lowerName.includes('indihome')) prefix = 'WIFI-INDI';
+                else if (lowerCat.includes('iconnet') || lowerName.includes('iconnet')) prefix = 'WIFI-ICON';
+                else if (lowerCat.includes('myrepublic') || lowerName.includes('myrepublic')) prefix = 'WIFI-MYREP';
+                else if (lowerCat.includes('first media') || lowerCat.includes('firstmedia') || lowerName.includes('first media')) prefix = 'WIFI-FM';
+                else if (lowerCat.includes('game')) {
+                    if (lowerName.includes('free fire') || lowerName.includes('ff')) {
+                        prefix = 'GAME-FF';
+                    } else if (lowerName.includes('mobile legends') || lowerName.includes('mlbb') || lowerName.includes('ml')) {
+                        prefix = 'GAME-ML';
                     } else {
-                        denomPart = rawNum;
+                        // Game baru manual lainnya
+                        const cleaned = lowerName.replace(/top\s*up/g, '').replace(/game/g, '').trim();
+                        const firstWord = cleaned.split(/\s+/)[0] || 'NEW';
+                        prefix = 'GAME-' + firstWord.toUpperCase().substring(0, 6);
                     }
+                } else if (cat.slug) {
+                    prefix = cat.slug.toUpperCase().substring(0, 8);
+                }
+
+                // Denom part extraction
+                let denomPart = '';
+                if (lowerName.includes('weekly') || lowerName.includes('wdp')) {
+                    denomPart = 'WDP';
+                } else if (lowerName.includes('mingguan')) {
+                    denomPart = 'MINGGU';
+                } else if (lowerName.includes('bulanan')) {
+                    denomPart = 'BULAN';
                 } else {
-                    denomPart = Math.floor(100 + Math.random() * 900);
+                    const match = item.name.match(/\d+[\.\d]*/);
+                    if (match) {
+                        const rawNum = match[0].replace(/\./g, '');
+                        if (rawNum >= 1000) {
+                            denomPart = (rawNum / 1000) + 'K';
+                        } else {
+                            denomPart = rawNum + (lowerCat.includes('game') || lowerName.includes('diamond') ? 'DM' : '');
+                        }
+                    } else {
+                        denomPart = Math.floor(100 + Math.random() * 900);
+                    }
                 }
 
                 item.code = prefix + '-' + denomPart;
@@ -258,7 +357,7 @@
                 const cat = this.categories.find(c => c.id == this.batchGen.categoryId);
                 if (!cat) return;
                 const lower = cat.name.toLowerCase();
-                const isDigital = lower.includes('pulsa') || lower.includes('paket') || lower.includes('token') || lower.includes('e-wallet') || lower.includes('transfer') || lower.includes('tarik') || lower.includes('jasa');
+                const isDigital = this.isDigitalCategory(cat.id);
                 if (isDigital) {
                     this.batchGen.defaultStock = 0;
                     this.batchGen.defaultMinStock = 0;
@@ -271,6 +370,22 @@
                 } else {
                     this.batchGen.defaultStock = 10;
                     this.batchGen.defaultMinStock = 3;
+                }
+
+                if (lower.includes('game')) {
+                    this.batchGen.gameType = 'ff';
+                    this.batchGen.selectedDenoms = ['50 Diamond', '70 Diamond', '140 Diamond', '355 Diamond', '720 Diamond'];
+                } else {
+                    this.batchGen.selectedDenoms = ['5.000', '10.000', '25.000', '50.000', '100.000'];
+                }
+            },
+
+            onBatchGameTypeChange(type) {
+                this.batchGen.gameType = type;
+                if (type === 'ff') {
+                    this.batchGen.selectedDenoms = ['50 Diamond', '70 Diamond', '140 Diamond', '355 Diamond', '720 Diamond'];
+                } else if (type === 'ml') {
+                    this.batchGen.selectedDenoms = ['86 Diamond', '172 Diamond', '257 Diamond', '706 Diamond', 'Weekly Diamond Pass'];
                 }
             },
 
@@ -295,12 +410,14 @@
                 }
 
                 const lower = cat.name.toLowerCase();
-                const isDigital = lower.includes('pulsa') || lower.includes('paket') || lower.includes('token') || lower.includes('e-wallet') || lower.includes('transfer') || lower.includes('tarik') || lower.includes('jasa');
+                const isDigital = this.isDigitalCategory(cat.id);
                 let unit = 'transaksi';
                 if (lower.includes('voucher')) unit = 'voucher';
                 else if (lower.includes('kartu perdana')) unit = 'kartu';
                 else if (isDigital) unit = 'transaksi';
                 else unit = 'pcs';
+
+                const isGame = lower.includes('game');
 
                 this.batchGen.selectedDenoms.forEach((denomStr) => {
                     const cleanNominal = parseInt(denomStr.replace(/\./g, '')) || 0;
@@ -308,6 +425,7 @@
                     const margin = parseInt(this.batchGen.baseMargin) || 2000;
                     const sellingPrice = costPrice > 0 ? costPrice + margin : 0;
 
+                    let prefix = 'PROD';
                     let prov = 'GEN';
                     if (lower.includes('telkomsel')) prov = 'TSEL';
                     else if (lower.includes('indosat')) prov = 'ISAT';
@@ -317,7 +435,6 @@
                     else if (lower.includes('smartfren')) prov = 'SMART';
                     else if (lower.includes('by.u') || lower.includes('byu')) prov = 'BYU';
 
-                    let prefix = 'PROD';
                     if (lower.includes('pulsa')) prefix = 'PULSA-' + prov;
                     else if (lower.includes('voucher')) prefix = 'VCR-' + prov;
                     else if (lower.includes('paket internet') || lower.includes('paket data')) prefix = 'DATA-' + prov;
@@ -328,12 +445,37 @@
                     else if (lower.includes('shopeepay')) prefix = 'SPAY';
                     else if (lower.includes('seabank')) prefix = 'SEABANK';
                     else if (lower.includes('ovo')) prefix = 'OVO';
+                    else if (lower.includes('bpjs')) prefix = 'BPJS-KES';
+                    else if (lower.includes('pajak') || (lower.includes('listrik') && lower.includes('tagihan'))) prefix = 'PLN-PASCA';
+                    else if (lower.includes('indihome')) prefix = 'WIFI-INDI';
+                    else if (lower.includes('iconnet')) prefix = 'WIFI-ICON';
+                    else if (lower.includes('myrepublic')) prefix = 'WIFI-MYREP';
+                    else if (lower.includes('first media') || lower.includes('firstmedia')) prefix = 'WIFI-FM';
+                    else if (isGame) {
+                        prefix = this.batchGen.gameType === 'ff' ? 'GAME-FF' : 'GAME-ML';
+                    }
 
-                    const denomCode = cleanNominal >= 1000 ? (cleanNominal / 1000) + 'K' : cleanNominal;
+                    let denomCode = cleanNominal >= 1000 ? (cleanNominal / 1000) + 'K' : cleanNominal;
+                    if (isGame) {
+                        if (denomStr.toLowerCase().includes('weekly') || denomStr.toLowerCase().includes('wdp')) {
+                            denomCode = 'WDP';
+                        } else if (denomStr.toLowerCase().includes('mingguan')) {
+                            denomCode = 'MINGGU';
+                        } else {
+                            const dmMatch = denomStr.match(/\d+/);
+                            denomCode = dmMatch ? dmMatch[0] + 'DM' : denomStr;
+                        }
+                    }
+
+                    let fullProdName = cat.name + ' ' + denomStr;
+                    if (isGame) {
+                        const gameTitle = this.batchGen.gameType === 'ff' ? 'Free Fire' : 'Mobile Legends';
+                        fullProdName = 'Top Up Game ' + gameTitle + ' ' + denomStr;
+                    }
 
                     this.addNewRow({
                         category_id: cat.id,
-                        name: cat.name + ' ' + denomStr,
+                        name: fullProdName,
                         code: prefix + '-' + denomCode,
                         cost_price: costPrice,
                         selling_price: sellingPrice,
@@ -570,6 +712,34 @@
                                             @endforeach
                                         </optgroup>
                                     @endif
+                                    @if($plnPascaCats->isNotEmpty())
+                                        <optgroup label="⚡ Tagihan & Pajak Listrik PLN">
+                                            @foreach($plnPascaCats as $cat)
+                                                <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+                                            @endforeach
+                                        </optgroup>
+                                    @endif
+                                    @if($bpjsCats->isNotEmpty())
+                                        <optgroup label="🏥 BPJS Kesehatan">
+                                            @foreach($bpjsCats as $cat)
+                                                <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+                                            @endforeach
+                                        </optgroup>
+                                    @endif
+                                    @if($wifiCats->isNotEmpty())
+                                        <optgroup label="📡 Tagihan WiFi & Internet Rumah">
+                                            @foreach($wifiCats as $cat)
+                                                <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+                                            @endforeach
+                                        </optgroup>
+                                    @endif
+                                    @if($gameCats->isNotEmpty())
+                                        <optgroup label="🎮 Top Up Game Online">
+                                            @foreach($gameCats as $cat)
+                                                <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+                                            @endforeach
+                                        </optgroup>
+                                    @endif
                                     @if($otherCats->isNotEmpty())
                                         <optgroup label="📦 Aksesoris, Jasa & Lainnya">
                                             @foreach($otherCats as $cat)
@@ -582,29 +752,108 @@
 
                             <!-- 2. Nama Lengkap Produk (5 Cols) -->
                             <div class="md:col-span-6">
-                                <div class="flex items-center justify-between mb-1">
+                                <div class="flex items-center justify-between mb-1 gap-2 flex-wrap">
                                     <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
                                         Nama Lengkap Produk <span class="text-rose-500">*</span>
                                     </label>
-                                    <!-- Mini Quick Denom Pills -->
-                                    <div class="flex items-center gap-1">
-                                        @foreach(['5.000', '10.000', '25.000', '50.000', '100.000'] as $d)
+                                    
+                                    <!-- Mini Quick Helper Pills -->
+                                    <template x-if="isGameCategory(item.category_id)">
+                                        <div class="flex items-center gap-1 flex-wrap">
+                                            <!-- Pilihan Game Khusus -->
                                             <button
                                                 type="button"
-                                                @click="appendRowDenom(index, '{{ $d }}')"
-                                                class="px-1.5 py-0.5 rounded text-[10px] font-mono bg-slate-100 dark:bg-slate-700 hover:bg-indigo-100 hover:text-indigo-700 text-slate-600 dark:text-slate-300 cursor-pointer"
+                                                @click="setRowGamePreset(index, 'ff')"
+                                                :class="item.name.toLowerCase().includes('free fire') ? 'bg-amber-500 text-white font-bold' : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300'"
+                                                class="px-2 py-0.5 rounded text-[10px] cursor-pointer hover:bg-amber-400"
                                             >
-                                                {{ $d }}
+                                                🔥 Free Fire
                                             </button>
-                                        @endforeach
-                                    </div>
+                                            <button
+                                                type="button"
+                                                @click="setRowGamePreset(index, 'ml')"
+                                                :class="item.name.toLowerCase().includes('mobile legends') ? 'bg-blue-600 text-white font-bold' : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300'"
+                                                class="px-2 py-0.5 rounded text-[10px] cursor-pointer hover:bg-blue-500"
+                                            >
+                                                ⚔️ Mobile Legends
+                                            </button>
+                                            <button
+                                                type="button"
+                                                @click="setRowGamePreset(index, 'custom')"
+                                                :class="!item.name.toLowerCase().includes('free fire') && !item.name.toLowerCase().includes('mobile legends') ? 'bg-indigo-600 text-white font-bold' : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300'"
+                                                class="px-2 py-0.5 rounded text-[10px] cursor-pointer hover:bg-indigo-500"
+                                                title="Game baru tinggal ketik manual"
+                                            >
+                                                🎮 Game Baru (Manual)
+                                            </button>
+                                        </div>
+                                    </template>
+
+                                    <template x-if="!isGameCategory(item.category_id)">
+                                        <div class="flex items-center gap-1">
+                                            @foreach(['5.000', '10.000', '25.000', '50.000', '100.000'] as $d)
+                                                <button
+                                                    type="button"
+                                                    @click="appendRowDenom(index, '{{ $d }}')"
+                                                    class="px-1.5 py-0.5 rounded text-[10px] font-mono bg-slate-100 dark:bg-slate-700 hover:bg-indigo-100 hover:text-indigo-700 text-slate-600 dark:text-slate-300 cursor-pointer"
+                                                >
+                                                    {{ $d }}
+                                                </button>
+                                            @endforeach
+                                        </div>
+                                    </template>
                                 </div>
+
+                                <!-- Sub-Pills Denominasi Game jika Game Terpilih -->
+                                <template x-if="isGameCategory(item.category_id)">
+                                    <div class="mb-1.5 flex items-center gap-1 flex-wrap">
+                                        <!-- Jika Free Fire -->
+                                        <template x-if="item.name.toLowerCase().includes('free fire')">
+                                            <div class="flex items-center gap-1 flex-wrap">
+                                                <span class="text-[10px] text-amber-600 dark:text-amber-400 font-bold">FF:</span>
+                                                @foreach(['50 Diamond', '70 Diamond', '140 Diamond', '355 Diamond', '720 Diamond', 'Member Mingguan'] as $d)
+                                                    <button
+                                                        type="button"
+                                                        @click="appendRowDenom(index, '{{ $d }}')"
+                                                        class="px-1.5 py-0.5 rounded text-[10px] bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 hover:bg-amber-100 text-amber-800 dark:text-amber-300 font-medium cursor-pointer"
+                                                    >
+                                                        {{ $d }}
+                                                    </button>
+                                                @endforeach
+                                            </div>
+                                        </template>
+
+                                        <!-- Jika Mobile Legends -->
+                                        <template x-if="item.name.toLowerCase().includes('mobile legends')">
+                                            <div class="flex items-center gap-1 flex-wrap">
+                                                <span class="text-[10px] text-blue-600 dark:text-blue-400 font-bold">ML:</span>
+                                                @foreach(['86 Diamond', '172 Diamond', '257 Diamond', '706 Diamond', 'Weekly Diamond Pass'] as $d)
+                                                    <button
+                                                        type="button"
+                                                        @click="appendRowDenom(index, '{{ $d }}')"
+                                                        class="px-1.5 py-0.5 rounded text-[10px] bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 hover:bg-blue-100 text-blue-800 dark:text-blue-300 font-medium cursor-pointer"
+                                                    >
+                                                        {{ $d }}
+                                                    </button>
+                                                @endforeach
+                                            </div>
+                                        </template>
+
+                                        <!-- Jika Game Baru / Manual -->
+                                        <template x-if="!item.name.toLowerCase().includes('free fire') && !item.name.toLowerCase().includes('mobile legends')">
+                                            <div class="text-[10px] text-indigo-600 dark:text-indigo-400 italic">
+                                                💡 Ketik nama game & nominal bebas (contoh: PUBG 60 UC, Roblox 100 Robux). Masuk kategori Top Up Game & potong Saldo Server.
+                                            </div>
+                                        </template>
+                                    </div>
+                                </template>
+
                                 <input
                                     type="text"
                                     :name="`items[${index}][name]`"
                                     x-model="item.name"
                                     @input="generateItemSku(index)"
-                                    placeholder="Contoh: Pulsa Tri 10.000 / Voucher Telkomsel 5GB"
+                                    placeholder="Contoh: Pulsa Tri 10.000 / Top Up Game Free Fire 140 Diamond"
                                     required
                                     class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-750 text-slate-900 dark:text-white text-xs font-bold focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 shadow-2xs"
                                 >
@@ -850,7 +1099,7 @@
                             @change="onBatchCategoryChange()"
                             class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-750 text-slate-900 dark:text-white font-semibold focus:ring-2 focus:ring-indigo-500 shadow-2xs text-xs"
                         >
-                            <option value="">-- Pilih Kategori (Misal: Pulsa Telkomsel, Voucher Tri, E-Wallet DANA) --</option>
+                            <option value="">-- Pilih Kategori (Misal: Pulsa Telkomsel, Top Up Game, Voucher Tri, E-Wallet DANA) --</option>
                             @if($pulsaCats->isNotEmpty())
                                 <optgroup label="📱 Pulsa Reguler (All Operator)">
                                     @foreach($pulsaCats as $cat)
@@ -893,6 +1142,34 @@
                                     @endforeach
                                 </optgroup>
                             @endif
+                            @if($plnPascaCats->isNotEmpty())
+                                <optgroup label="⚡ Tagihan & Pajak Listrik PLN">
+                                    @foreach($plnPascaCats as $cat)
+                                        <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+                                    @endforeach
+                                </optgroup>
+                            @endif
+                            @if($bpjsCats->isNotEmpty())
+                                <optgroup label="🏥 BPJS Kesehatan">
+                                    @foreach($bpjsCats as $cat)
+                                        <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+                                    @endforeach
+                                </optgroup>
+                            @endif
+                            @if($wifiCats->isNotEmpty())
+                                <optgroup label="📡 Tagihan WiFi & Internet Rumah">
+                                    @foreach($wifiCats as $cat)
+                                        <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+                                    @endforeach
+                                </optgroup>
+                            @endif
+                            @if($gameCats->isNotEmpty())
+                                <optgroup label="🎮 Top Up Game Online">
+                                    @foreach($gameCats as $cat)
+                                        <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+                                    @endforeach
+                                </optgroup>
+                            @endif
                             @if($otherCats->isNotEmpty())
                                 <optgroup label="📦 Aksesoris, Jasa & Lainnya">
                                     @foreach($otherCats as $cat)
@@ -906,14 +1183,81 @@
                                 <span>⚡</span> Kategori digital menggunakan Saldo Server induk. Stok awal otomatis diset 0.
                             </p>
                         </template>
+
+                        <!-- Pilihan Game Khusus saat Kategori Top Up Game Terpilih -->
+                        <template x-if="isGameCategory(batchGen.categoryId)">
+                            <div class="mt-3 p-3 rounded-2xl bg-indigo-50/70 dark:bg-slate-750 border border-indigo-100 dark:border-slate-700">
+                                <label class="block font-bold text-slate-800 dark:text-slate-200 mb-2">
+                                    🎮 Pilih Game Default:
+                                </label>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <button
+                                        type="button"
+                                        @click="onBatchGameTypeChange('ff')"
+                                        :class="batchGen.gameType === 'ff' ? 'bg-amber-500 text-white font-extrabold shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700'"
+                                        class="px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                                    >
+                                        <span>🔥 Free Fire</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        @click="onBatchGameTypeChange('ml')"
+                                        :class="batchGen.gameType === 'ml' ? 'bg-blue-600 text-white font-extrabold shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700'"
+                                        class="px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                                    >
+                                        <span>⚔️ Mobile Legends</span>
+                                    </button>
+                                </div>
+                                <p class="text-[10px] text-slate-500 mt-1.5">
+                                    Untuk game lainnya (seperti PUBG / Roblox), Anda dapat mengetiknya langsung secara manual di tabel baris produk.
+                                </p>
+                            </div>
+                        </template>
                     </div>
 
                     <!-- 2. Centang Pilihan Nominal -->
                     <div>
-                        <label class="block font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-2">
-                            Pilih Nominal yang Ingin Dibuat:
-                        </label>
-                        <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        <div class="flex items-center justify-between mb-2">
+                            <label class="block font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
+                                <span x-show="!isGameCategory(batchGen.categoryId)">Pilih Nominal yang Ingin Dibuat:</span>
+                                <span x-show="isGameCategory(batchGen.categoryId) && batchGen.gameType === 'ff'">Pilih Denominasi Diamond Free Fire:</span>
+                                <span x-show="isGameCategory(batchGen.categoryId) && batchGen.gameType === 'ml'">Pilih Denominasi Diamond Mobile Legends:</span>
+                            </label>
+                            <span class="text-[10px] text-indigo-600 font-bold" x-text="batchGen.selectedDenoms.length + ' dipilih'"></span>
+                        </div>
+
+                        <!-- Checkbox Denominasi Khusus Game Free Fire -->
+                        <div x-show="isGameCategory(batchGen.categoryId) && batchGen.gameType === 'ff'" class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                            @foreach(['50 Diamond', '70 Diamond', '140 Diamond', '355 Diamond', '720 Diamond', '1440 Diamond', 'Member Mingguan', 'Member Bulanan'] as $d)
+                                <label class="flex items-center gap-2 p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-750 cursor-pointer hover:border-amber-400 select-none">
+                                    <input
+                                        type="checkbox"
+                                        value="{{ $d }}"
+                                        x-model="batchGen.selectedDenoms"
+                                        class="rounded text-amber-500 focus:ring-amber-500"
+                                    >
+                                    <span class="font-bold text-[11px]">{{ $d }}</span>
+                                </label>
+                            @endforeach
+                        </div>
+
+                        <!-- Checkbox Denominasi Khusus Game Mobile Legends -->
+                        <div x-show="isGameCategory(batchGen.categoryId) && batchGen.gameType === 'ml'" class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                            @foreach(['86 Diamond', '172 Diamond', '257 Diamond', '344 Diamond', '706 Diamond', 'Weekly Diamond Pass'] as $d)
+                                <label class="flex items-center gap-2 p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-750 cursor-pointer hover:border-blue-400 select-none">
+                                    <input
+                                        type="checkbox"
+                                        value="{{ $d }}"
+                                        x-model="batchGen.selectedDenoms"
+                                        class="rounded text-blue-600 focus:ring-blue-500"
+                                    >
+                                    <span class="font-bold text-[11px]">{{ $d }}</span>
+                                </label>
+                            @endforeach
+                        </div>
+
+                        <!-- Checkbox Denominasi Normal (Pulsa, Paket, Token, E-Wallet, Voucher, Fisik) -->
+                        <div x-show="!isGameCategory(batchGen.categoryId)" class="grid grid-cols-2 sm:grid-cols-3 gap-2">
                             @foreach(['5.000', '10.000', '15.000', '20.000', '25.000', '50.000', '100.000', '150.000', '200.000'] as $d)
                                 <label class="flex items-center gap-2 p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-750 cursor-pointer hover:border-indigo-400 select-none">
                                     <input
