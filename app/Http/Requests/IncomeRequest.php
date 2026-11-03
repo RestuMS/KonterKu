@@ -90,7 +90,11 @@ class IncomeRequest extends FormRequest
                         // Voucher fisik & kartu perdana otomatis, tidak wajib nomor HP pembeli
                         if (!$isVoucher && !$isPerdana) {
                             $isTransfer = str_contains($catName, 'transfer') || str_contains($catName, 'tarik tunai') || str_contains($slug, 'transfer') || str_contains($slug, 'tarik');
-                            $isToken = str_contains($catName, 'token') || str_contains($catName, 'pln') || str_contains($slug, 'token') || str_contains($slug, 'pln');
+                            $isPlnPasca = str_contains($catName, 'pajak') || (str_contains($catName, 'listrik') && (str_contains($catName, 'tagihan') || str_contains($catName, 'pajak'))) || str_contains($slug, 'pajak');
+                            $isToken = !$isPlnPasca && (str_contains($catName, 'token') || str_contains($catName, 'pln') || str_contains($slug, 'token') || str_contains($slug, 'pln'));
+                            $isBpjs = str_contains($catName, 'bpjs') || str_contains($slug, 'bpjs');
+                            $isWifi = str_contains($catName, 'wifi') || str_contains($slug, 'wifi') || str_contains($slug, 'indihome') || str_contains($slug, 'iconnet') || str_contains($slug, 'myrepublic') || str_contains($slug, 'firstmedia');
+                            $isGame = str_contains($catName, 'game') || str_contains($slug, 'game');
                             $isEwallet = str_contains($catName, 'wallet') || str_contains($catName, 'dana') || str_contains($catName, 'gopay') || str_contains($catName, 'shopee') || str_contains($catName, 'ovo') || str_contains($catName, 'seabank') || str_contains($slug, 'wallet') || str_contains($slug, 'ewallet');
                             $isData = str_contains($catName, 'paket') || str_contains($catName, 'data') || str_contains($catName, 'kuota') || str_contains($catName, 'internet') || str_contains($slug, 'paket') || str_contains($slug, 'data') || str_contains($slug, 'internet');
                             $isPulsa = str_contains($catName, 'pulsa') || str_contains($slug, 'pulsa');
@@ -99,8 +103,16 @@ class IncomeRequest extends FormRequest
 
                             if ($isTransfer && empty($targetVal)) {
                                 $validator->errors()->add('customer_target', "Nomor rekening / nomor tujuan wajib diisi untuk transaksi {$category->name}.");
+                            } elseif ($isPlnPasca && empty($targetVal)) {
+                                $validator->errors()->add('customer_target', 'ID Pelanggan Listrik PLN (12 digit) wajib diisi untuk transaksi Tagihan/Pajak Listrik PLN.');
                             } elseif ($isToken && empty($targetVal)) {
                                 $validator->errors()->add('customer_target', 'Nomor meteran / ID Pelanggan PLN wajib diisi untuk transaksi Token Listrik.');
+                            } elseif ($isBpjs && empty($targetVal)) {
+                                $validator->errors()->add('customer_target', 'Nomor Virtual Account / No. BPJS (16 digit) wajib diisi untuk transaksi BPJS Kesehatan.');
+                            } elseif ($isWifi && empty($targetVal)) {
+                                $validator->errors()->add('customer_target', 'Nomor Pelanggan / ID Internet WiFi wajib diisi untuk transaksi WiFi.');
+                            } elseif ($isGame && empty($targetVal)) {
+                                $validator->errors()->add('customer_target', 'User ID & Zone ID Game Pelanggan wajib diisi untuk transaksi Top Up Game.');
                             } elseif ($isEwallet && empty($targetVal)) {
                                 $validator->errors()->add('customer_target', 'Nomor HP tujuan akun E-Wallet wajib diisi.');
                             } elseif ($isData && empty($targetVal)) {

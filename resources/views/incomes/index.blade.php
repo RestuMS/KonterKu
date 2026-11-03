@@ -14,6 +14,38 @@
                    !str_contains($name, 'operasional');
         })->values();
 
+        $pulsaCats = $cleanCategories->filter(fn($c) => str_starts_with(strtolower($c->name), 'pulsa'));
+        $voucherCats = $cleanCategories->filter(fn($c) => str_starts_with(strtolower($c->name), 'voucher'));
+        $paketCats = $cleanCategories->filter(fn($c) => str_starts_with(strtolower($c->name), 'paket internet'));
+        $perdanaCats = $cleanCategories->filter(fn($c) => str_starts_with(strtolower($c->name), 'kartu perdana'));
+        $ewalletCats = $cleanCategories->filter(fn($c) => str_starts_with(strtolower($c->name), 'e-wallet'));
+        $tokenCats = $cleanCategories->filter(fn($c) => str_contains(strtolower($c->name), 'token') || (str_contains(strtolower($c->name), 'listrik') && !str_contains(strtolower($c->name), 'tagihan') && !str_contains(strtolower($c->name), 'pajak')));
+        $plnPascaCats = $cleanCategories->filter(fn($c) => str_contains(strtolower($c->name), 'pajak') || (str_contains(strtolower($c->name), 'listrik') && (str_contains(strtolower($c->name), 'tagihan') || str_contains(strtolower($c->name), 'pajak'))));
+        $bpjsCats = $cleanCategories->filter(fn($c) => str_contains(strtolower($c->name), 'bpjs'));
+        $wifiCats = $cleanCategories->filter(fn($c) => str_contains(strtolower($c->name), 'wifi') || str_contains(strtolower($c->name), 'indihome') || str_contains(strtolower($c->name), 'iconnet') || str_contains(strtolower($c->name), 'myrepublic') || str_contains(strtolower($c->name), 'first media') || str_contains(strtolower($c->name), 'firstmedia'));
+        $gameCats = $cleanCategories->filter(fn($c) => str_contains(strtolower($c->name), 'game'));
+        $transferCats = $cleanCategories->filter(fn($c) => str_contains(strtolower($c->name), 'transfer') || str_contains(strtolower($c->name), 'tarik'));
+        $otherCats = $cleanCategories->reject(fn($c) => 
+            str_starts_with(strtolower($c->name), 'pulsa') || 
+            str_starts_with(strtolower($c->name), 'voucher') || 
+            str_starts_with(strtolower($c->name), 'paket internet') || 
+            str_starts_with(strtolower($c->name), 'kartu perdana') || 
+            str_starts_with(strtolower($c->name), 'e-wallet') || 
+            str_contains(strtolower($c->name), 'token') ||
+            str_contains(strtolower($c->name), 'listrik') ||
+            str_contains(strtolower($c->name), 'pajak') ||
+            str_contains(strtolower($c->name), 'bpjs') ||
+            str_contains(strtolower($c->name), 'wifi') ||
+            str_contains(strtolower($c->name), 'indihome') ||
+            str_contains(strtolower($c->name), 'iconnet') ||
+            str_contains(strtolower($c->name), 'myrepublic') ||
+            str_contains(strtolower($c->name), 'first media') ||
+            str_contains(strtolower($c->name), 'firstmedia') ||
+            str_contains(strtolower($c->name), 'game') ||
+            str_contains(strtolower($c->name), 'transfer') ||
+            str_contains(strtolower($c->name), 'tarik')
+        );
+
         $profitMargin = $totalAmount > 0 ? round(($totalProfit / $totalAmount) * 100, 1) : 0;
         $costRatio = $totalAmount > 0 ? round(($totalCost / $totalAmount) * 100, 1) : 0;
 
@@ -318,11 +350,90 @@
                         class="block w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 focus:bg-white text-slate-900 dark:text-slate-100 text-xs font-medium py-2 px-3 focus:ring-2 focus:ring-indigo-500 shadow-2xs"
                     >
                         <option value="">Semua Kategori</option>
-                        @foreach($cleanCategories as $cat)
-                            <option value="{{ $cat->id }}" {{ request('category_id') == $cat->id ? 'selected' : '' }}>
-                                {{ $cat->name }}
-                            </option>
-                        @endforeach
+                        @if($pulsaCats->isNotEmpty())
+                            <optgroup label="📱 Pulsa Reguler">
+                                @foreach($pulsaCats as $c)
+                                    <option value="{{ $c->id }}" {{ request('category_id') == $c->id ? 'selected' : '' }}>{{ $c->name }}</option>
+                                @endforeach
+                            </optgroup>
+                        @endif
+                        @if($paketCats->isNotEmpty())
+                            <optgroup label="🌐 Paket Data / Internet">
+                                @foreach($paketCats as $c)
+                                    <option value="{{ $c->id }}" {{ request('category_id') == $c->id ? 'selected' : '' }}>{{ $c->name }}</option>
+                                @endforeach
+                            </optgroup>
+                        @endif
+                        @if($voucherCats->isNotEmpty())
+                            <optgroup label="🎟️ Voucher Fisik">
+                                @foreach($voucherCats as $c)
+                                    <option value="{{ $c->id }}" {{ request('category_id') == $c->id ? 'selected' : '' }}>{{ $c->name }}</option>
+                                @endforeach
+                            </optgroup>
+                        @endif
+                        @if($perdanaCats->isNotEmpty())
+                            <optgroup label="💳 Kartu Perdana">
+                                @foreach($perdanaCats as $c)
+                                    <option value="{{ $c->id }}" {{ request('category_id') == $c->id ? 'selected' : '' }}>{{ $c->name }}</option>
+                                @endforeach
+                            </optgroup>
+                        @endif
+                        @if($tokenCats->isNotEmpty())
+                            <optgroup label="⚡ Token Listrik PLN">
+                                @foreach($tokenCats as $c)
+                                    <option value="{{ $c->id }}" {{ request('category_id') == $c->id ? 'selected' : '' }}>{{ $c->name }}</option>
+                                @endforeach
+                            </optgroup>
+                        @endif
+                        @if($plnPascaCats->isNotEmpty())
+                            <optgroup label="💡 Tagihan / Pajak Listrik PLN">
+                                @foreach($plnPascaCats as $c)
+                                    <option value="{{ $c->id }}" {{ request('category_id') == $c->id ? 'selected' : '' }}>{{ $c->name }}</option>
+                                @endforeach
+                            </optgroup>
+                        @endif
+                        @if($bpjsCats->isNotEmpty())
+                            <optgroup label="🏥 BPJS Kesehatan">
+                                @foreach($bpjsCats as $c)
+                                    <option value="{{ $c->id }}" {{ request('category_id') == $c->id ? 'selected' : '' }}>{{ $c->name }}</option>
+                                @endforeach
+                            </optgroup>
+                        @endif
+                        @if($wifiCats->isNotEmpty())
+                            <optgroup label="📡 Tagihan WiFi & Internet Rumah">
+                                @foreach($wifiCats as $c)
+                                    <option value="{{ $c->id }}" {{ request('category_id') == $c->id ? 'selected' : '' }}>{{ $c->name }}</option>
+                                @endforeach
+                            </optgroup>
+                        @endif
+                        @if($gameCats->isNotEmpty())
+                            <optgroup label="🎮 Top Up Game Online">
+                                @foreach($gameCats as $c)
+                                    <option value="{{ $c->id }}" {{ request('category_id') == $c->id ? 'selected' : '' }}>{{ $c->name }}</option>
+                                @endforeach
+                            </optgroup>
+                        @endif
+                        @if($ewalletCats->isNotEmpty())
+                            <optgroup label="👛 Top Up Saldo E-Wallet">
+                                @foreach($ewalletCats as $c)
+                                    <option value="{{ $c->id }}" {{ request('category_id') == $c->id ? 'selected' : '' }}>{{ $c->name }}</option>
+                                @endforeach
+                            </optgroup>
+                        @endif
+                        @if($transferCats->isNotEmpty())
+                            <optgroup label="🏦 Transfer & Tarik Tunai">
+                                @foreach($transferCats as $c)
+                                    <option value="{{ $c->id }}" {{ request('category_id') == $c->id ? 'selected' : '' }}>{{ $c->name }}</option>
+                                @endforeach
+                            </optgroup>
+                        @endif
+                        @if($otherCats->isNotEmpty())
+                            <optgroup label="📦 Lainnya">
+                                @foreach($otherCats as $c)
+                                    <option value="{{ $c->id }}" {{ request('category_id') == $c->id ? 'selected' : '' }}>{{ $c->name }}</option>
+                                @endforeach
+                            </optgroup>
+                        @endif
                     </select>
                 </div>
 

@@ -14,6 +14,38 @@
                    !str_contains($name, 'operasional');
         })->values();
 
+        $pulsaCats = $cleanCategories->filter(fn($c) => str_starts_with(strtolower($c->name), 'pulsa'));
+        $voucherCats = $cleanCategories->filter(fn($c) => str_starts_with(strtolower($c->name), 'voucher'));
+        $paketCats = $cleanCategories->filter(fn($c) => str_starts_with(strtolower($c->name), 'paket internet'));
+        $perdanaCats = $cleanCategories->filter(fn($c) => str_starts_with(strtolower($c->name), 'kartu perdana'));
+        $ewalletCats = $cleanCategories->filter(fn($c) => str_starts_with(strtolower($c->name), 'e-wallet'));
+        $tokenCats = $cleanCategories->filter(fn($c) => str_contains(strtolower($c->name), 'token') || (str_contains(strtolower($c->name), 'listrik') && !str_contains(strtolower($c->name), 'tagihan') && !str_contains(strtolower($c->name), 'pajak')));
+        $plnPascaCats = $cleanCategories->filter(fn($c) => str_contains(strtolower($c->name), 'pajak') || (str_contains(strtolower($c->name), 'listrik') && (str_contains(strtolower($c->name), 'tagihan') || str_contains(strtolower($c->name), 'pajak'))));
+        $bpjsCats = $cleanCategories->filter(fn($c) => str_contains(strtolower($c->name), 'bpjs'));
+        $wifiCats = $cleanCategories->filter(fn($c) => str_contains(strtolower($c->name), 'wifi') || str_contains(strtolower($c->name), 'indihome') || str_contains(strtolower($c->name), 'iconnet') || str_contains(strtolower($c->name), 'myrepublic') || str_contains(strtolower($c->name), 'first media') || str_contains(strtolower($c->name), 'firstmedia'));
+        $gameCats = $cleanCategories->filter(fn($c) => str_contains(strtolower($c->name), 'game'));
+        $transferCats = $cleanCategories->filter(fn($c) => str_contains(strtolower($c->name), 'transfer') || str_contains(strtolower($c->name), 'tarik'));
+        $otherCats = $cleanCategories->reject(fn($c) => 
+            str_starts_with(strtolower($c->name), 'pulsa') || 
+            str_starts_with(strtolower($c->name), 'voucher') || 
+            str_starts_with(strtolower($c->name), 'paket internet') || 
+            str_starts_with(strtolower($c->name), 'kartu perdana') || 
+            str_starts_with(strtolower($c->name), 'e-wallet') || 
+            str_contains(strtolower($c->name), 'token') ||
+            str_contains(strtolower($c->name), 'listrik') ||
+            str_contains(strtolower($c->name), 'pajak') ||
+            str_contains(strtolower($c->name), 'bpjs') ||
+            str_contains(strtolower($c->name), 'wifi') ||
+            str_contains(strtolower($c->name), 'indihome') ||
+            str_contains(strtolower($c->name), 'iconnet') ||
+            str_contains(strtolower($c->name), 'myrepublic') ||
+            str_contains(strtolower($c->name), 'first media') ||
+            str_contains(strtolower($c->name), 'firstmedia') ||
+            str_contains(strtolower($c->name), 'game') ||
+            str_contains(strtolower($c->name), 'transfer') ||
+            str_contains(strtolower($c->name), 'tarik')
+        );
+
         $productData = $products->map(function($p) {
             $catSlug = strtolower($p->category->slug ?? '');
             $catName = strtolower($p->category->name ?? '');
@@ -29,8 +61,16 @@
                 $group = 'voucher';
             } elseif (str_contains($catSlug, 'perdana') || str_contains($pName, 'perdana') || str_contains($pName, 'kartu')) {
                 $group = 'perdana';
-            } elseif (str_contains($catSlug, 'token') || str_contains($catSlug, 'pln') || str_contains($pName, 'token') || str_contains($pName, 'pln')) {
+            } elseif (str_contains($catSlug, 'token') || (str_contains($catSlug, 'pln') && !str_contains($catSlug, 'tagihan') && !str_contains($catSlug, 'pajak')) || str_contains($pName, 'token')) {
                 $group = 'token_pln';
+            } elseif (str_contains($catSlug, 'pajak') || str_contains($catSlug, 'tagihan-pajak-listrik-pln') || str_contains($pName, 'pajak listrik') || (str_contains($pName, 'tagihan') && str_contains($pName, 'listrik'))) {
+                $group = 'tagihan_pln';
+            } elseif (str_contains($catSlug, 'bpjs') || str_contains($pName, 'bpjs')) {
+                $group = 'bpjs';
+            } elseif (str_contains($catSlug, 'wifi') || str_contains($catSlug, 'indihome') || str_contains($catSlug, 'iconnet') || str_contains($catSlug, 'myrepublic') || str_contains($catSlug, 'firstmedia') || str_contains($pName, 'wifi') || str_contains($pName, 'indihome') || str_contains($pName, 'iconnet')) {
+                $group = 'wifi';
+            } elseif (str_contains($catSlug, 'game') || str_contains($pName, 'game') || str_contains($pName, 'diamond') || str_contains($pName, 'free fire') || str_contains($pName, 'mobile legends') || str_contains($pName, 'robux') || str_contains($pName, ' uc')) {
+                $group = 'game';
             } elseif (str_contains($catSlug, 'wallet') || str_contains($catSlug, 'dana') || str_contains($catSlug, 'gopay') || str_contains($catSlug, 'shopee') || str_contains($catSlug, 'ovo') || str_contains($catSlug, 'seabank') || str_contains($pName, 'wallet') || str_contains($pName, 'top up')) {
                 $group = 'ewallet';
             }
@@ -49,6 +89,14 @@
             elseif (str_contains($catSlug, 'shopee') || str_contains($pName, 'shopee')) $brand = 'ShopeePay';
             elseif (str_contains($catSlug, 'ovo') || str_contains($pName, 'ovo')) $brand = 'OVO';
             elseif (str_contains($catSlug, 'seabank') || str_contains($pName, 'seabank')) $brand = 'SeaBank';
+            elseif (str_contains($catSlug, 'indihome') || str_contains($pName, 'indihome')) $brand = 'IndiHome';
+            elseif (str_contains($catSlug, 'iconnet') || str_contains($pName, 'iconnet')) $brand = 'ICONNET';
+            elseif (str_contains($catSlug, 'myrepublic') || str_contains($pName, 'myrepublic')) $brand = 'MyRepublic';
+            elseif (str_contains($catSlug, 'firstmedia') || str_contains($pName, 'first media') || str_contains($pName, 'firstmedia')) $brand = 'First Media';
+            elseif (str_contains($pName, 'free fire') || str_contains($pName, 'ff')) $brand = 'Free Fire';
+            elseif (str_contains($pName, 'mobile legends') || str_contains($pName, 'mlbb') || str_contains($pName, 'ml')) $brand = 'Mobile Legends';
+            elseif (str_contains($catSlug, 'game') || str_contains($pName, 'game')) $brand = 'Game Lainnya';
+            elseif (str_contains($catSlug, 'bpjs') || str_contains($pName, 'bpjs')) $brand = 'BPJS';
             elseif (str_contains($catSlug, 'pln') || str_contains($pName, 'pln')) $brand = 'PLN';
 
             return [
@@ -81,21 +129,27 @@
                 mode: 'catalog',
 
                 // Filter Kategori Produk (Hanya Produk Konter)
-                activeCategory: 'pulsa', // 'pulsa', 'paket_data', 'voucher', 'perdana', 'token_pln', 'ewallet'
+                activeCategory: 'pulsa', // 'pulsa', 'paket_data', 'voucher', 'perdana', 'token_pln', 'tagihan_pln', 'bpjs', 'wifi', 'game', 'ewallet'
                 activeBrand: 'all',
                 searchQuery: '',
 
                 categoriesList: [
-                    { id: 'pulsa', name: 'Pulsa Reguler', icon: '⚡' },
+                    { id: 'pulsa', name: 'Pulsa Reguler', icon: '📱' },
                     { id: 'paket_data', name: 'Paket Data / Kuota', icon: '🌐' },
                     { id: 'voucher', name: 'Voucher Fisik', icon: '🎟️' },
                     { id: 'perdana', name: 'Kartu Perdana', icon: '💳' },
-                    { id: 'token_pln', name: 'Token Listrik PLN', icon: '💡' },
+                    { id: 'token_pln', name: 'Token Listrik PLN', icon: '⚡' },
+                    { id: 'tagihan_pln', name: 'Tagihan/Pajak PLN', icon: '💡' },
+                    { id: 'bpjs', name: 'BPJS Kesehatan', icon: '🏥' },
+                    { id: 'wifi', name: 'Tagihan WiFi', icon: '📡' },
+                    { id: 'game', name: 'Top Up Game', icon: '🎮' },
                     { id: 'ewallet', name: 'Top Up E-Wallet', icon: '👛' },
                 ],
 
                 telcoBrands: ['Telkomsel', 'Indosat', 'XL', 'Axis', 'Tri', 'Smartfren', 'By.U'],
                 walletBrands: ['DANA', 'GoPay', 'ShopeePay', 'OVO', 'SeaBank'],
+                gameBrands: ['Free Fire', 'Mobile Legends', 'Game Lainnya'],
+                wifiBrands: ['IndiHome', 'ICONNET', 'MyRepublic', 'First Media'],
 
                 // State Transfer & Tarik Tunai (BNI, BRI, BCA, Mandiri, BSI, dll.)
                 transferType: 'transfer', // 'transfer' | 'tarik'
@@ -134,7 +188,7 @@
                 isServerTransaction() {
                     if (this.mode === 'transfer') return true;
                     const cat = (this.activeCategory || '').toLowerCase();
-                    return ['pulsa', 'paket_data', 'voucher', 'perdana', 'token_pln', 'ewallet'].includes(cat);
+                    return ['pulsa', 'paket_data', 'voucher', 'perdana', 'token_pln', 'tagihan_pln', 'bpjs', 'wifi', 'game', 'ewallet'].includes(cat);
                 },
 
                 // Cek apakah transaksi dicatat mundur (tanggal sebelum hari ini)
@@ -257,6 +311,10 @@
                         return this.telcoBrands;
                     } else if (this.activeCategory === 'ewallet') {
                         return this.walletBrands;
+                    } else if (this.activeCategory === 'game') {
+                        return this.gameBrands;
+                    } else if (this.activeCategory === 'wifi') {
+                        return this.wifiBrands;
                     }
                     return [];
                 },
@@ -298,8 +356,20 @@
                             const isPerdana = pName.includes('perdana') || pName.includes('kartu') || catName.includes('perdana');
                             if (!isPerdana) return false;
                         } else if (this.activeCategory === 'token_pln') {
-                            const isToken = pName.includes('token') || pName.includes('pln') || catName.includes('token') || catName.includes('pln');
+                            const isToken = (pName.includes('token') || catName.includes('token')) && !pName.includes('tagihan') && !catName.includes('tagihan') && !pName.includes('pajak') && !catName.includes('pajak');
                             if (!isToken) return false;
+                        } else if (this.activeCategory === 'tagihan_pln') {
+                            const isTagihanPln = catName.includes('tagihan-pajak-listrik-pln') || catName.includes('pajak') || (catName.includes('listrik') && (catName.includes('tagihan') || catName.includes('pajak'))) || (pName.includes('listrik') && (pName.includes('tagihan') || pName.includes('pajak')));
+                            if (!isTagihanPln) return false;
+                        } else if (this.activeCategory === 'bpjs') {
+                            const isBpjs = catName.includes('bpjs') || pName.includes('bpjs');
+                            if (!isBpjs) return false;
+                        } else if (this.activeCategory === 'wifi') {
+                            const isWifi = catName.includes('wifi') || catName.includes('indihome') || catName.includes('iconnet') || catName.includes('myrepublic') || catName.includes('firstmedia') || pName.includes('wifi') || pName.includes('indihome') || pName.includes('iconnet') || pName.includes('myrepublic') || pName.includes('first media');
+                            if (!isWifi) return false;
+                        } else if (this.activeCategory === 'game') {
+                            const isGame = catName.includes('game') || pName.includes('game') || pName.includes('diamond') || pName.includes('free fire') || pName.includes('mobile legends') || pName.includes('robux') || pName.includes(' uc');
+                            if (!isGame) return false;
                         } else if (this.activeCategory === 'ewallet') {
                             const isWallet = catName.includes('wallet') || catName.includes('dana') || catName.includes('gopay') || catName.includes('shopee') || catName.includes('ovo') || catName.includes('seabank') || pName.includes('dana') || pName.includes('gopay') || pName.includes('top up');
                             if (!isWallet) return false;
@@ -307,9 +377,18 @@
 
                         // 2. Filter Brand
                         if (this.activeBrand && this.activeBrand !== 'all') {
-                            const b = this.activeBrand.toLowerCase();
-                            const matchesBrand = pName.includes(b) || catName.includes(b);
-                            if (!matchesBrand) return false;
+                            if (this.activeCategory === 'game' && this.activeBrand === 'Game Lainnya') {
+                                const isFF = pName.includes('free fire') || pName.includes('ff');
+                                const isML = pName.includes('mobile legends') || pName.includes('mlbb') || pName.includes('ml');
+                                if (isFF || isML) return false;
+                            } else {
+                                const b = this.activeBrand.toLowerCase().replace(/\s+/g, '');
+                                const pClean = pName.replace(/\s+/g, '');
+                                const catClean = catName.replace(/\s+/g, '');
+                                const brandClean = (p.brand || '').toLowerCase().replace(/\s+/g, '');
+                                const matchesBrand = pClean.includes(b) || catClean.includes(b) || brandClean.includes(b);
+                                if (!matchesBrand) return false;
+                            }
                         }
 
                         // 3. Filter Search
@@ -416,7 +495,21 @@
                     } else if (target === 'perdana') {
                         found = this.allCategories.find(c => c.slug.includes('perdana'));
                     } else if (target === 'token_pln') {
-                        found = this.allCategories.find(c => c.slug.includes('token') || c.slug.includes('pln'));
+                        found = this.allCategories.find(c => c.slug.includes('token') || (c.slug.includes('listrik') && !c.slug.includes('tagihan') && !c.slug.includes('pajak')));
+                    } else if (target === 'tagihan_pln') {
+                        found = this.allCategories.find(c => c.slug.includes('pajak') || (c.slug.includes('listrik') && c.slug.includes('tagihan')));
+                    } else if (target === 'bpjs') {
+                        found = this.allCategories.find(c => c.slug.includes('bpjs'));
+                    } else if (target === 'wifi') {
+                        if (this.activeBrand !== 'all') {
+                            const b = this.activeBrand.toLowerCase().replace(/\s+/g, '');
+                            found = this.allCategories.find(c => c.slug.toLowerCase().includes(b));
+                        }
+                        if (!found) {
+                            found = this.allCategories.find(c => c.slug.includes('wifi') || c.slug.includes('indihome'));
+                        }
+                    } else if (target === 'game') {
+                        found = this.allCategories.find(c => c.slug.includes('game'));
                     } else if (target === 'ewallet') {
                         found = this.allCategories.find(c => c.slug.includes('wallet') || c.slug.includes('dana'));
                     }
@@ -468,12 +561,16 @@
                         }
                     }
 
-                    // 7. Validasi Nomor Tujuan Pelanggan (Pulsa, Paket Data, Token PLN, E-Wallet)
+                    // 7. Validasi Nomor Tujuan Pelanggan (Pulsa, Paket Data, Token PLN, E-Wallet, Game, WiFi, BPJS)
                     if (this.isTargetRequired) {
                         const targetVal = (this.customerTarget || '').trim();
                         if (!targetVal) {
                             let label = 'Nomor tujuan / No. HP';
                             if (this.activeCategory === 'token_pln') label = 'Nomor meteran / ID Pelanggan PLN';
+                            else if (this.activeCategory === 'tagihan_pln') label = 'ID Pelanggan Listrik PLN';
+                            else if (this.activeCategory === 'bpjs') label = 'Nomor Virtual Account / No. BPJS';
+                            else if (this.activeCategory === 'wifi') label = 'Nomor Pelanggan Internet WiFi';
+                            else if (this.activeCategory === 'game') label = 'User ID & Zone ID Game';
                             else if (this.activeCategory === 'ewallet') label = 'Nomor HP tujuan akun E-Wallet';
                             else if (this.activeCategory === 'pulsa') label = 'Nomor HP tujuan pulsa';
                             else if (this.activeCategory === 'paket_data') label = 'Nomor HP tujuan paket data';
@@ -527,7 +624,7 @@
                 // Status Wajib / Otomatis Nomor Tujuan
                 get isTargetRequired() {
                     if (this.mode === 'transfer') return true;
-                    return ['pulsa', 'paket_data', 'token_pln', 'ewallet'].includes(this.activeCategory);
+                    return ['pulsa', 'paket_data', 'token_pln', 'tagihan_pln', 'bpjs', 'wifi', 'game', 'ewallet'].includes(this.activeCategory);
                 },
 
                 get isTargetAuto() {
@@ -541,6 +638,10 @@
                     if (this.activeCategory === 'pulsa') return 'No. HP Tujuan Pulsa';
                     if (this.activeCategory === 'paket_data') return 'No. HP Penerima Paket Data';
                     if (this.activeCategory === 'token_pln') return 'No. Meteran / ID Pelanggan PLN';
+                    if (this.activeCategory === 'tagihan_pln') return 'ID Pelanggan Listrik PLN (12 digit)';
+                    if (this.activeCategory === 'bpjs') return 'No. Virtual Account / No. BPJS (16 digit)';
+                    if (this.activeCategory === 'wifi') return 'Nomor Pelanggan / ID Internet WiFi';
+                    if (this.activeCategory === 'game') return 'User ID & Zone ID Game Pelanggan';
                     if (this.activeCategory === 'ewallet') return 'No. HP Akun E-Wallet';
                     if (this.activeCategory === 'voucher') return 'Identitas Voucher Fisik';
                     if (this.activeCategory === 'perdana') return 'Identitas Kartu Perdana';
@@ -552,6 +653,10 @@
                     if (this.activeCategory === 'pulsa') return 'Contoh: 081234567890 (No HP Pulsa)';
                     if (this.activeCategory === 'paket_data') return 'Contoh: 081234567890 (No HP Paket)';
                     if (this.activeCategory === 'token_pln') return 'Contoh: 1421xxxxxxxx (No Meter PLN)';
+                    if (this.activeCategory === 'tagihan_pln') return 'Contoh: 512345678901 (ID Pelanggan PLN)';
+                    if (this.activeCategory === 'bpjs') return 'Contoh: 8888801234567890 (No VA BPJS)';
+                    if (this.activeCategory === 'wifi') return 'Contoh: 1224xxxxxxxx (No Pelanggan Internet)';
+                    if (this.activeCategory === 'game') return 'Contoh: 12345678 (1234) / ID Game';
                     if (this.activeCategory === 'ewallet') return 'Contoh: 081234567890 (No Akun E-Wallet)';
                     if (this.activeCategory === 'voucher') return 'Voucher Tri / Fisik';
                     if (this.activeCategory === 'perdana') return 'Perdana Tri / Kartu Perdana';
@@ -775,7 +880,7 @@
                                 Filter Kategori Produk:
                             </label>
                             
-                            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
                                 <template x-for="cat in categoriesList" :key="cat.id">
                                     <button
                                         type="button"
@@ -1150,6 +1255,10 @@
                                     >
                                     <span class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 pointer-events-none text-xs">
                                         <span x-show="activeCategory === 'token_pln'">⚡</span>
+                                        <span x-show="activeCategory === 'tagihan_pln'">💡</span>
+                                        <span x-show="activeCategory === 'bpjs'">🏥</span>
+                                        <span x-show="activeCategory === 'wifi'">📡</span>
+                                        <span x-show="activeCategory === 'game'">🎮</span>
                                         <span x-show="['pulsa', 'paket_data'].includes(activeCategory)">📱</span>
                                         <span x-show="activeCategory === 'ewallet'">👛</span>
                                         <span x-show="activeCategory === 'voucher'">🎟️</span>
@@ -1177,11 +1286,90 @@
                                     class="block w-full rounded-xl border @error('category_id') border-rose-500 ring-1 ring-rose-500 @else border-slate-300 dark:border-slate-600 @enderror bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-xs font-medium py-2.5 px-3 focus:ring-2 focus:ring-indigo-500 shadow-2xs"
                                 >
                                     <option value="">-- Pilih Kategori --</option>
-                                    @foreach($cleanCategories as $cat)
-                                        <option value="{{ $cat->id }}" {{ old('category_id') == $cat->id ? 'selected' : '' }}>
-                                            {{ $cat->name }}
-                                        </option>
-                                    @endforeach
+                                    @if($pulsaCats->isNotEmpty())
+                                        <optgroup label="📱 Pulsa Reguler">
+                                            @foreach($pulsaCats as $c)
+                                                <option value="{{ $c->id }}" {{ old('category_id') == $c->id ? 'selected' : '' }}>{{ $c->name }}</option>
+                                            @endforeach
+                                        </optgroup>
+                                    @endif
+                                    @if($paketCats->isNotEmpty())
+                                        <optgroup label="🌐 Paket Data / Internet">
+                                            @foreach($paketCats as $c)
+                                                <option value="{{ $c->id }}" {{ old('category_id') == $c->id ? 'selected' : '' }}>{{ $c->name }}</option>
+                                            @endforeach
+                                        </optgroup>
+                                    @endif
+                                    @if($voucherCats->isNotEmpty())
+                                        <optgroup label="🎟️ Voucher Fisik">
+                                            @foreach($voucherCats as $c)
+                                                <option value="{{ $c->id }}" {{ old('category_id') == $c->id ? 'selected' : '' }}>{{ $c->name }}</option>
+                                            @endforeach
+                                        </optgroup>
+                                    @endif
+                                    @if($perdanaCats->isNotEmpty())
+                                        <optgroup label="💳 Kartu Perdana">
+                                            @foreach($perdanaCats as $c)
+                                                <option value="{{ $c->id }}" {{ old('category_id') == $c->id ? 'selected' : '' }}>{{ $c->name }}</option>
+                                            @endforeach
+                                        </optgroup>
+                                    @endif
+                                    @if($tokenCats->isNotEmpty())
+                                        <optgroup label="⚡ Token Listrik PLN">
+                                            @foreach($tokenCats as $c)
+                                                <option value="{{ $c->id }}" {{ old('category_id') == $c->id ? 'selected' : '' }}>{{ $c->name }}</option>
+                                            @endforeach
+                                        </optgroup>
+                                    @endif
+                                    @if($plnPascaCats->isNotEmpty())
+                                        <optgroup label="💡 Tagihan / Pajak Listrik PLN">
+                                            @foreach($plnPascaCats as $c)
+                                                <option value="{{ $c->id }}" {{ old('category_id') == $c->id ? 'selected' : '' }}>{{ $c->name }}</option>
+                                            @endforeach
+                                        </optgroup>
+                                    @endif
+                                    @if($bpjsCats->isNotEmpty())
+                                        <optgroup label="🏥 BPJS Kesehatan">
+                                            @foreach($bpjsCats as $c)
+                                                <option value="{{ $c->id }}" {{ old('category_id') == $c->id ? 'selected' : '' }}>{{ $c->name }}</option>
+                                            @endforeach
+                                        </optgroup>
+                                    @endif
+                                    @if($wifiCats->isNotEmpty())
+                                        <optgroup label="📡 Tagihan WiFi & Internet Rumah">
+                                            @foreach($wifiCats as $c)
+                                                <option value="{{ $c->id }}" {{ old('category_id') == $c->id ? 'selected' : '' }}>{{ $c->name }}</option>
+                                            @endforeach
+                                        </optgroup>
+                                    @endif
+                                    @if($gameCats->isNotEmpty())
+                                        <optgroup label="🎮 Top Up Game Online">
+                                            @foreach($gameCats as $c)
+                                                <option value="{{ $c->id }}" {{ old('category_id') == $c->id ? 'selected' : '' }}>{{ $c->name }}</option>
+                                            @endforeach
+                                        </optgroup>
+                                    @endif
+                                    @if($ewalletCats->isNotEmpty())
+                                        <optgroup label="👛 Top Up Saldo E-Wallet">
+                                            @foreach($ewalletCats as $c)
+                                                <option value="{{ $c->id }}" {{ old('category_id') == $c->id ? 'selected' : '' }}>{{ $c->name }}</option>
+                                            @endforeach
+                                        </optgroup>
+                                    @endif
+                                    @if($transferCats->isNotEmpty())
+                                        <optgroup label="🏦 Transfer & Tarik Tunai">
+                                            @foreach($transferCats as $c)
+                                                <option value="{{ $c->id }}" {{ old('category_id') == $c->id ? 'selected' : '' }}>{{ $c->name }}</option>
+                                            @endforeach
+                                        </optgroup>
+                                    @endif
+                                    @if($otherCats->isNotEmpty())
+                                        <optgroup label="📦 Lainnya">
+                                            @foreach($otherCats as $c)
+                                                <option value="{{ $c->id }}" {{ old('category_id') == $c->id ? 'selected' : '' }}>{{ $c->name }}</option>
+                                            @endforeach
+                                        </optgroup>
+                                    @endif
                                 </select>
                                 @error('category_id')
                                     <p class="text-[11px] text-rose-500 font-bold mt-1">{{ $message }}</p>
