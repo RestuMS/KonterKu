@@ -635,8 +635,8 @@
                         name="amount"
                         id="amount"
                         x-model.number="topupAmount"
-                        min="1000"
-                        step="1000"
+                        min="1"
+                        step="any"
                         required
                         class="w-full pl-9 pr-3 py-2.5 rounded-2xl border border-slate-300 dark:border-slate-600 text-sm font-mono font-bold dark:bg-slate-800 text-slate-900 dark:text-slate-100"
                     >
@@ -686,7 +686,7 @@
                         id="new_balance"
                         x-model.number="newBalance"
                         min="0"
-                        step="1"
+                        step="any"
                         required
                         class="w-full pl-9 pr-3 py-2.5 rounded-2xl border border-slate-300 dark:border-slate-600 text-sm font-mono font-bold dark:bg-slate-800 text-slate-900 dark:text-slate-100"
                     >

@@ -43,9 +43,23 @@ class ServerDepositController extends Controller
 
         $mutations = $query->latest('id')->paginate(15)->withQueryString();
 
-        // Metrik Statistik Ringkasan Finansial Saldo
-        $totalIn = ServerDepositMutation::where('type', 'in')->sum('amount');
-        $totalOut = ServerDepositMutation::where('type', 'out')->sum('amount');
+        // Metrik Statistik Ringkasan Finansial Saldo (Menyesuaikan Filter Tanggal jika Ada)
+        $statsQuery = ServerDepositMutation::query();
+        if ($request->filled('start_date') && $request->filled('end_date')) {
+            $startDate = Carbon::parse($request->start_date)->startOfDay();
+            $endDate = Carbon::parse($request->end_date)->endOfDay();
+            if ($startDate->gt($endDate)) {
+                [$startDate, $endDate] = [$endDate->copy()->startOfDay(), $startDate->copy()->endOfDay()];
+            }
+            $statsQuery->whereBetween('created_at', [$startDate, $endDate]);
+        } elseif ($request->filled('start_date')) {
+            $statsQuery->where('created_at', '>=', Carbon::parse($request->start_date)->startOfDay());
+        } elseif ($request->filled('end_date')) {
+            $statsQuery->where('created_at', '<=', Carbon::parse($request->end_date)->endOfDay());
+        }
+
+        $totalIn = (clone $statsQuery)->where('type', 'in')->sum('amount');
+        $totalOut = (clone $statsQuery)->where('type', 'out')->sum('amount');
         $todayMutationsCount = ServerDepositMutation::whereDate('created_at', Carbon::today())->count();
 
         // Preset strings untuk navigasi cepat

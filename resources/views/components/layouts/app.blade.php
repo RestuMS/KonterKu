@@ -6,6 +6,19 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ $title ?? 'KonterKu' }} — Kelola Keuangan & Stok Konter</title>
 
+    <!-- Favicon -->
+    @if(file_exists(public_path('images/favicon.png')))
+        <link rel="icon" type="image/png" href="{{ asset('images/favicon.png') }}">
+    @elseif(file_exists(public_path('images/logo.png')))
+        <link rel="icon" type="image/png" href="{{ asset('images/logo.png') }}">
+    @elseif(file_exists(public_path('images/logo.svg')))
+        <link rel="icon" type="image/svg+xml" href="{{ asset('images/logo.svg') }}">
+    @elseif(file_exists(public_path('favicon.svg')))
+        <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}">
+    @else
+        <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
+    @endif
+
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

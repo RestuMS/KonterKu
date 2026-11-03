@@ -662,7 +662,7 @@
                                         name="cost_price"
                                         x-model="createCostPrice"
                                         @input="calculateProfit()"
-                                        step="100"
+                                        step="any"
                                         min="0"
                                         class="w-full pl-9 pr-3 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-mono font-bold outline-none text-xs"
                                     >
@@ -682,8 +682,8 @@
                                         x-model="createAmount"
                                         @input="calculateProfit()"
                                         required
-                                        min="100"
-                                        step="100"
+                                        min="1"
+                                        step="any"
                                         class="w-full pl-9 pr-3 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-amber-600 dark:text-amber-400 font-mono font-black outline-none text-sm"
                                     >
                                 </div>
@@ -1007,6 +1007,8 @@
                                 name="cost_price"
                                 x-model="editCostPrice"
                                 @input="calculateEditProfit()"
+                                step="any"
+                                min="0"
                                 class="w-full px-3 py-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-mono font-bold focus:ring-2 focus:ring-indigo-500 outline-none text-xs"
                             >
                         </div>
@@ -1021,6 +1023,8 @@
                                 x-model="editAmount"
                                 @input="calculateEditProfit()"
                                 required
+                                min="1"
+                                step="any"
                                 class="w-full px-3 py-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-amber-600 dark:text-amber-400 font-mono font-black focus:ring-2 focus:ring-indigo-500 outline-none text-sm"
                             >
                         </div>

@@ -129,6 +129,14 @@
                 }
             },
 
+            isDigitalCategory(catId) {
+                if (!catId) return false;
+                const cat = this.categories.find(c => c.id == catId);
+                if (!cat) return false;
+                const lower = cat.name.toLowerCase();
+                return lower.includes('pulsa') || lower.includes('paket') || lower.includes('token') || lower.includes('e-wallet') || lower.includes('transfer') || lower.includes('tarik') || lower.includes('jasa');
+            },
+
             onRowCategorySelect(index, cat) {
                 const item = this.items[index];
                 const oldCat = this.categories.find(c => c.id == item.category_id);
@@ -155,12 +163,27 @@
                     }
                 }
 
-                // Saran satuan otomatis
+                // Saran satuan & penyesuaian stok otomatis (Fisik vs Digital/Server)
                 const lower = cat.name.toLowerCase();
-                if (lower.includes('voucher')) item.unit = 'voucher';
-                else if (lower.includes('kartu perdana') || lower.includes('perdana')) item.unit = 'kartu';
-                else if (lower.includes('pulsa') || lower.includes('paket') || lower.includes('token') || lower.includes('e-wallet')) item.unit = 'transaksi';
-                else item.unit = 'pcs';
+                const isDigital = lower.includes('pulsa') || lower.includes('paket') || lower.includes('token') || lower.includes('e-wallet') || lower.includes('transfer') || lower.includes('tarik') || lower.includes('jasa');
+
+                if (isDigital) {
+                    item.unit = 'transaksi';
+                    item.stock = 0;
+                    item.min_stock = 0;
+                } else if (lower.includes('voucher')) {
+                    item.unit = 'voucher';
+                    if (!item.stock || item.stock == 0) item.stock = 10;
+                    if (!item.min_stock || item.min_stock == 0) item.min_stock = 3;
+                } else if (lower.includes('kartu perdana') || lower.includes('perdana')) {
+                    item.unit = 'kartu';
+                    if (!item.stock || item.stock == 0) item.stock = 5;
+                    if (!item.min_stock || item.min_stock == 0) item.min_stock = 2;
+                } else {
+                    item.unit = 'pcs';
+                    if (!item.stock || item.stock == 0) item.stock = 10;
+                    if (!item.min_stock || item.min_stock == 0) item.min_stock = 3;
+                }
 
                 // Auto generate kode SKU
                 this.generateItemSku(index);
@@ -230,6 +253,27 @@
                 item.code = prefix + '-' + denomPart;
             },
 
+            // Handler saat kategori generator batch berubah
+            onBatchCategoryChange() {
+                const cat = this.categories.find(c => c.id == this.batchGen.categoryId);
+                if (!cat) return;
+                const lower = cat.name.toLowerCase();
+                const isDigital = lower.includes('pulsa') || lower.includes('paket') || lower.includes('token') || lower.includes('e-wallet') || lower.includes('transfer') || lower.includes('tarik') || lower.includes('jasa');
+                if (isDigital) {
+                    this.batchGen.defaultStock = 0;
+                    this.batchGen.defaultMinStock = 0;
+                } else if (lower.includes('voucher')) {
+                    this.batchGen.defaultStock = 10;
+                    this.batchGen.defaultMinStock = 3;
+                } else if (lower.includes('kartu perdana')) {
+                    this.batchGen.defaultStock = 5;
+                    this.batchGen.defaultMinStock = 2;
+                } else {
+                    this.batchGen.defaultStock = 10;
+                    this.batchGen.defaultMinStock = 3;
+                }
+            },
+
             // Fungsi Generator Seri Sekaligus
             generateBatchSeries() {
                 if (!this.batchGen.categoryId) {
@@ -251,9 +295,11 @@
                 }
 
                 const lower = cat.name.toLowerCase();
+                const isDigital = lower.includes('pulsa') || lower.includes('paket') || lower.includes('token') || lower.includes('e-wallet') || lower.includes('transfer') || lower.includes('tarik') || lower.includes('jasa');
                 let unit = 'transaksi';
                 if (lower.includes('voucher')) unit = 'voucher';
                 else if (lower.includes('kartu perdana')) unit = 'kartu';
+                else if (isDigital) unit = 'transaksi';
                 else unit = 'pcs';
 
                 this.batchGen.selectedDenoms.forEach((denomStr) => {
@@ -379,6 +425,38 @@
             </div>
         </div>
 
+        <!-- PANDUAN LOGIKA KATEGORI & STOK AWAL -->
+        <div class="bg-gradient-to-r from-blue-50/90 via-indigo-50/80 to-purple-50/80 dark:from-slate-800 dark:via-slate-800/90 dark:to-slate-800 rounded-3xl p-5 border border-indigo-100 dark:border-slate-700 shadow-2xs">
+            <div class="flex items-start gap-3.5">
+                <div class="w-10 h-10 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-sm text-base">
+                    💡
+                </div>
+                <div class="flex-1 text-xs">
+                    <h4 class="text-sm font-black text-slate-900 dark:text-white">
+                        Panduan Kategori & Logika Pengisian Stok Awal
+                    </h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2.5 text-slate-600 dark:text-slate-300">
+                        <div class="p-3 rounded-2xl bg-white/90 dark:bg-slate-750/90 border border-slate-200/70 dark:border-slate-700">
+                            <strong class="text-emerald-700 dark:text-emerald-300 font-bold flex items-center gap-1.5 mb-1 text-xs">
+                                <span>📦</span> 1. Produk Fisik (Voucher Fisik, Perdana, Aksesoris)
+                            </strong>
+                            <p class="leading-relaxed text-[11.5px] text-slate-600 dark:text-slate-300">
+                                Isi <strong>Stok Awal</strong> sesuai jumlah fisik barang riil yang ada di rak/laci (satuan: <em>pcs, voucher, kartu</em>). Sistem otomatis mencatat mutasi stok awal masuk dan memotong stok setiap kali kasir mencatat transaksi penjualan.
+                            </p>
+                        </div>
+                        <div class="p-3 rounded-2xl bg-white/90 dark:bg-slate-750/90 border border-slate-200/70 dark:border-slate-700">
+                            <strong class="text-amber-700 dark:text-amber-300 font-bold flex items-center gap-1.5 mb-1 text-xs">
+                                <span>⚡</span> 2. Produk Digital / Server (Pulsa, Paket Data, Token PLN, E-Wallet)
+                            </strong>
+                            <p class="leading-relaxed text-[11.5px] text-slate-600 dark:text-slate-300">
+                                Produk digital tidak memiliki fisik di toko. <strong>Stok Awal cukup diisi 0</strong> (satuan: <em>transaksi</em>). Ketersediaan modal dan transaksi digital dipotong otomatis dari <strong>Saldo Server Konter</strong>.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- FORM UTAMA -->
         <form method="POST" action="{{ route('products.store') }}" id="multiProductForm" class="space-y-6">
             @csrf
@@ -450,9 +528,55 @@
                                     class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-750 text-slate-900 dark:text-white text-xs font-semibold focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 shadow-2xs"
                                 >
                                     <option value="">-- Pilih Kategori --</option>
-                                    @foreach($categories as $cat)
-                                        <option value="{{ $cat->id }}">{{ $cat->name }}</option>
-                                    @endforeach
+                                    @if($pulsaCats->isNotEmpty())
+                                        <optgroup label="📱 Pulsa Reguler (All Operator)">
+                                            @foreach($pulsaCats as $cat)
+                                                <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+                                            @endforeach
+                                        </optgroup>
+                                    @endif
+                                    @if($voucherCats->isNotEmpty())
+                                        <optgroup label="🎟️ Voucher Fisik & Kuota">
+                                            @foreach($voucherCats as $cat)
+                                                <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+                                            @endforeach
+                                        </optgroup>
+                                    @endif
+                                    @if($paketCats->isNotEmpty())
+                                        <optgroup label="🌐 Paket Internet & Data">
+                                            @foreach($paketCats as $cat)
+                                                <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+                                            @endforeach
+                                        </optgroup>
+                                    @endif
+                                    @if($perdanaCats->isNotEmpty())
+                                        <optgroup label="💳 Kartu Perdana Segel">
+                                            @foreach($perdanaCats as $cat)
+                                                <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+                                            @endforeach
+                                        </optgroup>
+                                    @endif
+                                    @if($ewalletCats->isNotEmpty())
+                                        <optgroup label="👛 E-Wallet & Bank Digital">
+                                            @foreach($ewalletCats as $cat)
+                                                <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+                                            @endforeach
+                                        </optgroup>
+                                    @endif
+                                    @if($tokenCats->isNotEmpty())
+                                        <optgroup label="⚡ Token Listrik PLN">
+                                            @foreach($tokenCats as $cat)
+                                                <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+                                            @endforeach
+                                        </optgroup>
+                                    @endif
+                                    @if($otherCats->isNotEmpty())
+                                        <optgroup label="📦 Aksesoris, Jasa & Lainnya">
+                                            @foreach($otherCats as $cat)
+                                                <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+                                            @endforeach
+                                        </optgroup>
+                                    @endif
                                 </select>
                             </div>
 
@@ -546,9 +670,21 @@
 
                             <!-- 6. Stok Awal (2 Cols) -->
                             <div class="md:col-span-2">
-                                <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1">
-                                    Stok Awal <span class="text-rose-500">*</span>
-                                </label>
+                                <div class="flex items-center justify-between mb-1">
+                                    <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
+                                        Stok Awal <span class="text-rose-500">*</span>
+                                    </label>
+                                    <template x-if="isDigitalCategory(item.category_id)">
+                                        <span class="text-[9px] font-black px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-950/70 dark:text-amber-300" title="Produk digital menggunakan saldo server">
+                                            ⚡ Server
+                                        </span>
+                                    </template>
+                                    <template x-if="item.category_id && !isDigitalCategory(item.category_id)">
+                                        <span class="text-[9px] font-black px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300" title="Produk fisik di rak/laci">
+                                            📦 Fisik
+                                        </span>
+                                    </template>
+                                </div>
                                 <input
                                     type="number"
                                     :name="`items[${index}][stock]`"
@@ -557,6 +693,12 @@
                                     required
                                     class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-750 text-slate-900 dark:text-white text-xs font-bold focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 shadow-2xs"
                                 >
+                                <p class="text-[10px] text-slate-400 mt-1" x-show="isDigitalCategory(item.category_id)">
+                                    Isi 0 (Pakai Saldo Server)
+                                </p>
+                                <p class="text-[10px] text-slate-400 mt-1" x-show="item.category_id && !isDigitalCategory(item.category_id)">
+                                    Jumlah fisik di rak
+                                </p>
                             </div>
 
                             <!-- 7. Min Stok (2 Cols) -->
@@ -705,13 +847,65 @@
                         </label>
                         <select
                             x-model="batchGen.categoryId"
-                            class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-750 text-slate-900 dark:text-white font-semibold focus:ring-2 focus:ring-indigo-500 shadow-2xs"
+                            @change="onBatchCategoryChange()"
+                            class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-750 text-slate-900 dark:text-white font-semibold focus:ring-2 focus:ring-indigo-500 shadow-2xs text-xs"
                         >
                             <option value="">-- Pilih Kategori (Misal: Pulsa Telkomsel, Voucher Tri, E-Wallet DANA) --</option>
-                            @foreach($categories as $cat)
-                                <option value="{{ $cat->id }}">{{ $cat->name }}</option>
-                            @endforeach
+                            @if($pulsaCats->isNotEmpty())
+                                <optgroup label="📱 Pulsa Reguler (All Operator)">
+                                    @foreach($pulsaCats as $cat)
+                                        <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+                                    @endforeach
+                                </optgroup>
+                            @endif
+                            @if($voucherCats->isNotEmpty())
+                                <optgroup label="🎟️ Voucher Fisik & Kuota">
+                                    @foreach($voucherCats as $cat)
+                                        <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+                                    @endforeach
+                                </optgroup>
+                            @endif
+                            @if($paketCats->isNotEmpty())
+                                <optgroup label="🌐 Paket Internet & Data">
+                                    @foreach($paketCats as $cat)
+                                        <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+                                    @endforeach
+                                </optgroup>
+                            @endif
+                            @if($perdanaCats->isNotEmpty())
+                                <optgroup label="💳 Kartu Perdana Segel">
+                                    @foreach($perdanaCats as $cat)
+                                        <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+                                    @endforeach
+                                </optgroup>
+                            @endif
+                            @if($ewalletCats->isNotEmpty())
+                                <optgroup label="👛 E-Wallet & Bank Digital">
+                                    @foreach($ewalletCats as $cat)
+                                        <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+                                    @endforeach
+                                </optgroup>
+                            @endif
+                            @if($tokenCats->isNotEmpty())
+                                <optgroup label="⚡ Token Listrik PLN">
+                                    @foreach($tokenCats as $cat)
+                                        <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+                                    @endforeach
+                                </optgroup>
+                            @endif
+                            @if($otherCats->isNotEmpty())
+                                <optgroup label="📦 Aksesoris, Jasa & Lainnya">
+                                    @foreach($otherCats as $cat)
+                                        <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+                                    @endforeach
+                                </optgroup>
+                            @endif
                         </select>
+                        <template x-if="isDigitalCategory(batchGen.categoryId)">
+                            <p class="text-[11px] text-amber-600 dark:text-amber-400 mt-1 font-semibold flex items-center gap-1">
+                                <span>⚡</span> Kategori digital menggunakan Saldo Server induk. Stok awal otomatis diset 0.
+                            </p>
+                        </template>
                     </div>
 
                     <!-- 2. Centang Pilihan Nominal -->

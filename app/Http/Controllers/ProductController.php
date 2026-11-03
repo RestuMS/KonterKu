@@ -14,8 +14,19 @@ use Illuminate\View\View;
 
 class ProductController extends Controller
 {
+    /**
+     * Pastikan kategori standar usaha konter selalu tersedia di database.
+     */
+    protected function ensureCategoriesExist(): void
+    {
+        if (Category::whereIn('type', ['product', 'all'])->count() === 0) {
+            (new \Database\Seeders\CategorySeeder())->run();
+        }
+    }
+
     public function index(Request $request): View
     {
+        $this->ensureCategoriesExist();
         $query = Product::with('category');
 
         if ($request->filled('search')) {
@@ -35,18 +46,20 @@ class ProductController extends Controller
         }
 
         if ($request->boolean('low_stock')) {
-            $query->whereColumn('stock', '<=', 'min_stock');
+            $query->whereColumn('stock', '<=', 'min_stock')
+                  ->where('unit', '!=', 'transaksi');
         }
 
         $products = $query->latest()->paginate(10)->withQueryString();
-        $categories = Category::whereIn('type', ['product', 'all'])->get();
+        $categories = Category::whereIn('type', ['product', 'all'])->orderBy('name')->get();
 
         return view('products.index', compact('products', 'categories'));
     }
 
     public function create(): View
     {
-        $categories = Category::whereIn('type', ['product', 'all'])->orderBy('id')->get();
+        $this->ensureCategoriesExist();
+        $categories = Category::whereIn('type', ['product', 'all'])->orderBy('name')->get();
         return view('products.create', compact('categories'));
     }
 
@@ -109,7 +122,8 @@ class ProductController extends Controller
 
     public function edit(Product $product): View
     {
-        $categories = Category::whereIn('type', ['product', 'all'])->orderBy('id')->get();
+        $this->ensureCategoriesExist();
+        $categories = Category::whereIn('type', ['product', 'all'])->orderBy('name')->get();
         return view('products.edit', compact('product', 'categories'));
     }
 

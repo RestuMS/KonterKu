@@ -1020,8 +1020,8 @@
                                     <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400 font-bold text-xs pointer-events-none">Rp</span>
                                     <input
                                         type="number"
-                                        min="1000"
-                                        step="1000"
+                                        min="1"
+                                        step="any"
                                         x-model.number="transferNominal"
                                         @input="applyTransfer()"
                                         class="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm font-mono font-black focus:ring-2 focus:ring-emerald-500 shadow-2xs"
@@ -1051,7 +1051,7 @@
                                     <input
                                         type="number"
                                         min="0"
-                                        step="500"
+                                        step="any"
                                         x-model.number="transferAdminFee"
                                         @input="applyTransfer()"
                                         class="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-emerald-300 dark:border-emerald-600 bg-white dark:bg-slate-800 text-emerald-700 dark:text-emerald-300 text-sm font-mono font-black focus:ring-2 focus:ring-emerald-500 shadow-2xs"

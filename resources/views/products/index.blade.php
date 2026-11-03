@@ -3,6 +3,23 @@
         Produk & Persediaan Barang
     </x-slot:header>
 
+    @php
+        $pulsaCats = $categories->filter(fn($c) => str_starts_with(strtolower($c->name), 'pulsa'));
+        $voucherCats = $categories->filter(fn($c) => str_starts_with(strtolower($c->name), 'voucher'));
+        $paketCats = $categories->filter(fn($c) => str_starts_with(strtolower($c->name), 'paket internet'));
+        $perdanaCats = $categories->filter(fn($c) => str_starts_with(strtolower($c->name), 'kartu perdana'));
+        $ewalletCats = $categories->filter(fn($c) => str_starts_with(strtolower($c->name), 'e-wallet'));
+        $tokenCats = $categories->filter(fn($c) => str_contains(strtolower($c->name), 'token'));
+        $otherCats = $categories->reject(fn($c) => 
+            str_starts_with(strtolower($c->name), 'pulsa') || 
+            str_starts_with(strtolower($c->name), 'voucher') || 
+            str_starts_with(strtolower($c->name), 'paket internet') || 
+            str_starts_with(strtolower($c->name), 'kartu perdana') || 
+            str_starts_with(strtolower($c->name), 'e-wallet') || 
+            str_contains(strtolower($c->name), 'token')
+        );
+    @endphp
+
     <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
             <h2 class="text-xl font-bold text-slate-900 dark:text-white">Katalog & Stok Produk</h2>
@@ -33,11 +50,55 @@
             <div>
                 <x-select name="category_id">
                     <option value="">Semua Kategori</option>
-                    @foreach($categories as $cat)
-                        <option value="{{ $cat->id }}" {{ request('category_id') == $cat->id ? 'selected' : '' }}>
-                            {{ $cat->name }}
-                        </option>
-                    @endforeach
+                    @if($pulsaCats->isNotEmpty())
+                        <optgroup label="📱 Pulsa Reguler">
+                            @foreach($pulsaCats as $cat)
+                                <option value="{{ $cat->id }}" {{ request('category_id') == $cat->id ? 'selected' : '' }}>{{ $cat->name }}</option>
+                            @endforeach
+                        </optgroup>
+                    @endif
+                    @if($voucherCats->isNotEmpty())
+                        <optgroup label="🎟️ Voucher Fisik & Kuota">
+                            @foreach($voucherCats as $cat)
+                                <option value="{{ $cat->id }}" {{ request('category_id') == $cat->id ? 'selected' : '' }}>{{ $cat->name }}</option>
+                            @endforeach
+                        </optgroup>
+                    @endif
+                    @if($paketCats->isNotEmpty())
+                        <optgroup label="🌐 Paket Internet & Data">
+                            @foreach($paketCats as $cat)
+                                <option value="{{ $cat->id }}" {{ request('category_id') == $cat->id ? 'selected' : '' }}>{{ $cat->name }}</option>
+                            @endforeach
+                        </optgroup>
+                    @endif
+                    @if($perdanaCats->isNotEmpty())
+                        <optgroup label="💳 Kartu Perdana Segel">
+                            @foreach($perdanaCats as $cat)
+                                <option value="{{ $cat->id }}" {{ request('category_id') == $cat->id ? 'selected' : '' }}>{{ $cat->name }}</option>
+                            @endforeach
+                        </optgroup>
+                    @endif
+                    @if($ewalletCats->isNotEmpty())
+                        <optgroup label="👛 E-Wallet & Bank Digital">
+                            @foreach($ewalletCats as $cat)
+                                <option value="{{ $cat->id }}" {{ request('category_id') == $cat->id ? 'selected' : '' }}>{{ $cat->name }}</option>
+                            @endforeach
+                        </optgroup>
+                    @endif
+                    @if($tokenCats->isNotEmpty())
+                        <optgroup label="⚡ Token Listrik PLN">
+                            @foreach($tokenCats as $cat)
+                                <option value="{{ $cat->id }}" {{ request('category_id') == $cat->id ? 'selected' : '' }}>{{ $cat->name }}</option>
+                            @endforeach
+                        </optgroup>
+                    @endif
+                    @if($otherCats->isNotEmpty())
+                        <optgroup label="📦 Aksesoris, Jasa & Lainnya">
+                            @foreach($otherCats as $cat)
+                                <option value="{{ $cat->id }}" {{ request('category_id') == $cat->id ? 'selected' : '' }}>{{ $cat->name }}</option>
+                            @endforeach
+                        </optgroup>
+                    @endif
                 </x-select>
             </div>
             <div>
@@ -100,7 +161,11 @@
                                 + @rupiah($prod->selling_price - $prod->cost_price)
                             </td>
                             <td class="px-6 py-3.5 text-center">
-                                @if($prod->stock <= $prod->min_stock)
+                                @if($prod->unit === 'transaksi' && $prod->stock == 0)
+                                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200/60 dark:border-amber-800" title="Ketersediaan produk digital otomatis dari Saldo Server">
+                                        <span>⚡ Server</span>
+                                    </span>
+                                @elseif($prod->stock <= $prod->min_stock)
                                     <x-badge color="rose">
                                         {{ $prod->stock }} {{ $prod->unit }} (Min: {{ $prod->min_stock }})
                                     </x-badge>

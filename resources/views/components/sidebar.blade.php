@@ -10,11 +10,23 @@
     <!-- Brand / Logo -->
     <div class="h-16 px-6 flex items-center justify-between border-b border-slate-800/80">
         <a href="{{ route('dashboard') }}" class="flex items-center gap-3">
-            <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-indigo-400 flex items-center justify-center text-white shadow-md shadow-indigo-500/20">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/>
-                </svg>
-            </div>
+            @if(file_exists(public_path('images/logo.png')))
+                <img src="{{ asset('images/logo.png') }}" alt="Logo KonterKu" class="w-9 h-9 rounded-xl object-contain shadow-md shadow-indigo-500/20">
+            @elseif(file_exists(public_path('images/logo.webp')))
+                <img src="{{ asset('images/logo.webp') }}" alt="Logo KonterKu" class="w-9 h-9 rounded-xl object-contain shadow-md shadow-indigo-500/20">
+            @elseif(file_exists(public_path('images/logo.jpg')))
+                <img src="{{ asset('images/logo.jpg') }}" alt="Logo KonterKu" class="w-9 h-9 rounded-xl object-contain shadow-md shadow-indigo-500/20">
+            @elseif(file_exists(public_path('images/logo.jpeg')))
+                <img src="{{ asset('images/logo.jpeg') }}" alt="Logo KonterKu" class="w-9 h-9 rounded-xl object-contain shadow-md shadow-indigo-500/20">
+            @elseif(file_exists(public_path('images/logo.svg')))
+                <img src="{{ asset('images/logo.svg') }}" alt="Logo KonterKu" class="w-9 h-9 rounded-xl object-contain shadow-md shadow-indigo-500/20">
+            @else
+                <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-indigo-400 flex items-center justify-center text-white shadow-md shadow-indigo-500/20">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                    </svg>
+                </div>
+            @endif
             <div>
                 <span class="text-base font-bold tracking-tight text-white block leading-none">KonterKu</span>
                 <span class="text-[10px] text-slate-400 font-medium tracking-wider uppercase">Keuangan & Stok</span>

@@ -242,6 +242,21 @@ class CategorySeeder extends Seeder
                 'type' => 'all',
                 'description' => 'Layanan tarik tunai saldo rekening bank & saldo e-wallet agen konter',
             ],
+
+            // Produk Fisik & Jasa Tambahan
+            [
+                'name' => 'Aksesoris HP',
+                'slug' => 'aksesoris-hp',
+                'type' => 'product',
+                'description' => 'Aksesoris ponsel (kabel data, charger, headset, casing, tempered glass)',
+            ],
+            [
+                'name' => 'Jasa Servis & Software',
+                'slug' => 'jasa-servis',
+                'type' => 'product',
+                'description' => 'Jasa perbaikan ponsel, ganti LCD, install software, flashing, dll.',
+            ],
+
             [
                 'name' => 'Operasional Toko',
                 'slug' => 'operasional-toko',

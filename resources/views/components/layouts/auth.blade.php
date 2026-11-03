@@ -6,6 +6,19 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ $title ?? 'Autentikasi' }} — KonterKu</title>
 
+    <!-- Favicon -->
+    @if(file_exists(public_path('images/favicon.png')))
+        <link rel="icon" type="image/png" href="{{ asset('images/favicon.png') }}">
+    @elseif(file_exists(public_path('images/logo.png')))
+        <link rel="icon" type="image/png" href="{{ asset('images/logo.png') }}">
+    @elseif(file_exists(public_path('images/logo.svg')))
+        <link rel="icon" type="image/svg+xml" href="{{ asset('images/logo.svg') }}">
+    @elseif(file_exists(public_path('favicon.svg')))
+        <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}">
+    @else
+        <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
+    @endif
+
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -58,11 +71,19 @@
             <!-- Top Brand Identity with Live Clock -->
             <div class="relative z-10 flex items-center justify-between">
                 <div class="flex items-center gap-3.5">
-                    <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-500 via-indigo-600 to-sky-400 text-white flex items-center justify-center shadow-lg shadow-indigo-500/35 shrink-0 animate-float">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/>
-                        </svg>
-                    </div>
+                    @if(file_exists(public_path('images/logo.png')))
+                        <img src="{{ asset('images/logo.png') }}" alt="Logo KonterKu" class="w-12 h-12 rounded-2xl object-contain shadow-lg shadow-indigo-500/35 shrink-0 animate-float">
+                    @elseif(file_exists(public_path('images/logo.webp')))
+                        <img src="{{ asset('images/logo.webp') }}" alt="Logo KonterKu" class="w-12 h-12 rounded-2xl object-contain shadow-lg shadow-indigo-500/35 shrink-0 animate-float">
+                    @elseif(file_exists(public_path('images/logo.svg')))
+                        <img src="{{ asset('images/logo.svg') }}" alt="Logo KonterKu" class="w-12 h-12 rounded-2xl object-contain shadow-lg shadow-indigo-500/35 shrink-0 animate-float">
+                    @else
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-500 via-indigo-600 to-sky-400 text-white flex items-center justify-center shadow-lg shadow-indigo-500/35 shrink-0 animate-float">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                            </svg>
+                        </div>
+                    @endif
                     <div>
                         <div class="flex items-center gap-2">
                             <h1 class="text-2xl font-black tracking-tight text-white">KonterKu</h1>
@@ -208,11 +229,19 @@
 
             <!-- Mobile Brand Header (Tampil hanya pada layar HP/Tablet) -->
             <div class="lg:hidden text-center mb-6 w-full max-w-md relative z-10">
-                <div class="inline-flex w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-600 via-indigo-700 to-sky-500 items-center justify-center text-white shadow-lg shadow-indigo-500/30 mb-2.5 animate-float">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/>
-                    </svg>
-                </div>
+                @if(file_exists(public_path('images/logo.png')))
+                    <img src="{{ asset('images/logo.png') }}" alt="Logo KonterKu" class="inline-flex w-12 h-12 rounded-2xl object-contain shadow-lg shadow-indigo-500/30 mb-2.5 animate-float">
+                @elseif(file_exists(public_path('images/logo.webp')))
+                    <img src="{{ asset('images/logo.webp') }}" alt="Logo KonterKu" class="inline-flex w-12 h-12 rounded-2xl object-contain shadow-lg shadow-indigo-500/30 mb-2.5 animate-float">
+                @elseif(file_exists(public_path('images/logo.svg')))
+                    <img src="{{ asset('images/logo.svg') }}" alt="Logo KonterKu" class="inline-flex w-12 h-12 rounded-2xl object-contain shadow-lg shadow-indigo-500/30 mb-2.5 animate-float">
+                @else
+                    <div class="inline-flex w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-600 via-indigo-700 to-sky-500 items-center justify-center text-white shadow-lg shadow-indigo-500/30 mb-2.5 animate-float">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                        </svg>
+                    </div>
+                @endif
                 <h2 class="text-2xl font-black text-slate-900 dark:text-white tracking-tight">KonterKu</h2>
                 <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Sistem Kasir & Pembukuan Konter</p>
             </div>

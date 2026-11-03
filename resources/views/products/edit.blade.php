@@ -46,11 +46,29 @@
                 }
             },
 
+            isDigital() {
+                if (!this.categoryName) return false;
+                const lower = this.categoryName.toLowerCase();
+                return lower.includes('pulsa') || lower.includes('paket') || lower.includes('token') || lower.includes('e-wallet') || lower.includes('transfer') || lower.includes('tarik') || lower.includes('jasa');
+            },
+
             selectCategory(cat) {
                 const oldCatName = this.categoryName;
                 this.categoryId = cat.id;
                 this.categoryName = cat.name;
                 this.categorySlug = cat.slug;
+
+                const lower = cat.name.toLowerCase();
+                const isDigital = lower.includes('pulsa') || lower.includes('paket') || lower.includes('token') || lower.includes('e-wallet') || lower.includes('transfer') || lower.includes('tarik') || lower.includes('jasa');
+                if (isDigital) {
+                    this.unit = 'transaksi';
+                } else if (lower.includes('voucher')) {
+                    this.unit = 'voucher';
+                } else if (lower.includes('perdana')) {
+                    this.unit = 'kartu';
+                } else {
+                    this.unit = 'pcs';
+                }
 
                 if (!this.name || this.name.trim() === '') {
                     this.name = cat.name + ' ';
@@ -333,11 +351,70 @@
                                 required
                                 class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-750 text-slate-900 dark:text-white text-xs font-semibold focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 shadow-2xs"
                             >
-                                @foreach($categories as $cat)
-                                    <option value="{{ $cat->id }}" {{ old('category_id', $product->category_id) == $cat->id ? 'selected' : '' }}>
-                                        {{ $cat->name }}
-                                    </option>
-                                @endforeach
+                                <option value="">-- Pilih Kategori --</option>
+                                @if($pulsaCats->isNotEmpty())
+                                    <optgroup label="📱 Pulsa Reguler (All Operator)">
+                                        @foreach($pulsaCats as $cat)
+                                            <option value="{{ $cat->id }}" {{ old('category_id', $product->category_id) == $cat->id ? 'selected' : '' }}>
+                                                {{ $cat->name }}
+                                            </option>
+                                        @endforeach
+                                    </optgroup>
+                                @endif
+                                @if($voucherCats->isNotEmpty())
+                                    <optgroup label="🎟️ Voucher Fisik & Kuota">
+                                        @foreach($voucherCats as $cat)
+                                            <option value="{{ $cat->id }}" {{ old('category_id', $product->category_id) == $cat->id ? 'selected' : '' }}>
+                                                {{ $cat->name }}
+                                            </option>
+                                        @endforeach
+                                    </optgroup>
+                                @endif
+                                @if($paketCats->isNotEmpty())
+                                    <optgroup label="🌐 Paket Internet & Data">
+                                        @foreach($paketCats as $cat)
+                                            <option value="{{ $cat->id }}" {{ old('category_id', $product->category_id) == $cat->id ? 'selected' : '' }}>
+                                                {{ $cat->name }}
+                                            </option>
+                                        @endforeach
+                                    </optgroup>
+                                @endif
+                                @if($perdanaCats->isNotEmpty())
+                                    <optgroup label="💳 Kartu Perdana Segel">
+                                        @foreach($perdanaCats as $cat)
+                                            <option value="{{ $cat->id }}" {{ old('category_id', $product->category_id) == $cat->id ? 'selected' : '' }}>
+                                                {{ $cat->name }}
+                                            </option>
+                                        @endforeach
+                                    </optgroup>
+                                @endif
+                                @if($ewalletCats->isNotEmpty())
+                                    <optgroup label="👛 E-Wallet & Bank Digital">
+                                        @foreach($ewalletCats as $cat)
+                                            <option value="{{ $cat->id }}" {{ old('category_id', $product->category_id) == $cat->id ? 'selected' : '' }}>
+                                                {{ $cat->name }}
+                                            </option>
+                                        @endforeach
+                                    </optgroup>
+                                @endif
+                                @if($tokenCats->isNotEmpty())
+                                    <optgroup label="⚡ Token Listrik PLN">
+                                        @foreach($tokenCats as $cat)
+                                            <option value="{{ $cat->id }}" {{ old('category_id', $product->category_id) == $cat->id ? 'selected' : '' }}>
+                                                {{ $cat->name }}
+                                            </option>
+                                        @endforeach
+                                    </optgroup>
+                                @endif
+                                @if($otherCats->isNotEmpty())
+                                    <optgroup label="📦 Aksesoris, Jasa & Lainnya">
+                                        @foreach($otherCats as $cat)
+                                            <option value="{{ $cat->id }}" {{ old('category_id', $product->category_id) == $cat->id ? 'selected' : '' }}>
+                                                {{ $cat->name }}
+                                            </option>
+                                        @endforeach
+                                    </optgroup>
+                                @endif
                             </select>
                         </div>
 
@@ -447,9 +524,21 @@
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-5 pt-2">
                         <!-- Stok -->
                         <div>
-                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1.5">
-                                Jumlah Stok Saat Ini <span class="text-rose-500">*</span>
-                            </label>
+                            <div class="flex items-center justify-between mb-1.5">
+                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
+                                    Jumlah Stok Saat Ini <span class="text-rose-500">*</span>
+                                </label>
+                                <template x-if="isDigital()">
+                                    <span class="text-[9px] font-black px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-950/70 dark:text-amber-300" title="Produk digital menggunakan saldo server">
+                                        ⚡ Server
+                                    </span>
+                                </template>
+                                <template x-if="!isDigital()">
+                                    <span class="text-[9px] font-black px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300" title="Produk fisik di etalase/rak konter">
+                                        📦 Fisik
+                                    </span>
+                                </template>
+                            </div>
                             <input
                                 type="number"
                                 name="stock"
@@ -458,7 +547,12 @@
                                 required
                                 class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-750 text-slate-900 dark:text-white text-xs font-bold focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 shadow-2xs"
                             >
-                            <p class="text-[11px] text-slate-400 mt-1">Gunakan Mutasi Stok untuk penyesuaian berkala.</p>
+                            <p class="text-[11px] text-slate-400 mt-1" x-show="isDigital()">
+                                ⚡ Produk digital tidak memerlukan stok fisik (potong saldo server).
+                            </p>
+                            <p class="text-[11px] text-slate-400 mt-1" x-show="!isDigital()">
+                                Gunakan Mutasi Stok untuk penyesuaian berkala.
+                            </p>
                         </div>
 
                         <!-- Batas Minimum Stok -->
