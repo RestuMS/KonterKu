@@ -60,7 +60,8 @@ class ProductController extends Controller
     {
         $this->ensureCategoriesExist();
         $categories = Category::whereIn('type', ['product', 'all'])->orderBy('name')->get();
-        return view('products.create', compact('categories'));
+        $existingCodes = Product::pluck('code')->toArray();
+        return view('products.create', compact('categories', 'existingCodes'));
     }
 
     public function store(ProductRequest $request): RedirectResponse

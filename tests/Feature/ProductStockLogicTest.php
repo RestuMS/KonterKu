@@ -200,5 +200,44 @@ class ProductStockLogicTest extends TestCase
         $response->assertSee('VCR-MENIPIS');
         $response->assertDontSee('PULSA-TEST');
     }
+
+    public function test_batch_product_creation_with_tri_and_byu_does_not_conflict(): void
+    {
+        $catTri = Category::create(['name' => 'Pulsa Tri', 'slug' => 'pulsa-tri-test', 'type' => 'product']);
+        $catByu = Category::create(['name' => 'Pulsa By.U', 'slug' => 'pulsa-byu-test', 'type' => 'product']);
+
+        $payload = [
+            'items' => [
+                [
+                    'category_id' => $catTri->id,
+                    'name' => 'Pulsa Tri 5.000',
+                    'code' => 'PULSA-TRI-5K',
+                    'cost_price' => 5100,
+                    'selling_price' => 7000,
+                    'stock' => 0,
+                    'min_stock' => 0,
+                    'unit' => 'transaksi',
+                    'is_active' => '1',
+                ],
+                [
+                    'category_id' => $catByu->id,
+                    'name' => 'Pulsa By.U 5.000',
+                    'code' => 'PULSA-BYU-5K',
+                    'cost_price' => 5150,
+                    'selling_price' => 7000,
+                    'stock' => 0,
+                    'min_stock' => 0,
+                    'unit' => 'transaksi',
+                    'is_active' => '1',
+                ],
+            ]
+        ];
+
+        $response = $this->actingAs($this->user)->post(route('products.store'), $payload);
+
+        $response->assertRedirect(route('products.index'));
+        $this->assertDatabaseHas('products', ['code' => 'PULSA-TRI-5K']);
+        $this->assertDatabaseHas('products', ['code' => 'PULSA-BYU-5K']);
+    }
 }
 

@@ -38,6 +38,7 @@
     <div 
         x-data="{
             categories: {{ Js::from($categories) }},
+            existingCodes: {{ Js::from($existingCodes ?? []) }},
             items: [],
             showBatchModal: false,
 
@@ -66,6 +67,7 @@
                         unit: item.unit || 'pcs',
                         is_active: item.is_active !== undefined ? Boolean(item.is_active) : true,
                         notes: item.notes || '',
+                        manual_code: Boolean(item.code),
                     }));
                 } else {
                     // Mulai dengan 1 baris produk kosong siap diisi
@@ -86,7 +88,8 @@
                     min_stock: prefill.min_stock !== undefined ? prefill.min_stock : 5,
                     unit: prefill.unit || 'pcs',
                     is_active: prefill.is_active !== undefined ? prefill.is_active : true,
-                    notes: prefill.notes || ''
+                    notes: prefill.notes || '',
+                    manual_code: Boolean(prefill.code)
                 });
             },
 
@@ -94,11 +97,18 @@
                 const source = this.items[index];
                 const uid = Date.now() + Math.floor(Math.random() * 1000);
                 
-                // Buat kode SKU baru dengan nomor acak agar unik
+                // Buat kode SKU baru dengan suffix acak agar unik
                 let newCode = source.code ? source.code + '-CPY' : '';
                 if (source.code && source.code.includes('-')) {
                     const parts = source.code.split('-');
                     newCode = parts.slice(0, -1).join('-') + '-' + Math.floor(100 + Math.random() * 900);
+                }
+
+                // Pastikan newCode tidak bentrok dengan database atau form
+                const allUsed = [...(this.existingCodes || []).map(c => c.toUpperCase()), ...this.items.map(it => (it.code || '').toUpperCase())];
+                let suffix = 2;
+                while (allUsed.includes(newCode.toUpperCase())) {
+                    newCode = source.code + '-' + suffix++;
                 }
 
                 this.items.splice(index + 1, 0, {
@@ -112,7 +122,8 @@
                     min_stock: source.min_stock,
                     unit: source.unit,
                     is_active: source.is_active,
-                    notes: source.notes
+                    notes: source.notes,
+                    manual_code: false
                 });
             },
 
@@ -275,7 +286,67 @@
                 }
 
                 item.name = current + (current.length > 0 ? ' ' : '') + denom;
+                item.manual_code = false;
                 this.generateItemSku(index);
+            },
+
+            // Deteksi Brand Provider & Layanan Cerdas
+            detectBrand(name, catName = '') {
+                const n = (name || '').toLowerCase();
+                const c = (catName || '').toLowerCase();
+
+                // 1. Prioritas Utama: Nama Produk yang diketik kasir (karena lebih spesifik jika kasir ketik langsung)
+                if (n.includes('by.u') || n.includes('by u') || n.includes('byu') || n.includes('by-u')) return 'BYU';
+                if (n.includes('telkomsel') || n.includes('tsel')) return 'TSEL';
+                if (n.includes('indosat') || n.includes('im3') || n.includes('isat')) return 'ISAT';
+                if (n.includes('tri') || n.includes('three') || /\b3\b/.test(n)) return 'TRI';
+                if (n.includes('smartfren') || n.includes('smart')) return 'SMART';
+                if (n.includes('axis')) return 'AXIS';
+                if (/\bxl\b/.test(n) || n.includes('xl ') || n.startsWith('xl')) return 'XL';
+
+                // 2. Prioritas Kedua: Nama Kategori pilihan jika di nama belum ada kata kunci
+                if (c.includes('by.u') || c.includes('by u') || c.includes('byu') || c.includes('by-u')) return 'BYU';
+                if (c.includes('telkomsel') || c.includes('tsel')) return 'TSEL';
+                if (c.includes('indosat') || c.includes('im3') || c.includes('isat')) return 'ISAT';
+                if (c.includes('tri') || c.includes('three') || /\b3\b/.test(c)) return 'TRI';
+                if (c.includes('smartfren') || c.includes('smart')) return 'SMART';
+                if (c.includes('axis')) return 'AXIS';
+                if (/\bxl\b/.test(c) || c.includes('xl')) return 'XL';
+
+                return 'GEN';
+            },
+
+            // Handler input nama produk kasir (Auto match brand kategori & generate SKU)
+            onNameInput(index) {
+                const item = this.items[index];
+                if (!item.name) return;
+
+                // Sinkronisasi Kategori Otomatis jika nama memuat brand yang beda dengan kategori saat ini
+                const detectedBrand = this.detectBrand(item.name);
+                const currentCat = this.categories.find(c => c.id == item.category_id);
+
+                if (detectedBrand !== 'GEN') {
+                    const brandSlug = detectedBrand === 'BYU' ? 'byu' :
+                                      detectedBrand === 'TSEL' ? 'telkomsel' :
+                                      detectedBrand === 'ISAT' ? 'indosat' :
+                                      detectedBrand === 'TRI' ? 'tri' :
+                                      detectedBrand === 'SMART' ? 'smartfren' :
+                                      detectedBrand === 'AXIS' ? 'axis' :
+                                      detectedBrand === 'XL' ? 'xl' : '';
+
+                    if (brandSlug) {
+                        const catType = (currentCat ? currentCat.slug : '').split('-')[0] || 'pulsa';
+                        const betterCat = this.categories.find(c => c.slug.includes(brandSlug) && c.slug.includes(catType));
+                        if (betterCat && betterCat.id != item.category_id) {
+                            item.category_id = betterCat.id;
+                        }
+                    }
+                }
+
+                // Generate SKU otomatis jika kasir belum mengubah kode secara manual
+                if (!item.manual_code) {
+                    this.generateItemSku(index);
+                }
             },
 
             generateItemSku(index) {
@@ -287,32 +358,25 @@
                 const lowerCat = cat.name.toLowerCase();
                 const lowerName = (item.name || '').toLowerCase();
 
-                let prov = 'GEN';
-                if (lowerCat.includes('telkomsel') || lowerName.includes('telkomsel')) prov = 'TSEL';
-                else if (lowerCat.includes('indosat') || lowerName.includes('indosat') || lowerName.includes('im3')) prov = 'ISAT';
-                else if (lowerCat.includes('tri') || lowerName.includes('tri') || lowerName.includes(' 3')) prov = 'TRI';
-                else if (lowerCat.includes('xl') || lowerName.includes('xl')) prov = 'XL';
-                else if (lowerCat.includes('axis') || lowerName.includes('axis')) prov = 'AXIS';
-                else if (lowerCat.includes('smartfren') || lowerName.includes('smartfren')) prov = 'SMART';
-                else if (lowerCat.includes('by.u') || lowerCat.includes('byu') || lowerName.includes('by.u') || lowerName.includes('byu')) prov = 'BYU';
+                let prov = this.detectBrand(item.name, cat.name);
 
-                if (lowerCat.includes('pulsa')) prefix = 'PULSA-' + prov;
-                else if (lowerCat.includes('voucher')) prefix = 'VCR-' + prov;
-                else if (lowerCat.includes('paket internet') || lowerCat.includes('paket data')) prefix = 'DATA-' + prov;
-                else if (lowerCat.includes('kartu perdana')) prefix = 'SIM-' + prov;
-                else if (lowerCat.includes('token')) prefix = 'PLN';
+                if (lowerCat.includes('pulsa') || lowerName.includes('pulsa')) prefix = 'PULSA-' + prov;
+                else if (lowerCat.includes('voucher') || lowerName.includes('voucher')) prefix = 'VCR-' + prov;
+                else if (lowerCat.includes('paket internet') || lowerCat.includes('paket data') || lowerName.includes('paket') || lowerName.includes('kuota') || lowerName.includes('data')) prefix = 'DATA-' + prov;
+                else if (lowerCat.includes('kartu perdana') || lowerName.includes('perdana')) prefix = 'SIM-' + prov;
+                else if (lowerCat.includes('token') || lowerName.includes('token')) prefix = 'PLN';
                 else if (lowerCat.includes('dana') || lowerName.includes('dana')) prefix = 'DANA';
                 else if (lowerCat.includes('gopay') || lowerName.includes('gopay')) prefix = 'GOPAY';
                 else if (lowerCat.includes('shopeepay') || lowerName.includes('shopee')) prefix = 'SPAY';
                 else if (lowerCat.includes('seabank') || lowerName.includes('seabank')) prefix = 'SEABANK';
                 else if (lowerCat.includes('ovo') || lowerName.includes('ovo')) prefix = 'OVO';
-                else if (lowerCat.includes('bpjs')) prefix = 'BPJS-KES';
-                else if (lowerCat.includes('pajak') || (lowerCat.includes('listrik') && lowerCat.includes('tagihan'))) prefix = 'PLN-PASCA';
+                else if (lowerCat.includes('bpjs') || lowerName.includes('bpjs')) prefix = 'BPJS-KES';
+                else if (lowerCat.includes('pajak') || (lowerCat.includes('listrik') && lowerCat.includes('tagihan')) || lowerName.includes('pajak listrik')) prefix = 'PLN-PASCA';
                 else if (lowerCat.includes('indihome') || lowerName.includes('indihome')) prefix = 'WIFI-INDI';
                 else if (lowerCat.includes('iconnet') || lowerName.includes('iconnet')) prefix = 'WIFI-ICON';
                 else if (lowerCat.includes('myrepublic') || lowerName.includes('myrepublic')) prefix = 'WIFI-MYREP';
                 else if (lowerCat.includes('first media') || lowerCat.includes('firstmedia') || lowerName.includes('first media')) prefix = 'WIFI-FM';
-                else if (lowerCat.includes('game')) {
+                else if (lowerCat.includes('game') || lowerName.includes('game') || lowerName.includes('diamond')) {
                     if (lowerName.includes('free fire') || lowerName.includes('ff')) {
                         prefix = 'GAME-FF';
                     } else if (lowerName.includes('mobile legends') || lowerName.includes('mlbb') || lowerName.includes('ml')) {
@@ -327,7 +391,7 @@
                     prefix = cat.slug.toUpperCase().substring(0, 8);
                 }
 
-                // Denom part extraction
+                // Denom part extraction (Mendukung format: 5k, 10k, 5rb, 5.000, 5000, Diamond)
                 let denomPart = '';
                 if (lowerName.includes('weekly') || lowerName.includes('wdp')) {
                     denomPart = 'WDP';
@@ -336,20 +400,71 @@
                 } else if (lowerName.includes('bulanan')) {
                     denomPart = 'BULAN';
                 } else {
-                    const match = item.name.match(/\d+[\.\d]*/);
-                    if (match) {
-                        const rawNum = match[0].replace(/\./g, '');
+                    const kMatch = item.name.match(/\b(\d+)\s*k\b/i);
+                    const rbMatch = item.name.match(/\b(\d+)\s*rb\b/i);
+                    const numMatch = item.name.match(/\d+[\.\d]*/);
+
+                    if (kMatch) {
+                        denomPart = kMatch[1] + 'K';
+                    } else if (rbMatch) {
+                        denomPart = rbMatch[1] + 'K';
+                    } else if (numMatch) {
+                        const rawNum = parseInt(numMatch[0].replace(/\./g, '')) || 0;
                         if (rawNum >= 1000) {
                             denomPart = (rawNum / 1000) + 'K';
-                        } else {
+                        } else if (rawNum > 0) {
                             denomPart = rawNum + (lowerCat.includes('game') || lowerName.includes('diamond') ? 'DM' : '');
+                        } else {
+                            denomPart = Math.floor(100 + Math.random() * 900);
                         }
                     } else {
                         denomPart = Math.floor(100 + Math.random() * 900);
                     }
                 }
 
-                item.code = prefix + '-' + denomPart;
+                let baseCode = prefix + '-' + denomPart;
+                let finalCode = baseCode;
+
+                // Pastikan kode unik, tidak tabrakan dengan database atau baris lain di form ini
+                const otherCodes = this.items.filter((_, idx) => idx !== index).map(it => (it.code || '').trim().toUpperCase());
+                const dbCodes = (this.existingCodes || []).map(c => c.trim().toUpperCase());
+                let counter = 1;
+                while (dbCodes.includes(finalCode.toUpperCase()) || otherCodes.includes(finalCode.toUpperCase())) {
+                    counter++;
+                    finalCode = baseCode + '-' + counter;
+                }
+
+                item.code = finalCode;
+            },
+
+            // Cek apakah kode SKU saat ini duplikat
+            isCodeDuplicate(index) {
+                const item = this.items[index];
+                if (!item.code || !item.code.trim()) return false;
+                const upperCode = item.code.trim().toUpperCase();
+
+                const dbCodes = (this.existingCodes || []).map(c => c.trim().toUpperCase());
+                if (dbCodes.includes(upperCode)) return true;
+
+                const duplicateInRows = this.items.some((it, i) => i !== index && (it.code || '').trim().toUpperCase() === upperCode);
+                return duplicateInRows;
+            },
+
+            getDuplicateMsg(index) {
+                const item = this.items[index];
+                if (!item.code) return '';
+                const upperCode = item.code.trim().toUpperCase();
+                const dbCodes = (this.existingCodes || []).map(c => c.trim().toUpperCase());
+
+                if (dbCodes.includes(upperCode)) {
+                    return `⚠️ SKU ${item.code} sudah terdaftar di database.`;
+                }
+                return `⚠️ SKU ${item.code} kembar dengan baris lain di form ini.`;
+            },
+
+            makeCodeUnique(index) {
+                this.items[index].manual_code = false;
+                this.generateItemSku(index);
             },
 
             // Handler saat kategori generator batch berubah
@@ -426,14 +541,7 @@
                     const sellingPrice = costPrice > 0 ? costPrice + margin : 0;
 
                     let prefix = 'PROD';
-                    let prov = 'GEN';
-                    if (lower.includes('telkomsel')) prov = 'TSEL';
-                    else if (lower.includes('indosat')) prov = 'ISAT';
-                    else if (lower.includes('tri')) prov = 'TRI';
-                    else if (lower.includes('xl')) prov = 'XL';
-                    else if (lower.includes('axis')) prov = 'AXIS';
-                    else if (lower.includes('smartfren')) prov = 'SMART';
-                    else if (lower.includes('by.u') || lower.includes('byu')) prov = 'BYU';
+                    let prov = this.detectBrand('', cat.name);
 
                     if (lower.includes('pulsa')) prefix = 'PULSA-' + prov;
                     else if (lower.includes('voucher')) prefix = 'VCR-' + prov;
@@ -467,6 +575,18 @@
                         }
                     }
 
+                    let baseCode = prefix + '-' + denomCode;
+                    let finalCode = baseCode;
+                    let counter = 1;
+                    const existingInFormAndDb = [
+                        ...(this.existingCodes || []).map(c => c.toUpperCase()),
+                        ...this.items.map(it => (it.code || '').toUpperCase())
+                    ];
+                    while (existingInFormAndDb.includes(finalCode.toUpperCase())) {
+                        counter++;
+                        finalCode = baseCode + '-' + counter;
+                    }
+
                     let fullProdName = cat.name + ' ' + denomStr;
                     if (isGame) {
                         const gameTitle = this.batchGen.gameType === 'ff' ? 'Free Fire' : 'Mobile Legends';
@@ -476,14 +596,15 @@
                     this.addNewRow({
                         category_id: cat.id,
                         name: fullProdName,
-                        code: prefix + '-' + denomCode,
+                        code: finalCode,
                         cost_price: costPrice,
                         selling_price: sellingPrice,
                         stock: this.batchGen.defaultStock,
                         min_stock: this.batchGen.defaultMinStock,
                         unit: unit,
                         is_active: true,
-                        notes: ''
+                        notes: '',
+                        manual_code: false
                     });
                 });
 
@@ -852,7 +973,7 @@
                                     type="text"
                                     :name="`items[${index}][name]`"
                                     x-model="item.name"
-                                    @input="generateItemSku(index)"
+                                    @input="onNameInput(index)"
                                     placeholder="Contoh: Pulsa Tri 10.000 / Top Up Game Free Fire 140 Diamond"
                                     required
                                     class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-750 text-slate-900 dark:text-white text-xs font-bold focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 shadow-2xs"
@@ -867,20 +988,35 @@
                                     </label>
                                     <button
                                         type="button"
-                                        @click="generateItemSku(index)"
-                                        class="text-[10px] text-indigo-600 font-bold hover:underline cursor-pointer"
+                                        @click="makeCodeUnique(index)"
+                                        class="text-[10px] text-indigo-600 dark:text-indigo-400 font-bold hover:underline cursor-pointer flex items-center gap-1"
+                                        title="Buat ulang kode SKU otomatis yang unik"
                                     >
-                                        ⚡ Generate
+                                        <span>⚡ Buat Otomatis</span>
                                     </button>
                                 </div>
                                 <input
                                     type="text"
                                     :name="`items[${index}][code]`"
                                     x-model="item.code"
+                                    @input="item.manual_code = true"
                                     placeholder="SKU-10K"
                                     required
-                                    class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-750 text-slate-900 dark:text-white text-xs font-mono font-bold focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 shadow-2xs"
+                                    :class="isCodeDuplicate(index) ? 'border-rose-500 ring-1 ring-rose-500 bg-rose-50/50 dark:bg-rose-950/20 text-rose-900 dark:text-rose-200' : 'border-slate-300 dark:border-slate-600'"
+                                    class="w-full px-3 py-2 rounded-xl border bg-white dark:bg-slate-750 text-slate-900 dark:text-white text-xs font-mono font-bold focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 shadow-2xs"
                                 >
+                                <template x-if="isCodeDuplicate(index)">
+                                    <div class="mt-1 flex items-center justify-between text-[10px] text-rose-500 font-bold">
+                                        <span x-text="getDuplicateMsg(index)"></span>
+                                        <button
+                                            type="button"
+                                            @click="makeCodeUnique(index)"
+                                            class="text-indigo-600 dark:text-indigo-400 underline hover:text-indigo-800 ml-1 shrink-0 cursor-pointer"
+                                        >
+                                            ⚡ Buat Unik
+                                        </button>
+                                    </div>
+                                </template>
                             </div>
 
                             <!-- 4. Harga Modal (3 Cols) -->
