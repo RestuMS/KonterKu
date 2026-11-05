@@ -990,19 +990,18 @@
                         </div>
 
                         <!-- ------------------------------------------------- -->
-                        <!-- A. PANEL FORM INPUT TAGIHAN (PLN, BPJS, WIFI)     -->
-                        <!--    Bebas Stok & Potong Saldo Server Otomatis      -->
+                        <!-- A. PANEL INFO TAGIHAN BEBAS STOK (PLN, BPJS, WIFI)-->
                         <!-- ------------------------------------------------- -->
-                        <div x-show="isBillCategory" class="p-5 rounded-2xl bg-white dark:bg-slate-850 border border-indigo-200 dark:border-indigo-800/60 shadow-xs space-y-4">
-                            <!-- Header Form Tagihan -->
+                        <div x-show="isBillCategory" class="p-5 sm:p-6 rounded-2xl bg-white dark:bg-slate-850 border border-indigo-200 dark:border-indigo-800/60 shadow-xs space-y-4">
+                            <!-- Header Info Tagihan -->
                             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-indigo-100 dark:border-indigo-900/40">
                                 <div class="flex items-center gap-3">
-                                    <div class="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center text-xl font-black shadow-xs shrink-0" x-text="billCategoryIcon"></div>
+                                    <div class="w-11 h-11 rounded-2xl bg-indigo-600 text-white flex items-center justify-center text-2xl font-black shadow-md shadow-indigo-600/30 shrink-0" x-text="billCategoryIcon"></div>
                                     <div>
-                                        <h3 class="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white flex items-center gap-2">
+                                        <h3 class="text-sm font-black uppercase tracking-wider text-slate-900 dark:text-white flex items-center gap-2">
                                             <span x-text="billCategoryTitle"></span>
                                         </h3>
-                                        <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Input nominal tagihan langsung tanpa perlu input stok katalog.</p>
+                                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Layanan pembayaran tagihan bulanan pelanggan.</p>
                                     </div>
                                 </div>
                                 <div class="flex items-center gap-1.5 flex-wrap">
@@ -1015,120 +1014,68 @@
                                 </div>
                             </div>
 
-                            <!-- Catatan Penjelasan Alur -->
-                            <div class="p-3 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200/80 dark:border-indigo-800/50 text-xs text-slate-600 dark:text-slate-300 flex items-start gap-2.5">
-                                <span class="text-base shrink-0 mt-0.5">💡</span>
-                                <div class="text-[11px] leading-relaxed">
-                                    <strong class="text-slate-800 dark:text-slate-200">Pencatatan Tagihan Dinamis:</strong> Masukkan nomor/ID pelanggan, nominal <strong>Tagihan Asli (Modal)</strong> yang terpotong di saldo server, dan <strong>Tagihan Jual (Total Bayar)</strong> yang diterima dari pelanggan. Selisihnya otomatis menjadi laba bersih konter.
-                                </div>
-                            </div>
-
                             <!-- Pilihan Provider WiFi Cepat (Khusus Tagihan WiFi) -->
-                            <div x-show="activeCategory === 'wifi'" class="space-y-1.5 pt-1">
-                                <label class="block text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+                            <div x-show="activeCategory === 'wifi'" class="space-y-2 pt-1">
+                                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
                                     Pilih Provider WiFi:
                                 </label>
-                                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                                     <template x-for="brand in wifiBrands" :key="brand">
                                         <button
                                             type="button"
                                             @click="selectBrand(brand)"
                                             :class="(activeBrand === brand || (activeBrand === 'all' && brand === 'IndiHome'))
-                                                ? 'border-indigo-600 bg-indigo-600 text-white font-black shadow-xs ring-2 ring-indigo-500/20'
-                                                : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold hover:border-slate-400'"
-                                            class="p-2.5 rounded-xl border text-xs text-center transition-all cursor-pointer"
-                                            x-text="brand"
-                                        ></button>
+                                                ? 'border-indigo-600 bg-indigo-600 text-white font-black shadow-sm ring-2 ring-indigo-500/30'
+                                                : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold hover:border-slate-400 hover:bg-slate-100'"
+                                            class="p-3 rounded-xl border text-xs text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-1"
+                                        >
+                                            <span class="text-base">📡</span>
+                                            <span x-text="brand" class="truncate font-bold"></span>
+                                        </button>
                                     </template>
                                 </div>
                             </div>
 
-                            <!-- Form Input Tagihan di Kolom Kiri -->
-                            <div class="space-y-4 pt-1">
-                                <!-- Nomor / ID Pelanggan -->
-                                <div>
-                                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
-                                        <span class="flex items-center gap-1.5">
-                                            <span x-text="targetLabel"></span>
-                                            <span class="text-rose-500">*</span>
-                                        </span>
-                                        <span class="text-[10px] text-slate-400">Nomor tagihan pelanggan</span>
-                                    </label>
-                                    <div class="relative">
-                                        <input
-                                            type="text"
-                                            x-model="customerTarget"
-                                            :placeholder="targetPlaceholder"
-                                            class="w-full pl-3.5 pr-10 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-mono font-bold focus:ring-2 focus:ring-indigo-500 shadow-2xs"
-                                        >
-                                        <span class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 pointer-events-none text-sm" x-text="billCategoryIcon"></span>
+                            <!-- Petunjuk Pengisian di Form Sebelah Kanan -->
+                            <div class="p-4 rounded-xl bg-gradient-to-br from-indigo-50/80 to-slate-50 dark:from-indigo-950/40 dark:to-slate-800/40 border border-indigo-200/80 dark:border-indigo-800/60 text-xs space-y-3">
+                                <div class="flex items-center gap-2 font-black text-indigo-900 dark:text-indigo-200">
+                                    <span class="text-base">👉</span>
+                                    <span>Lengkapi Transaksi Pada Form di Sebelah Kanan:</span>
+                                </div>
+                                <ul class="space-y-2 text-[11px] text-slate-600 dark:text-slate-300 pl-1 leading-relaxed">
+                                    <li class="flex items-start gap-2">
+                                        <span class="w-5 h-5 rounded-full bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">1</span>
+                                        <span>Masukkan <strong>Nomor / ID Pelanggan</strong> tagihan.</span>
+                                    </li>
+                                    <li class="flex items-start gap-2">
+                                        <span class="w-5 h-5 rounded-full bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">2</span>
+                                        <span>Masukkan <strong>Tagihan Asli (Modal)</strong> sesuai nominal riil tagihan dari server (saldo server akan otomatis terpotong sesuai angka ini).</span>
+                                    </li>
+                                    <li class="flex items-start gap-2">
+                                        <span class="w-5 h-5 rounded-full bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">3</span>
+                                        <span>Masukkan <strong>Tagihan Jual (Total Bayar)</strong> yang diterima dari pelanggan konter.</span>
+                                    </li>
+                                    <li class="flex items-start gap-2">
+                                        <span class="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">✓</span>
+                                        <span><strong>Laba Bersih</strong> akan otomatis dihitung secara transparan di form kanan sebelum transaksi disimpan.</span>
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <!-- Status Sisa Saldo Server -->
+                            <div class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 flex items-center justify-between text-xs">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-base">⚡</span>
+                                    <div>
+                                        <span class="text-slate-500 dark:text-slate-400 block text-[11px]">Sisa Saldo Server Siap Pakai:</span>
+                                        <strong 
+                                            :class="serverDepositBalance <= serverDepositMinAlert ? 'text-amber-600 dark:text-amber-400 font-black' : 'text-emerald-600 dark:text-emerald-400 font-black'"
+                                            class="font-mono text-sm"
+                                            x-text="'Rp ' + Number(serverDepositBalance).toLocaleString('id-ID')"
+                                        ></strong>
                                     </div>
                                 </div>
-
-                                <!-- Grid 2 Input Nominal: Tagihan Asli (Modal) & Tagihan Jual (Total Bayar) -->
-                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <!-- 1. Tagihan Asli (Modal) -->
-                                    <div>
-                                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
-                                            <span>Tagihan Asli (Modal) <span class="text-rose-500">*</span></span>
-                                        </label>
-                                        <div class="relative">
-                                            <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400 font-bold text-xs pointer-events-none">Rp</span>
-                                            <input
-                                                type="number"
-                                                min="0"
-                                                step="any"
-                                                x-model.number="costPrice"
-                                                @input="if (!totalAmount && costPrice) { totalAmount = costPrice; sellingPrice = costPrice; }"
-                                                placeholder="0"
-                                                class="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm font-mono font-bold focus:ring-2 focus:ring-indigo-500 shadow-2xs"
-                                            >
-                                        </div>
-                                        <span class="text-[10px] text-slate-400 mt-1 block">Nominal tagihan riil yang memotong saldo server.</span>
-                                    </div>
-
-                                    <!-- 2. Tagihan Jual (Total Bayar Pelanggan) -->
-                                    <div>
-                                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
-                                            <span>Tagihan Jual (Total Bayar) <span class="text-rose-500">*</span></span>
-                                        </label>
-                                        <div class="relative">
-                                            <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-indigo-600 font-bold text-xs pointer-events-none">Rp</span>
-                                            <input
-                                                type="number"
-                                                min="0"
-                                                step="any"
-                                                x-model.number="totalAmount"
-                                                @input="updateUnitFromTotal()"
-                                                placeholder="0"
-                                                class="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-indigo-300 dark:border-indigo-600 bg-indigo-50/30 dark:bg-indigo-950/30 text-indigo-700 dark:text-indigo-300 text-sm font-mono font-black focus:ring-2 focus:ring-indigo-500 shadow-2xs"
-                                            >
-                                        </div>
-                                        <span class="text-[10px] text-indigo-600 dark:text-indigo-400 mt-1 block font-semibold">Total uang yang diterima dari pelanggan.</span>
-                                    </div>
-                                </div>
-
-                                <!-- Live Card Ringkasan Tagihan & Laba Bersih -->
-                                <div class="p-4 rounded-xl bg-gradient-to-r from-emerald-50 via-teal-50 to-indigo-50 dark:from-emerald-950/40 dark:via-teal-950/40 dark:to-indigo-950/40 border border-emerald-200 dark:border-emerald-800/60 grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
-                                    <div>
-                                        <span class="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
-                                            Saldo Server Terpotong:
-                                        </span>
-                                        <span class="text-sm font-black font-mono text-slate-800 dark:text-slate-200 mt-0.5 block" x-text="'Rp ' + formatRupiah(costPrice)"></span>
-                                        <span class="text-[10px] text-slate-400">Sesuai tagihan asli</span>
-                                    </div>
-                                    <div class="sm:text-right border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-200/60 dark:border-slate-700/60">
-                                        <span class="text-[11px] font-extrabold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider block">
-                                            Laba Bersih Transaksi:
-                                        </span>
-                                        <span 
-                                            :class="totalProfit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'"
-                                            class="text-lg font-black font-mono mt-0.5 block"
-                                            x-text="(totalProfit >= 0 ? '+ Rp ' : '- Rp ') + formatRupiah(Math.abs(totalProfit))"
-                                        ></span>
-                                        <span class="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold" x-text="profitMargin + '% profit margin'"></span>
-                                    </div>
-                                </div>
+                                <span class="text-[10px] text-slate-400 font-medium">Auto-potong saldo</span>
                             </div>
                         </div>
 
