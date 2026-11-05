@@ -120,6 +120,11 @@ class IncomeRequest extends FormRequest
                             } elseif ($isPulsa && empty($targetVal)) {
                                 $validator->errors()->add('customer_target', 'Nomor HP tujuan pulsa wajib diisi.');
                             }
+
+                            // Validasi khusus: Tagihan Asli (Modal) wajib diisi lebih dari 0 untuk kategori tagihan
+                            if (($isPlnPasca || $isBpjs || $isWifi) && (!$this->filled('cost_price') || (float)$this->cost_price <= 0)) {
+                                $validator->errors()->add('cost_price', 'Nominal Tagihan Asli (Modal) wajib diisi lebih besar dari Rp 0.');
+                            }
                         }
                     }
                 }

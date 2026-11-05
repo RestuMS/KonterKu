@@ -185,6 +185,39 @@
                 serverDepositBalance: {{ (float) (($serverDeposit ?? \App\Models\ServerDeposit::getPrimary())->balance ?? 0) }},
                 serverDepositMinAlert: {{ (float) (($serverDeposit ?? \App\Models\ServerDeposit::getPrimary())->min_alert_balance ?? 100000) }},
 
+                // Cek apakah kategori tagihan dinamis (Bebas Stok & Potong Saldo Server)
+                get isBillCategory() {
+                    return ['tagihan_pln', 'bpjs', 'wifi'].includes(this.activeCategory);
+                },
+
+                get billCategoryTitle() {
+                    if (this.activeCategory === 'tagihan_pln') return 'Tagihan / Pajak Listrik PLN';
+                    if (this.activeCategory === 'bpjs') return 'Tagihan BPJS Kesehatan';
+                    if (this.activeCategory === 'wifi') {
+                        const brand = (this.activeBrand && this.activeBrand !== 'all') ? this.activeBrand : '';
+                        return brand ? 'Tagihan WiFi ' + brand : 'Tagihan WiFi Internet';
+                    }
+                    return 'Tagihan Bulanan';
+                },
+
+                get billCategoryIcon() {
+                    if (this.activeCategory === 'tagihan_pln') return '💡';
+                    if (this.activeCategory === 'bpjs') return '🏥';
+                    if (this.activeCategory === 'wifi') return '📡';
+                    return '⚡';
+                },
+
+                setDefaultBillName() {
+                    if (this.activeCategory === 'tagihan_pln') {
+                        this.productName = 'Tagihan / Pajak Listrik PLN';
+                    } else if (this.activeCategory === 'bpjs') {
+                        this.productName = 'Tagihan BPJS Kesehatan';
+                    } else if (this.activeCategory === 'wifi') {
+                        const brand = (this.activeBrand && this.activeBrand !== 'all') ? this.activeBrand : 'IndiHome';
+                        this.productName = 'Tagihan WiFi ' + brand;
+                    }
+                },
+
                 isServerTransaction() {
                     if (this.mode === 'transfer') return true;
                     const cat = (this.activeCategory || '').toLowerCase();
@@ -325,6 +358,11 @@
                     this.activeBrand = 'all';
                     this.autoMatchCategoryDb();
                     this.autoFillTarget();
+                    if (this.isBillCategory) {
+                        this.selectedProductId = '';
+                        this.qty = 1;
+                        this.setDefaultBillName();
+                    }
                 },
 
                 // Ganti Filter Brand
@@ -333,6 +371,9 @@
                     this.autoMatchCategoryDb();
                     if (this.isTargetAuto) {
                         this.autoFillTarget();
+                    }
+                    if (this.isBillCategory) {
+                        this.setDefaultBillName();
                     }
                 },
 
@@ -497,16 +538,16 @@
                     } else if (target === 'token_pln') {
                         found = this.allCategories.find(c => c.slug.includes('token') || (c.slug.includes('listrik') && !c.slug.includes('tagihan') && !c.slug.includes('pajak')));
                     } else if (target === 'tagihan_pln') {
-                        found = this.allCategories.find(c => c.slug.includes('pajak') || (c.slug.includes('listrik') && c.slug.includes('tagihan')));
+                        found = this.allCategories.find(c => (c.slug && (c.slug.includes('pajak') || (c.slug.includes('listrik') && c.slug.includes('tagihan')))) || (c.name && c.name.toLowerCase().includes('pajak')));
                     } else if (target === 'bpjs') {
-                        found = this.allCategories.find(c => c.slug.includes('bpjs'));
+                        found = this.allCategories.find(c => (c.slug && c.slug.includes('bpjs')) || (c.name && c.name.toLowerCase().includes('bpjs')));
                     } else if (target === 'wifi') {
                         if (this.activeBrand !== 'all') {
                             const b = this.activeBrand.toLowerCase().replace(/\s+/g, '');
-                            found = this.allCategories.find(c => c.slug.toLowerCase().includes(b));
+                            found = this.allCategories.find(c => (c.slug && c.slug.toLowerCase().includes(b)) || (c.name && c.name.toLowerCase().replace(/\s+/g, '').includes(b)));
                         }
                         if (!found) {
-                            found = this.allCategories.find(c => c.slug.includes('wifi') || c.slug.includes('indihome'));
+                            found = this.allCategories.find(c => (c.slug && (c.slug.includes('wifi') || c.slug.includes('indihome'))) || (c.name && (c.name.toLowerCase().includes('wifi') || c.name.toLowerCase().includes('indihome'))));
                         }
                     } else if (target === 'game') {
                         found = this.allCategories.find(c => c.slug.includes('game'));
@@ -542,6 +583,9 @@
                     const modal = parseFloat(this.costPrice) || 0;
                     if (modal < 0) {
                         this.validationErrors.push('Harga modal / HPP tidak boleh bernilai negatif.');
+                    }
+                    if (this.isBillCategory && modal <= 0) {
+                        this.validationErrors.push('Nominal Tagihan Asli (Modal) wajib diisi dan harus lebih besar dari Rp 0.');
                     }
 
                     // 5. Validasi Kuantitas
@@ -722,6 +766,21 @@
                         this.updateRealTime();
                     }, 1000);
 
+                    if (this.categoryId) {
+                        const cat = this.allCategories.find(c => c.id == this.categoryId);
+                        if (cat) {
+                            const slug = (cat.slug || '').toLowerCase();
+                            const name = (cat.name || '').toLowerCase();
+                            if (slug.includes('bpjs') || name.includes('bpjs')) {
+                                this.activeCategory = 'bpjs';
+                            } else if (slug.includes('pajak') || (slug.includes('listrik') && slug.includes('tagihan'))) {
+                                this.activeCategory = 'tagihan_pln';
+                            } else if (slug.includes('wifi') || slug.includes('indihome') || slug.includes('iconnet') || slug.includes('myrepublic') || slug.includes('firstmedia')) {
+                                this.activeCategory = 'wifi';
+                            }
+                        }
+                    }
+
                     if (this.selectedProductId) {
                         const p = this.products.find(item => item.id == this.selectedProductId);
                         if (p) this.selectProduct(p);
@@ -734,6 +793,9 @@
                         this.autoMatchCategoryDb();
                         if (!this.customerTarget && this.isTargetAuto) {
                             this.autoFillTarget();
+                        }
+                        if (this.isBillCategory && !this.productName) {
+                            this.setDefaultBillName();
                         }
                     }
                 }
@@ -899,7 +961,7 @@
                             <!-- Filter Operator / Brand (Jika Kategori Memiliki Brand) -->
                             <div x-show="currentBrands.length > 0" class="pt-3 border-t border-slate-100 dark:border-slate-800">
                                 <label class="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
-                                    Filter Operator / Brand:
+                                    <span x-text="activeCategory === 'wifi' ? 'Pilih Provider WiFi:' : 'Filter Operator / Brand:'"></span>
                                 </label>
                                 <div class="flex items-center gap-1.5 flex-wrap">
                                     <button
@@ -927,8 +989,153 @@
                             </div>
                         </div>
 
-                        <!-- Panel Katalog Produk & Pencarian -->
-                        <div class="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-850 border border-slate-200 dark:border-slate-800 shadow-xs space-y-3.5">
+                        <!-- ------------------------------------------------- -->
+                        <!-- A. PANEL FORM INPUT TAGIHAN (PLN, BPJS, WIFI)     -->
+                        <!--    Bebas Stok & Potong Saldo Server Otomatis      -->
+                        <!-- ------------------------------------------------- -->
+                        <div x-show="isBillCategory" class="p-5 rounded-2xl bg-white dark:bg-slate-850 border border-indigo-200 dark:border-indigo-800/60 shadow-xs space-y-4">
+                            <!-- Header Form Tagihan -->
+                            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-indigo-100 dark:border-indigo-900/40">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center text-xl font-black shadow-xs shrink-0" x-text="billCategoryIcon"></div>
+                                    <div>
+                                        <h3 class="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white flex items-center gap-2">
+                                            <span x-text="billCategoryTitle"></span>
+                                        </h3>
+                                        <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Input nominal tagihan langsung tanpa perlu input stok katalog.</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-1.5 flex-wrap">
+                                    <span class="text-[10px] font-black uppercase px-2.5 py-1 rounded-full bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                                        ⚡ Bebas Stok
+                                    </span>
+                                    <span class="text-[10px] font-black uppercase px-2.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                                        💰 Potong Saldo Server
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- Catatan Penjelasan Alur -->
+                            <div class="p-3 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200/80 dark:border-indigo-800/50 text-xs text-slate-600 dark:text-slate-300 flex items-start gap-2.5">
+                                <span class="text-base shrink-0 mt-0.5">💡</span>
+                                <div class="text-[11px] leading-relaxed">
+                                    <strong class="text-slate-800 dark:text-slate-200">Pencatatan Tagihan Dinamis:</strong> Masukkan nomor/ID pelanggan, nominal <strong>Tagihan Asli (Modal)</strong> yang terpotong di saldo server, dan <strong>Tagihan Jual (Total Bayar)</strong> yang diterima dari pelanggan. Selisihnya otomatis menjadi laba bersih konter.
+                                </div>
+                            </div>
+
+                            <!-- Pilihan Provider WiFi Cepat (Khusus Tagihan WiFi) -->
+                            <div x-show="activeCategory === 'wifi'" class="space-y-1.5 pt-1">
+                                <label class="block text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+                                    Pilih Provider WiFi:
+                                </label>
+                                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                    <template x-for="brand in wifiBrands" :key="brand">
+                                        <button
+                                            type="button"
+                                            @click="selectBrand(brand)"
+                                            :class="(activeBrand === brand || (activeBrand === 'all' && brand === 'IndiHome'))
+                                                ? 'border-indigo-600 bg-indigo-600 text-white font-black shadow-xs ring-2 ring-indigo-500/20'
+                                                : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold hover:border-slate-400'"
+                                            class="p-2.5 rounded-xl border text-xs text-center transition-all cursor-pointer"
+                                            x-text="brand"
+                                        ></button>
+                                    </template>
+                                </div>
+                            </div>
+
+                            <!-- Form Input Tagihan di Kolom Kiri -->
+                            <div class="space-y-4 pt-1">
+                                <!-- Nomor / ID Pelanggan -->
+                                <div>
+                                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
+                                        <span class="flex items-center gap-1.5">
+                                            <span x-text="targetLabel"></span>
+                                            <span class="text-rose-500">*</span>
+                                        </span>
+                                        <span class="text-[10px] text-slate-400">Nomor tagihan pelanggan</span>
+                                    </label>
+                                    <div class="relative">
+                                        <input
+                                            type="text"
+                                            x-model="customerTarget"
+                                            :placeholder="targetPlaceholder"
+                                            class="w-full pl-3.5 pr-10 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-mono font-bold focus:ring-2 focus:ring-indigo-500 shadow-2xs"
+                                        >
+                                        <span class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 pointer-events-none text-sm" x-text="billCategoryIcon"></span>
+                                    </div>
+                                </div>
+
+                                <!-- Grid 2 Input Nominal: Tagihan Asli (Modal) & Tagihan Jual (Total Bayar) -->
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <!-- 1. Tagihan Asli (Modal) -->
+                                    <div>
+                                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
+                                            <span>Tagihan Asli (Modal) <span class="text-rose-500">*</span></span>
+                                        </label>
+                                        <div class="relative">
+                                            <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400 font-bold text-xs pointer-events-none">Rp</span>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                step="any"
+                                                x-model.number="costPrice"
+                                                @input="if (!totalAmount && costPrice) { totalAmount = costPrice; sellingPrice = costPrice; }"
+                                                placeholder="0"
+                                                class="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm font-mono font-bold focus:ring-2 focus:ring-indigo-500 shadow-2xs"
+                                            >
+                                        </div>
+                                        <span class="text-[10px] text-slate-400 mt-1 block">Nominal tagihan riil yang memotong saldo server.</span>
+                                    </div>
+
+                                    <!-- 2. Tagihan Jual (Total Bayar Pelanggan) -->
+                                    <div>
+                                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
+                                            <span>Tagihan Jual (Total Bayar) <span class="text-rose-500">*</span></span>
+                                        </label>
+                                        <div class="relative">
+                                            <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-indigo-600 font-bold text-xs pointer-events-none">Rp</span>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                step="any"
+                                                x-model.number="totalAmount"
+                                                @input="updateUnitFromTotal()"
+                                                placeholder="0"
+                                                class="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-indigo-300 dark:border-indigo-600 bg-indigo-50/30 dark:bg-indigo-950/30 text-indigo-700 dark:text-indigo-300 text-sm font-mono font-black focus:ring-2 focus:ring-indigo-500 shadow-2xs"
+                                            >
+                                        </div>
+                                        <span class="text-[10px] text-indigo-600 dark:text-indigo-400 mt-1 block font-semibold">Total uang yang diterima dari pelanggan.</span>
+                                    </div>
+                                </div>
+
+                                <!-- Live Card Ringkasan Tagihan & Laba Bersih -->
+                                <div class="p-4 rounded-xl bg-gradient-to-r from-emerald-50 via-teal-50 to-indigo-50 dark:from-emerald-950/40 dark:via-teal-950/40 dark:to-indigo-950/40 border border-emerald-200 dark:border-emerald-800/60 grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
+                                    <div>
+                                        <span class="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
+                                            Saldo Server Terpotong:
+                                        </span>
+                                        <span class="text-sm font-black font-mono text-slate-800 dark:text-slate-200 mt-0.5 block" x-text="'Rp ' + formatRupiah(costPrice)"></span>
+                                        <span class="text-[10px] text-slate-400">Sesuai tagihan asli</span>
+                                    </div>
+                                    <div class="sm:text-right border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-200/60 dark:border-slate-700/60">
+                                        <span class="text-[11px] font-extrabold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider block">
+                                            Laba Bersih Transaksi:
+                                        </span>
+                                        <span 
+                                            :class="totalProfit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'"
+                                            class="text-lg font-black font-mono mt-0.5 block"
+                                            x-text="(totalProfit >= 0 ? '+ Rp ' : '- Rp ') + formatRupiah(Math.abs(totalProfit))"
+                                        ></span>
+                                        <span class="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold" x-text="profitMargin + '% profit margin'"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ------------------------------------------------- -->
+                        <!-- B. PANEL KATALOG PRODUK & PENCARIAN (STANDAR)     -->
+                        <!-- ------------------------------------------------- -->
+                        <div x-show="!isBillCategory" class="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-850 border border-slate-200 dark:border-slate-800 shadow-xs space-y-3.5">
                             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
                                 <div class="flex items-center gap-2">
                                     <span class="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white">Pilih Produk Dari Katalog</span>
@@ -964,8 +1171,6 @@
                                     ></option>
                                 </template>
                             </select>
-
-                            <input type="hidden" name="product_id" :value="selectedProductId">
 
                             <!-- Grid Kartu Produk Interaktif -->
                             <div class="space-y-2 pt-1">
@@ -1007,6 +1212,9 @@
                                 </div>
                             </div>
                         </div>
+
+                        <!-- Input Hidden Product ID (Kosongkan jika Kategori Tagihan Dinamis) -->
+                        <input type="hidden" name="product_id" :value="isBillCategory ? '' : selectedProductId">
                     </div>
 
                     <!-- ----------------------------------------------------- -->
@@ -1216,7 +1424,8 @@
                             <div>
                                 <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
                                     <span>Item Transaksi <span class="text-rose-500">*</span></span>
-                                    <span x-show="selectedProductId" class="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold">Katalog Stok</span>
+                                    <span x-show="selectedProductId && !isBillCategory" class="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold">Katalog Stok</span>
+                                    <span x-show="isBillCategory" class="text-[11px] text-indigo-600 dark:text-indigo-400 font-bold">⚡ Bebas Stok</span>
                                 </label>
                                 <input
                                     type="text"
@@ -1378,11 +1587,11 @@
 
                             <!-- Rincian Harga Modal, Jual & Qty -->
                             <div class="grid grid-cols-2 gap-3 pt-1">
-                                <!-- Harga Modal -->
+                                <!-- Harga Modal / Tagihan Asli -->
                                 <div>
                                     <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1 flex items-center justify-between">
-                                        <span>Modal Satuan (HPP)</span>
-                                        <span class="text-[10px] text-amber-600 dark:text-amber-400 font-mono font-bold" x-show="qty > 1" x-text="'Total: Rp ' + formatRupiah(totalCost)"></span>
+                                        <span x-text="isBillCategory ? 'Tagihan Asli (Modal)' : 'Modal Satuan (HPP)'"></span>
+                                        <span class="text-[10px] text-amber-600 dark:text-amber-400 font-mono font-bold" x-show="qty > 1 && !isBillCategory" x-text="'Total: Rp ' + formatRupiah(totalCost)"></span>
                                     </label>
                                     <div class="relative">
                                         <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 font-bold text-xs pointer-events-none">Rp</span>
@@ -1405,7 +1614,7 @@
                                     <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
                                         Qty <span class="text-rose-500">*</span>
                                     </label>
-                                    <div class="flex items-center">
+                                    <div x-show="!isBillCategory" class="flex items-center">
                                         <button
                                             type="button"
                                             @click="onQtyChange((parseInt(qty) || 1) - 1)"
@@ -1426,6 +1635,9 @@
                                             class="px-2.5 py-2 rounded-r-xl border border-l-0 border-slate-300 dark:border-slate-600 bg-slate-100 hover:bg-slate-200 dark:bg-slate-750 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold text-xs cursor-pointer transition-colors"
                                         >+</button>
                                     </div>
+                                    <div x-show="isBillCategory" class="py-2 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono font-bold text-slate-700 dark:text-slate-300 text-center">
+                                        1 Transaksi
+                                    </div>
                                     @error('quantity')
                                         <p class="text-[11px] text-rose-500 font-bold mt-1">{{ $message }}</p>
                                     @enderror
@@ -1433,9 +1645,9 @@
                             </div>
 
                             <!-- Harga Jual Satuan & Total Bayar Pelanggan -->
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                                <!-- Harga Jual Satuan -->
-                                <div>
+                            <div :class="isBillCategory ? 'grid grid-cols-1 gap-3 pt-1' : 'grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1'">
+                                <!-- Harga Jual Satuan (Disembunyikan jika tagihan karena langsung total) -->
+                                <div x-show="!isBillCategory">
                                     <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1">
                                         Harga Satuan (Rp)
                                     </label>
@@ -1458,8 +1670,11 @@
                                 <!-- Total Bayar Pelanggan (Omzet yang Masuk) -->
                                 <div>
                                     <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
-                                        <span>Total Bayar <span class="text-rose-500">*</span></span>
-                                        <span class="text-[10px] text-indigo-600 dark:text-indigo-400 font-bold font-mono" x-show="qty > 1" x-text="qty + 'x @ Rp ' + formatRupiah(sellingPrice)"></span>
+                                        <span class="flex items-center gap-1">
+                                            <span x-text="isBillCategory ? 'Tagihan Jual (Total Bayar)' : 'Total Bayar'"></span>
+                                            <span class="text-rose-500">*</span>
+                                        </span>
+                                        <span class="text-[10px] text-indigo-600 dark:text-indigo-400 font-bold font-mono" x-show="qty > 1 && !isBillCategory" x-text="qty + 'x @ Rp ' + formatRupiah(sellingPrice)"></span>
                                     </label>
                                     <div class="relative">
                                         <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-indigo-600 font-bold text-sm pointer-events-none">Rp</span>
@@ -1478,16 +1693,14 @@
                                     @error('amount')
                                         <p class="text-[11px] text-rose-500 font-bold mt-1">{{ $message }}</p>
                                     @enderror
-                                    <span class="text-[10px] text-indigo-600/80 dark:text-indigo-400/80 mt-0.5 block font-semibold">Uang masuk yang dibayar pembeli</span>
+                                    <span class="text-[10px] text-indigo-600/80 dark:text-indigo-400/80 mt-0.5 block font-semibold" x-text="isBillCategory ? 'Total uang yang dibayarkan pelanggan konter' : 'Uang masuk yang dibayar pembeli'"></span>
                                 </div>
                             </div>
 
                             <!-- Kartu Laba Real-Time & Peringatan Rugi -->
                             <div class="p-3.5 rounded-xl bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-indigo-500/10 dark:from-emerald-950/40 dark:via-teal-950/40 dark:to-indigo-950/40 border border-emerald-300/80 dark:border-emerald-700/60 flex items-center justify-between">
                                 <div>
-                                    <span class="text-[11px] font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300 block">
-                                        Estimasi Laba Transaksi
-                                    </span>
+                                    <span class="text-[11px] font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300 block" x-text="isBillCategory ? 'Laba Bersih Transaksi' : 'Estimasi Laba Transaksi'"></span>
                                     <span class="text-[10px] text-slate-500 dark:text-slate-400 font-mono" x-text="profitMargin + '% profit margin'"></span>
                                 </div>
                                 <div class="text-right font-mono">
@@ -1506,7 +1719,7 @@
                                 style="display: none;"
                             >
                                 <span class="text-sm">⚠️</span>
-                                <span>Peringatan: Total bayar lebih kecil dari modal kulakan (Potensi rugi Rp <strong x-text="formatRupiah(Math.abs(totalProfit))"></strong>).</span>
+                                <span x-text="isBillCategory ? 'Peringatan: Tagihan jual lebih kecil dari tagihan asli (Potensi rugi Rp ' + formatRupiah(Math.abs(totalProfit)) + ').' : 'Peringatan: Total bayar lebih kecil dari modal kulakan (Potensi rugi Rp ' + formatRupiah(Math.abs(totalProfit)) + ').'"></span>
                             </div>
 
                             <!-- Metode Pembayaran -->
