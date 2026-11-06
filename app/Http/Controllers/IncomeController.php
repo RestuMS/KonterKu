@@ -71,8 +71,13 @@ class IncomeController extends Controller
 
     public function create(): View
     {
-        $categories = Category::whereIn('type', ['product', 'transaction', 'all'])->orderBy('name')->get();
-        $products = Product::where('is_active', true)->with('category')->orderBy('name')->get();
+        $categories = Category::whereIn('type', ['product', 'transaction', 'all'])->orderBy('id')->get();
+        $products = Product::where('is_active', true)
+            ->with('category')
+            ->orderBy('category_id', 'asc')
+            ->orderBy('selling_price', 'asc')
+            ->orderBy('id', 'asc')
+            ->get();
         $serverDeposit = \App\Models\ServerDeposit::getPrimary();
 
         return view('incomes.create', compact('categories', 'products', 'serverDeposit'));
@@ -268,8 +273,13 @@ class IncomeController extends Controller
         }
 
         $income->load(['category', 'items.product']);
-        $categories = Category::whereIn('type', ['product', 'transaction', 'all'])->orderBy('name')->get();
-        $products = Product::where('is_active', true)->with('category')->orderBy('name')->get();
+        $categories = Category::whereIn('type', ['product', 'transaction', 'all'])->orderBy('id')->get();
+        $products = Product::where('is_active', true)
+            ->with('category')
+            ->orderBy('category_id', 'asc')
+            ->orderBy('selling_price', 'asc')
+            ->orderBy('id', 'asc')
+            ->get();
 
         return view('incomes.edit', compact('income', 'categories', 'products'));
     }

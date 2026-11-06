@@ -239,5 +239,70 @@ class ProductStockLogicTest extends TestCase
         $this->assertDatabaseHas('products', ['code' => 'PULSA-TRI-5K']);
         $this->assertDatabaseHas('products', ['code' => 'PULSA-BYU-5K']);
     }
+
+    public function test_products_are_ordered_by_category_and_selling_price_ascending(): void
+    {
+        $cat = Category::firstOrCreate(
+            ['slug' => 'e-wallet-dana'],
+            ['name' => 'E-Wallet DANA', 'type' => 'product']
+        );
+
+        // Input data secara acak (15k duluan, baru 5k, 20k, 10k)
+        $p15 = Product::create([
+            'category_id' => $cat->id,
+            'name' => 'E-Wallet DANA 15.000',
+            'code' => 'DANA-15K',
+            'cost_price' => 15068,
+            'selling_price' => 17000,
+            'stock' => 0,
+            'unit' => 'transaksi',
+            'is_active' => true,
+        ]);
+
+        $p5 = Product::create([
+            'category_id' => $cat->id,
+            'name' => 'E-Wallet DANA 5.000',
+            'code' => 'DANA-5K',
+            'cost_price' => 5068,
+            'selling_price' => 7000,
+            'stock' => 0,
+            'unit' => 'transaksi',
+            'is_active' => true,
+        ]);
+
+        $p20 = Product::create([
+            'category_id' => $cat->id,
+            'name' => 'E-Wallet DANA 20.000',
+            'code' => 'DANA-20K',
+            'cost_price' => 20068,
+            'selling_price' => 22000,
+            'stock' => 0,
+            'unit' => 'transaksi',
+            'is_active' => true,
+        ]);
+
+        $p10 = Product::create([
+            'category_id' => $cat->id,
+            'name' => 'E-Wallet DANA 10.000',
+            'code' => 'DANA-10K',
+            'cost_price' => 10068,
+            'selling_price' => 12000,
+            'stock' => 0,
+            'unit' => 'transaksi',
+            'is_active' => true,
+        ]);
+
+        // Verifikasi pada ProductController (index)
+        $response = $this->actingAs($this->user)->get(route('products.index', ['category_id' => $cat->id]));
+        $response->assertOk();
+        $productsInView = $response->viewData('products');
+        $this->assertEquals([$p5->id, $p10->id, $p15->id, $p20->id], $productsInView->pluck('id')->values()->toArray());
+
+        // Verifikasi pada IncomeController (create kasir)
+        $responseCashier = $this->actingAs($this->user)->get(route('incomes.create'));
+        $responseCashier->assertOk();
+        $cashierProducts = $responseCashier->viewData('products')->where('category_id', $cat->id);
+        $this->assertEquals([$p5->id, $p10->id, $p15->id, $p20->id], $cashierProducts->pluck('id')->values()->toArray());
+    }
 }
 

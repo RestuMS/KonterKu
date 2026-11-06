@@ -29,7 +29,7 @@ class SettingController extends Controller
         // Kategori terpisah sesuai kebutuhan pengaturan
         $productCategories = \App\Models\Category::where('type', 'product')
             ->withCount('products')
-            ->orderBy('name')
+            ->orderBy('id')
             ->get();
 
         $incomeCategories = \App\Models\Category::whereIn('type', ['income', 'all'])

@@ -61,7 +61,12 @@ class StockController extends Controller
 
     public function create(): View
     {
-        $products = Product::with('category')->where('is_active', true)->orderBy('name')->get();
+        $products = Product::with('category')
+            ->where('is_active', true)
+            ->orderBy('category_id', 'asc')
+            ->orderBy('selling_price', 'asc')
+            ->orderBy('id', 'asc')
+            ->get();
         $recentMutations = StockMutation::with(['product', 'user'])->latest()->limit(5)->get();
         return view('stocks.create', compact('products', 'recentMutations'));
     }

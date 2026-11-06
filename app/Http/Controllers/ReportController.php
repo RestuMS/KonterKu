@@ -313,7 +313,11 @@ class ReportController extends Controller
             ->latest('transaction_date')
             ->get();
 
-        $products = Product::with('category')->orderBy('name')->get();
+        $products = Product::with('category')
+            ->orderBy('category_id', 'asc')
+            ->orderBy('selling_price', 'asc')
+            ->orderBy('id', 'asc')
+            ->get();
 
         $kasbons = Kasbon::with(['product', 'user', 'transaction'])
             ->whereBetween('debt_date', [$start->toDateString(), $end->toDateString()])
@@ -441,7 +445,11 @@ class ReportController extends Controller
                 }
             } elseif ($tab === 'produk_stok') {
                 fputcsv($handle, ['No', 'Kode Produk', 'Nama Produk', 'Kategori', 'Stok Fisik', 'Satuan', 'Batas Minimum', 'Harga Modal (HPP)', 'Harga Jual', 'Nilai Aset Modal', 'Estimasi Nilai Jual', 'Potensi Laba']);
-                $products = Product::with('category')->orderBy('name')->cursor();
+                $products = Product::with('category')
+                    ->orderBy('category_id', 'asc')
+                    ->orderBy('selling_price', 'asc')
+                    ->orderBy('id', 'asc')
+                    ->cursor();
 
                 $no = 1;
                 foreach ($products as $p) {

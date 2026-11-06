@@ -83,7 +83,9 @@ class KasbonController extends Controller
 
         // Ambil daftar produk aktif untuk dropdown form kasbon
         $products = Product::where('is_active', true)
-            ->orderBy('name')
+            ->orderBy('category_id', 'asc')
+            ->orderBy('selling_price', 'asc')
+            ->orderBy('id', 'asc')
             ->get(['id', 'name', 'code', 'cost_price', 'selling_price', 'stock']);
 
         return view('kasbons.index', compact(

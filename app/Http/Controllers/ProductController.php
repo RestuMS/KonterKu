@@ -50,8 +50,19 @@ class ProductController extends Controller
                   ->where('unit', '!=', 'transaksi');
         }
 
-        $products = $query->latest()->paginate(10)->withQueryString();
-        $categories = Category::whereIn('type', ['product', 'all'])->orderBy('name')->get();
+        match ($request->get('sort')) {
+            'latest' => $query->latest(),
+            'oldest' => $query->oldest(),
+            'name_asc' => $query->orderBy('name', 'asc'),
+            'name_desc' => $query->orderBy('name', 'desc'),
+            'price_desc' => $query->orderBy('selling_price', 'desc'),
+            'stock_asc' => $query->orderBy('stock', 'asc'),
+            'stock_desc' => $query->orderBy('stock', 'desc'),
+            default => $query->orderBy('category_id', 'asc')->orderBy('selling_price', 'asc')->orderBy('id', 'asc'),
+        };
+
+        $products = $query->paginate(15)->withQueryString();
+        $categories = Category::whereIn('type', ['product', 'all'])->orderBy('id')->get();
 
         return view('products.index', compact('products', 'categories'));
     }
