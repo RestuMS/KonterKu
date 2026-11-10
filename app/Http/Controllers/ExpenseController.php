@@ -103,10 +103,22 @@ class ExpenseController extends Controller
             );
         }
 
-        return Category::whereIn('type', ['expense', 'transaction', 'all'])
-            ->whereNotIn('name', ['Transfer Uang', 'Tarik Tunai', 'Pulsa All Provider'])
-            ->orderBy('name')
-            ->get();
+        return Category::where(function ($query) {
+            $query->where('type', 'expense')
+                  ->orWhere(function ($q) {
+                      $q->whereIn('type', ['transaction', 'all'])
+                        ->whereIn('slug', [
+                            'kulakan-sales',
+                            'jajan',
+                            'beli-kuota',
+                            'beli-mainan',
+                            'beli-bensin',
+                            'operasional-toko',
+                        ]);
+                  });
+        })
+        ->orderBy('name')
+        ->get();
     }
 
     public function create(): View

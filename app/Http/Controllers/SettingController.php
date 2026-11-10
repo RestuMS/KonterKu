@@ -35,7 +35,7 @@ class SettingController extends Controller
         $incomeCategories = \App\Models\Category::whereIn('type', ['income', 'all'])
             ->orWhere(function($q) {
                 $q->where('type', 'transaction')
-                  ->whereNotIn('slug', ['jajan', 'beli-kuota', 'beli-mainan', 'beli-bensin', 'operasional-toko']);
+                  ->whereNotIn('slug', ['kulakan-sales', 'jajan', 'beli-kuota', 'beli-mainan', 'beli-bensin', 'operasional-toko']);
             })
             ->withCount('transactions')
             ->orderBy('name')
@@ -44,7 +44,7 @@ class SettingController extends Controller
         $expenseCategories = \App\Models\Category::where('type', 'expense')
             ->orWhere(function($q) {
                 $q->whereIn('type', ['transaction', 'all'])
-                  ->whereIn('slug', ['jajan', 'beli-kuota', 'beli-mainan', 'beli-bensin', 'operasional-toko']);
+                  ->whereIn('slug', ['kulakan-sales', 'jajan', 'beli-kuota', 'beli-mainan', 'beli-bensin', 'operasional-toko']);
             })
             ->withCount('transactions')
             ->orderBy('name')

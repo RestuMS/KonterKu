@@ -536,13 +536,30 @@ class VoucherInjectionTest extends TestCase
 
     public function test_expense_module_includes_tagihan_sales_preset_and_filter(): void
     {
+        // Kategori produk/layanan kasir (type = 'all') tidak boleh ikut muncul di Pengeluaran
+        $ewalletCat = Category::create([
+            'name' => 'E-Wallet DANA',
+            'slug' => 'ewallet-dana',
+            'type' => 'all',
+        ]);
+        $wifiCat = Category::create([
+            'name' => 'Tagihan WiFi IndiHome',
+            'slug' => 'tagihan-indihome',
+            'type' => 'all',
+        ]);
+
         $createRes = $this->actingAs($this->user)->get(route('expenses.create'));
         $createRes->assertOk();
         $createRes->assertSee('Tagihan Sales');
 
+        $expenseCats = $createRes->viewData('categories');
+        $this->assertFalse($expenseCats->contains('id', $ewalletCat->id));
+        $this->assertFalse($expenseCats->contains('id', $wifiCat->id));
+
         $salesCategory = Category::where('slug', 'kulakan-sales')->first();
         $this->assertNotNull($salesCategory);
         $this->assertEquals('Tagihan Sales', $salesCategory->name);
+        $this->assertTrue($expenseCats->contains('id', $salesCategory->id));
 
         // Simpan tagihan sales langsung dari form pengeluaran manual
         $this->actingAs($this->user)->post(route('expenses.store'), [
@@ -557,5 +574,9 @@ class VoucherInjectionTest extends TestCase
         $indexRes->assertOk();
         $indexRes->assertSee('Tagihan Sales');
         $indexRes->assertSee('Bayar Tagihan Sales Tri');
+
+        $indexCats = $indexRes->viewData('categories');
+        $this->assertFalse($indexCats->contains('id', $ewalletCat->id));
+        $this->assertFalse($indexCats->contains('id', $wifiCat->id));
     }
 }
