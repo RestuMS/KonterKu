@@ -4,8 +4,9 @@
     </x-slot:header>
 
     @php
-        // Mengelompokkan kategori secara sistematis (Voucher fisik dipusatkan lewat menu Inject Voucher)
+        // Mengelompokkan kategori secara sistematis
         $pulsaCats = $categories->filter(fn($c) => str_starts_with(strtolower($c->name), 'pulsa'));
+        $voucherCats = $categories->filter(fn($c) => str_starts_with(strtolower($c->name), 'voucher'));
         $paketCats = $categories->filter(fn($c) => str_starts_with(strtolower($c->name), 'paket internet'));
         $perdanaCats = $categories->filter(fn($c) => str_starts_with(strtolower($c->name), 'kartu perdana'));
         $ewalletCats = $categories->filter(fn($c) => str_starts_with(strtolower($c->name), 'e-wallet'));
@@ -40,6 +41,10 @@
             existingCodes: {{ Js::from($existingCodes ?? []) }},
             items: [],
             showBatchModal: false,
+            recordExpense: {{ old('record_expense') ? 'true' : 'false' }},
+            paymentMethod: '{{ old('payment_method', 'cash') }}',
+            expenseNotes: '{{ old('expense_notes', '') }}',
+            customExpenseAmount: '{{ old('expense_amount', '') }}',
 
             // State Generator Seri Cepat
             batchGen: {
@@ -687,28 +692,28 @@
             </div>
         </div>
 
-        <!-- BANNER KHUSUS: INPUT VOUCHER FISIK DIPUSATKAN LEWAT INJECT VOUCHER -->
-        <div class="bg-gradient-to-r from-amber-50 via-white to-indigo-50/70 dark:from-slate-850 dark:via-slate-800 dark:to-slate-850 rounded-3xl p-5 border border-amber-200/90 dark:border-amber-900/50 shadow-xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <!-- BANNER INFO: DUA CARA STOK VOUCHER FISIK (ORDER SALES VS INJECT SERVER) -->
+        <div class="bg-gradient-to-r from-emerald-50 via-white to-indigo-50/70 dark:from-slate-850 dark:via-slate-800 dark:to-slate-850 rounded-3xl p-5 border border-emerald-200/90 dark:border-emerald-900/50 shadow-xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div class="flex items-center gap-3.5">
-                <div class="w-11 h-11 rounded-2xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 text-xl font-bold border border-amber-200/60 dark:border-amber-800/60">
+                <div class="w-11 h-11 rounded-2xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 text-xl font-bold border border-emerald-200/60 dark:border-emerald-800/60">
                     🎟️
                 </div>
                 <div class="text-xs">
-                    <div class="flex items-center gap-2">
-                        <strong class="text-sm font-black text-slate-900 dark:text-white">Mau Tambah / Input Stok Voucher Fisik?</strong>
-                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">Satu Pintu</span>
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <strong class="text-sm font-black text-slate-900 dark:text-white">Voucher Fisik Order dari Sales? Bisa Input Langsung di Sini!</strong>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">Tanpa Potong Saldo Server</span>
                     </div>
-                    <p class="text-slate-600 dark:text-slate-400 mt-0.5">
-                        Pendaftaran & penambahan stok voucher fisik (Tri, Telkomsel, XL, Axis, Indosat, dll) kini dipusatkan di menu <strong>⚡ Inject Stok Voucher</strong> agar saldo server digital langsung terpotong saat voucher diinjeksi dan stok fisik etalase bertambah akurat.
+                    <p class="text-slate-600 dark:text-slate-400 mt-0.5 leading-relaxed">
+                        Untuk voucher jadi yang dibeli dari <strong>Sales</strong>, silakan langsung pilih kategori <strong>Voucher Fisik</strong> dan isi stok awalnya di bawah. <em>(Jika mengisi voucher kosong pakai Saldo Server sendiri, gunakan menu Inject Voucher).</em>
                     </p>
                 </div>
             </div>
             <a 
                 href="{{ route('stocks.inject') }}" 
-                class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-sky-600 hover:from-indigo-700 hover:to-sky-700 text-white font-black text-xs shadow-md shadow-indigo-600/20 shrink-0 transition-all cursor-pointer active:scale-95"
+                class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs shadow-md shadow-indigo-600/20 shrink-0 transition-all cursor-pointer active:scale-95"
             >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                <span>⚡ Buka Form Inject Voucher</span>
+                <span>⚡ Inject Saldo Server</span>
             </a>
         </div>
 
@@ -725,7 +730,7 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2.5 text-slate-600 dark:text-slate-300">
                         <div class="p-3 rounded-2xl bg-white/90 dark:bg-slate-750/90 border border-slate-200/70 dark:border-slate-700">
                             <strong class="text-emerald-700 dark:text-emerald-300 font-bold flex items-center gap-1.5 mb-1 text-xs">
-                                <span>📦</span> 1. Produk Fisik Non-Voucher (Kartu Perdana, Aksesoris)
+                                <span>📦</span> 1. Produk Fisik (Voucher Fisik Sales, Perdana, Aksesoris)
                             </strong>
                             <p class="leading-relaxed text-[11.5px] text-slate-600 dark:text-slate-300">
                                 Isi <strong>Stok Awal</strong> sesuai jumlah fisik barang riil yang ada di rak/laci (satuan: <em>pcs, voucher, kartu</em>). Sistem otomatis mencatat mutasi stok awal masuk dan memotong stok setiap kali kasir mencatat transaksi penjualan.
@@ -818,6 +823,13 @@
                                     @if($pulsaCats->isNotEmpty())
                                         <optgroup label="📱 Pulsa Reguler (All Operator)">
                                             @foreach($pulsaCats as $cat)
+                                                <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+                                            @endforeach
+                                        </optgroup>
+                                    @endif
+                                    @if($voucherCats->isNotEmpty())
+                                        <optgroup label="🎟️ Voucher Fisik & Kuota">
+                                            @foreach($voucherCats as $cat)
                                                 <option value="{{ $cat->id }}">{{ $cat->name }}</option>
                                             @endforeach
                                         </optgroup>
@@ -1165,6 +1177,95 @@
                 </div>
             </div>
 
+            <!-- OPSI KEUANGAN: KULAKAN / ORDER DARI SALES -->
+            <div 
+                x-show="grandTotalStockCost > 0"
+                x-transition
+                class="p-5 rounded-3xl bg-white dark:bg-slate-800 border border-slate-200/90 dark:border-slate-700 shadow-xs space-y-4"
+            >
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <label class="flex items-start sm:items-center gap-3 cursor-pointer select-none">
+                        <input
+                            type="checkbox"
+                            name="record_expense"
+                            value="1"
+                            x-model="recordExpense"
+                            class="mt-0.5 sm:mt-0 w-5 h-5 rounded-lg border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                        >
+                        <div>
+                            <span class="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2 flex-wrap">
+                                <span>🧾 Catat otomatis ke Pengeluaran Toko (Kulakan Sales)</span>
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-700 dark:bg-indigo-950/70 dark:text-indigo-300">Opsional</span>
+                            </span>
+                            <span class="text-xs text-slate-500 dark:text-slate-400 block mt-0.5">
+                                Centang jika stok awal barang ini baru Anda beli/bayar langsung ke Sales (uang keluar tercatat di menu Pengeluaran, tidak memotong Saldo Server).
+                            </span>
+                        </div>
+                    </label>
+                    <div class="text-right shrink-0">
+                        <span class="text-[10px] uppercase tracking-wider font-bold text-slate-400 block">Estimasi Modal Stok:</span>
+                        <span class="font-mono font-black text-base text-slate-900 dark:text-white" x-text="formatRupiah(grandTotalStockCost)"></span>
+                    </div>
+                </div>
+
+                <!-- Pilihan Pembayaran & Catatan Sales saat dicentang -->
+                <div x-show="recordExpense" x-transition class="pt-3 border-t border-slate-100 dark:border-slate-700 grid grid-cols-1 md:grid-cols-12 gap-4 text-xs">
+                    <div class="md:col-span-4 space-y-1.5">
+                        <label class="font-bold text-slate-700 dark:text-slate-300 block">
+                            Metode Bayar ke Sales: <span class="text-rose-500">*</span>
+                        </label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <label
+                                :class="paymentMethod === 'cash' ? 'border-emerald-500 bg-emerald-50/70 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300 font-black' : 'border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-750 text-slate-600 font-semibold'"
+                                class="px-3 py-2.5 rounded-xl border text-center cursor-pointer transition-all"
+                            >
+                                <input type="radio" name="payment_method" value="cash" x-model="paymentMethod" class="sr-only">
+                                <span>💵 Cash</span>
+                            </label>
+                            <label
+                                :class="paymentMethod === 'transfer' ? 'border-indigo-500 bg-indigo-50/70 text-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-300 font-black' : 'border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-750 text-slate-600 font-semibold'"
+                                class="px-3 py-2.5 rounded-xl border text-center cursor-pointer transition-all"
+                            >
+                                <input type="radio" name="payment_method" value="transfer" x-model="paymentMethod" class="sr-only">
+                                <span>🏦 Transfer</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="md:col-span-4 space-y-1.5">
+                        <label class="font-bold text-slate-700 dark:text-slate-300 block">
+                            Total Dibayar ke Sales (Rp):
+                        </label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center font-bold text-slate-400 pointer-events-none">Rp</span>
+                            <input
+                                type="number"
+                                name="expense_amount"
+                                x-model="customExpenseAmount"
+                                min="0"
+                                step="1"
+                                :placeholder="Math.round(grandTotalStockCost) + ' (Otomatis)'"
+                                class="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-750 text-slate-900 dark:text-white font-mono font-bold focus:ring-2 focus:ring-indigo-500 shadow-2xs"
+                            >
+                        </div>
+                        <span class="text-[10px] text-slate-400 block">Biarkan kosong untuk otomatis sesuai total modal stok.</span>
+                    </div>
+
+                    <div class="md:col-span-4 space-y-1.5">
+                        <label class="font-bold text-slate-700 dark:text-slate-300 block">
+                            Nama Sales / Catatan Nota (Opsional):
+                        </label>
+                        <input
+                            type="text"
+                            name="expense_notes"
+                            x-model="expenseNotes"
+                            placeholder="Contoh: Sales Tri / Nota #123"
+                            class="w-full px-3 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-750 text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-indigo-500 shadow-2xs"
+                        >
+                    </div>
+                </div>
+            </div>
+
             <!-- STICKY BOTTOM BAR: RINGKASAN & SIMPAN SEMUA -->
             <div class="fixed bottom-0 left-0 right-0 z-30 lg:pl-64 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-t border-slate-200/80 dark:border-slate-750 px-4 sm:px-8 py-3.5 shadow-2xl">
                 <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -1252,10 +1353,17 @@
                             @change="onBatchCategoryChange()"
                             class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-750 text-slate-900 dark:text-white font-semibold focus:ring-2 focus:ring-indigo-500 shadow-2xs text-xs"
                         >
-                            <option value="">-- Pilih Kategori (Misal: Pulsa Telkomsel, Top Up Game, E-Wallet DANA) --</option>
+                            <option value="">-- Pilih Kategori (Misal: Pulsa Telkomsel, Top Up Game, Voucher Tri, E-Wallet DANA) --</option>
                             @if($pulsaCats->isNotEmpty())
                                 <optgroup label="📱 Pulsa Reguler (All Operator)">
                                     @foreach($pulsaCats as $cat)
+                                        <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+                                    @endforeach
+                                </optgroup>
+                            @endif
+                            @if($voucherCats->isNotEmpty())
+                                <optgroup label="🎟️ Voucher Fisik & Kuota">
+                                    @foreach($voucherCats as $cat)
                                         <option value="{{ $cat->id }}">{{ $cat->name }}</option>
                                     @endforeach
                                 </optgroup>

@@ -6,8 +6,11 @@ use App\Http\Requests\ProductRequest;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\StockMutation;
+use App\Models\Transaction;
+use App\Services\StockService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
@@ -70,71 +73,104 @@ class ProductController extends Controller
     public function create(): View
     {
         $this->ensureCategoriesExist();
-        // Voucher fisik dipusatkan penginputannya melalui menu "Inject Voucher" agar saldo server & stok fisik sinkron satu pintu
-        $categories = Category::whereIn('type', ['product', 'all'])
-            ->where('slug', 'not like', 'voucher-%')
-            ->where('name', 'not like', 'Voucher%')
-            ->orderBy('name')
-            ->get();
+        $categories = Category::whereIn('type', ['product', 'all'])->orderBy('name')->get();
         $existingCodes = Product::pluck('code')->toArray();
         return view('products.create', compact('categories', 'existingCodes'));
     }
 
-    public function store(ProductRequest $request): RedirectResponse
+    public function store(ProductRequest $request, StockService $stockService): RedirectResponse
     {
-        if ($request->has('items') && is_array($request->items)) {
-            $count = 0;
-            DB::transaction(function () use ($request, &$count) {
-                foreach ($request->items as $item) {
-                    $item['is_active'] = isset($item['is_active']) && $item['is_active'];
-                    $product = Product::create($item);
-                    $count++;
+        $isBatch = $request->has('items') && is_array($request->items);
+        $rawItems = $isBatch
+            ? $request->items
+            : [array_merge($request->validated(), ['is_active' => $request->has('is_active')])];
 
-                    // Catat mutasi stok masuk awal jika ada stok
-                    if ($product->stock > 0) {
-                        StockMutation::create([
-                            'product_id' => $product->id,
-                            'user_id' => Auth::id(),
-                            'type' => 'in',
-                            'quantity' => $product->stock,
-                            'stock_before' => 0,
-                            'stock_after' => $product->stock,
-                            'reference_type' => Product::class,
-                            'reference_id' => $product->id,
-                            'notes' => 'Stok awal produk baru',
-                        ]);
+        $recordExpense = $request->boolean('record_expense');
+        $paymentMethod = $request->input('payment_method', 'cash');
+        $expenseNotes = trim((string) $request->input('expense_notes', ''));
+
+        $count = 0;
+        $recordedExpenseAmount = 0;
+
+        DB::transaction(function () use (
+            $rawItems, $isBatch, $request, $stockService,
+            $recordExpense, $paymentMethod, $expenseNotes,
+            &$count, &$recordedExpenseAmount
+        ) {
+            $createdMutations = [];
+            $totalStockCost = 0;
+            $stockedSummaries = [];
+
+            foreach ($rawItems as $item) {
+                $item['is_active'] = $isBatch
+                    ? (isset($item['is_active']) && $item['is_active'])
+                    : (bool) ($item['is_active'] ?? true);
+
+                $product = Product::create(Arr::only($item, [
+                    'category_id', 'code', 'name', 'cost_price', 'selling_price',
+                    'stock', 'min_stock', 'unit', 'is_active', 'notes',
+                ]));
+                $count++;
+
+                if ($product->stock > 0) {
+                    $mutation = StockMutation::create([
+                        'product_id' => $product->id,
+                        'user_id' => Auth::id(),
+                        'type' => 'in',
+                        'quantity' => $product->stock,
+                        'stock_before' => 0,
+                        'stock_after' => $product->stock,
+                        'reference_type' => Product::class,
+                        'reference_id' => $product->id,
+                        'notes' => $recordExpense
+                            ? ('[ORDER SALES] Stok awal produk baru' . ($expenseNotes ? " ({$expenseNotes})" : ''))
+                            : 'Stok awal produk baru',
+                    ]);
+
+                    if ($product->unit !== 'transaksi') {
+                        $createdMutations[] = $mutation;
+                        $totalStockCost += ((float) $product->cost_price * (int) $product->stock);
+                        $stockedSummaries[] = "{$product->name} ({$product->stock} {$product->unit})";
                     }
                 }
-            });
+            }
 
-            return redirect()->route('products.index')
-                ->with('success', "Berhasil menambahkan {$count} produk baru sekaligus.");
-        }
+            if ($recordExpense) {
+                $finalAmount = $request->filled('expense_amount')
+                    ? (float) $request->expense_amount
+                    : $totalStockCost;
 
-        $data = $request->validated();
-        $data['is_active'] = $request->has('is_active');
+                if ($finalAmount > 0) {
+                    $desc = '[ORDER SALES] Kulakan produk baru: ' . (!empty($stockedSummaries) ? implode(', ', $stockedSummaries) : 'Stok awal')
+                        . ($expenseNotes ? " | {$expenseNotes}" : '');
 
-        DB::transaction(function () use ($data) {
-            $product = Product::create($data);
+                    $expenseTx = $stockService->recordKulakanExpense(
+                        $finalAmount,
+                        $paymentMethod,
+                        $desc,
+                        Auth::id()
+                    );
 
-            // Catat mutasi stok masuk awal jika ada stok
-            if ($product->stock > 0) {
-                StockMutation::create([
-                    'product_id' => $product->id,
-                    'user_id' => Auth::id(),
-                    'type' => 'in',
-                    'quantity' => $product->stock,
-                    'stock_before' => 0,
-                    'stock_after' => $product->stock,
-                    'reference_type' => Product::class,
-                    'reference_id' => $product->id,
-                    'notes' => 'Stok awal produk baru',
-                ]);
+                    foreach ($createdMutations as $mut) {
+                        $mut->update([
+                            'reference_type' => Transaction::class,
+                            'reference_id' => $expenseTx->id,
+                        ]);
+                    }
+                    $recordedExpenseAmount = $finalAmount;
+                }
             }
         });
 
-        return redirect()->route('products.index')
-            ->with('success', "Produk {$data['name']} berhasil ditambahkan.");
+        $msg = $isBatch
+            ? "Berhasil menambahkan {$count} produk baru sekaligus."
+            : 'Produk ' . ($rawItems[0]['name'] ?? '') . ' berhasil ditambahkan.';
+
+        if ($recordedExpenseAmount > 0) {
+            $msg .= ' Pengeluaran kulakan Rp ' . number_format($recordedExpenseAmount, 0, ',', '.') . ' (' . strtoupper($paymentMethod) . ') otomatis tercatat.';
+        }
+
+        return redirect()->route('products.index')->with('success', $msg);
     }
 
     public function edit(Product $product): View
@@ -146,10 +182,31 @@ class ProductController extends Controller
 
     public function update(ProductRequest $request, Product $product): RedirectResponse
     {
-        $data = $request->validated();
+        $data = Arr::only($request->validated(), [
+            'category_id', 'code', 'name', 'cost_price', 'selling_price',
+            'stock', 'min_stock', 'unit', 'is_active', 'notes',
+        ]);
         $data['is_active'] = $request->has('is_active');
+        $oldStock = (int) $product->stock;
 
-        $product->update($data);
+        DB::transaction(function () use ($product, $data, $oldStock) {
+            $product->update($data);
+
+            $newStock = (int) $product->stock;
+            if ($newStock !== $oldStock) {
+                StockMutation::create([
+                    'product_id' => $product->id,
+                    'user_id' => Auth::id(),
+                    'type' => 'adjustment',
+                    'quantity' => abs($newStock - $oldStock),
+                    'stock_before' => $oldStock,
+                    'stock_after' => $newStock,
+                    'reference_type' => Product::class,
+                    'reference_id' => $product->id,
+                    'notes' => 'Penyesuaian stok melalui edit produk',
+                ]);
+            }
+        });
 
         return redirect()->route('products.index')
             ->with('success', "Produk {$product->name} berhasil diperbarui.");

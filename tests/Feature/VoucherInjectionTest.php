@@ -299,7 +299,7 @@ class VoucherInjectionTest extends TestCase
         $this->assertEquals(335000, (float) ServerDeposit::getPrimary()->balance); // Saldo server tidak terpotong dobel
     }
 
-    public function test_voucher_separation_between_products_stocks_and_inject(): void
+    public function test_voucher_accessible_in_products_and_stocks_while_inject_focuses_on_vouchers(): void
     {
         $vcrCat = Category::create([
             'name' => 'Voucher Axis',
@@ -321,7 +321,7 @@ class VoucherInjectionTest extends TestCase
             'selling_price' => 10000,
             'stock' => 5,
             'min_stock' => 2,
-            'unit' => 'pcs',
+            'unit' => 'voucher',
             'is_active' => true,
         ]);
 
@@ -337,21 +337,21 @@ class VoucherInjectionTest extends TestCase
             'is_active' => true,
         ]);
 
-        // 1. /products/create tidak boleh menampilkan kategori voucher fisik
+        // 1. /products/create harus menampilkan kategori voucher fisik untuk order dari sales
         $productCreateResponse = $this->actingAs($this->user)->get(route('products.create'));
         $productCreateResponse->assertOk();
         $catsInProductCreate = $productCreateResponse->viewData('categories');
-        $this->assertFalse($catsInProductCreate->contains('id', $vcrCat->id));
+        $this->assertTrue($catsInProductCreate->contains('id', $vcrCat->id));
         $this->assertTrue($catsInProductCreate->contains('id', $pulsaCat->id));
 
-        // 2. /stocks/create (penyesuaian stok umum) tidak menampilkan voucher fisik
+        // 2. /stocks/create (penyesuaian stok) harus menampilkan voucher fisik untuk restock dari sales
         $stockCreateResponse = $this->actingAs($this->user)->get(route('stocks.create'));
         $stockCreateResponse->assertOk();
         $productsInStockCreate = $stockCreateResponse->viewData('products');
-        $this->assertFalse($productsInStockCreate->contains('id', $vcrProduct->id));
+        $this->assertTrue($productsInStockCreate->contains('id', $vcrProduct->id));
         $this->assertTrue($productsInStockCreate->contains('id', $pulsaProduct->id));
 
-        // 3. /stocks/inject hanya menampilkan produk dan kategori voucher fisik
+        // 3. /stocks/inject tetap fokus hanya menampilkan produk dan kategori voucher fisik
         $injectResponse = $this->actingAs($this->user)->get(route('stocks.inject'));
         $injectResponse->assertOk();
         $productsInInject = $injectResponse->viewData('products');
@@ -360,5 +360,177 @@ class VoucherInjectionTest extends TestCase
         $this->assertFalse($productsInInject->contains('id', $pulsaProduct->id));
         $this->assertTrue($catsInInject->contains('id', $vcrCat->id));
         $this->assertFalse($catsInInject->contains('id', $pulsaCat->id));
+    }
+
+    public function test_sales_voucher_created_in_products_does_not_deduct_server_on_sale_and_supports_optional_expense(): void
+    {
+        ServerDeposit::setBalance(500000);
+
+        $vcrCat = Category::create([
+            'name' => 'Voucher Tri',
+            'slug' => 'voucher-tri',
+            'type' => 'product',
+        ]);
+
+        // Input produk baru voucher fisik dari Sales tanpa mencentang pengeluaran
+        $resNoExp = $this->actingAs($this->user)->post(route('products.store'), [
+            'items' => [
+                [
+                    'category_id' => $vcrCat->id,
+                    'code' => 'VCR-TRI-SL1',
+                    'name' => 'Voucher Tri 6GB Sales',
+                    'cost_price' => 15000,
+                    'selling_price' => 20000,
+                    'stock' => 10,
+                    'min_stock' => 2,
+                    'unit' => 'voucher',
+                    'is_active' => 1,
+                ],
+            ],
+        ]);
+        $resNoExp->assertRedirect(route('products.index'));
+
+        $vcrNoExp = Product::where('code', 'VCR-TRI-SL1')->first();
+        $this->assertNotNull($vcrNoExp);
+        $this->assertEquals(10, $vcrNoExp->stock);
+        $this->assertEquals(0, Transaction::where('type', 'pengeluaran')->count());
+        $this->assertEquals(500000, (float) ServerDeposit::getPrimary()->balance);
+
+        // Input produk baru voucher fisik dari Sales DENGAN centang catat pengeluaran (Transfer)
+        $resWithExp = $this->actingAs($this->user)->post(route('products.store'), [
+            'items' => [
+                [
+                    'category_id' => $vcrCat->id,
+                    'code' => 'VCR-TRI-SL2',
+                    'name' => 'Voucher Tri 12GB Sales',
+                    'cost_price' => 25000,
+                    'selling_price' => 30000,
+                    'stock' => 4,
+                    'min_stock' => 2,
+                    'unit' => 'voucher',
+                    'is_active' => 1,
+                ],
+            ],
+            'record_expense' => '1',
+            'payment_method' => 'transfer',
+            'expense_notes' => 'Sales Tri Mas Adi',
+        ]);
+        $resWithExp->assertRedirect(route('products.index'));
+
+        $vcrWithExp = Product::where('code', 'VCR-TRI-SL2')->first();
+        $this->assertNotNull($vcrWithExp);
+        $this->assertEquals(4, $vcrWithExp->stock);
+
+        // Pengeluaran kulakan harus otomatis tercatat sebesar 4 x 25.000 = 100.000 via Transfer
+        $expenseTx = Transaction::where('type', 'pengeluaran')->latest('id')->first();
+        $this->assertNotNull($expenseTx);
+        $this->assertEquals(100000, (float) $expenseTx->total_amount);
+        $this->assertEquals('transfer', $expenseTx->payment_method);
+        $this->assertStringContainsString('[ORDER SALES]', $expenseTx->notes);
+        $this->assertStringContainsString('Sales Tri Mas Adi', $expenseTx->notes);
+
+        // Saldo server tidak boleh ikut terpotong saat input kulakan Sales
+        $this->assertEquals(500000, (float) ServerDeposit::getPrimary()->balance);
+
+        // Jual kedua jenis voucher fisik hasil order Sales di kasir -> Saldo Server tetap 500.000!
+        $this->actingAs($this->user)->post(route('incomes.store'), [
+            'product_id' => $vcrNoExp->id,
+            'product_name' => $vcrNoExp->name,
+            'category_id' => $vcrCat->id,
+            'payment_method' => 'cash',
+            'quantity' => 2,
+            'cost_price' => 15000,
+            'amount' => 40000,
+            'transaction_date' => now()->format('Y-m-d\TH:i'),
+        ])->assertRedirect(route('incomes.index'));
+
+        $this->actingAs($this->user)->post(route('incomes.store'), [
+            'product_id' => $vcrWithExp->id,
+            'product_name' => $vcrWithExp->name,
+            'category_id' => $vcrCat->id,
+            'payment_method' => 'cash',
+            'quantity' => 1,
+            'cost_price' => 25000,
+            'amount' => 30000,
+            'transaction_date' => now()->format('Y-m-d\TH:i'),
+        ])->assertRedirect(route('incomes.index'));
+
+        $this->assertEquals(8, $vcrNoExp->fresh()->stock);
+        $this->assertEquals(3, $vcrWithExp->fresh()->stock);
+        $this->assertEquals(500000, (float) ServerDeposit::getPrimary()->balance);
+    }
+
+    public function test_restock_from_sales_in_stocks_supports_optional_expense_and_prevents_server_deduction(): void
+    {
+        ServerDeposit::setBalance(500000);
+
+        $vcrCat = Category::create([
+            'name' => 'Voucher XL',
+            'slug' => 'voucher-xl',
+            'type' => 'product',
+        ]);
+
+        $voucher = Product::create([
+            'category_id' => $vcrCat->id,
+            'code' => 'VCR-XL-5GB',
+            'name' => 'Voucher XL 5GB Sales',
+            'cost_price' => 18000,
+            'selling_price' => 23000,
+            'stock' => 2,
+            'min_stock' => 2,
+            'unit' => 'voucher',
+            'is_active' => true,
+        ]);
+
+        // 1. Tambah stok dari Sales tanpa mencentang pengeluaran
+        $this->actingAs($this->user)->post(route('stocks.store'), [
+            'product_id' => $voucher->id,
+            'adjustment_type' => 'add',
+            'stock_value' => 5,
+            'notes' => 'Titipan Sales XL tanpa nota kas',
+        ])->assertRedirect(route('stocks.index'));
+
+        $this->assertEquals(7, $voucher->fresh()->stock);
+        $this->assertEquals(0, Transaction::where('type', 'pengeluaran')->count());
+
+        // 2. Tambah stok dari Sales DENGAN centang catat pengeluaran Cash & nominal custom diskon nota (10 pcs x 18rb = 180rb, bayar 175rb)
+        $this->actingAs($this->user)->post(route('stocks.store'), [
+            'product_id' => $voucher->id,
+            'adjustment_type' => 'add',
+            'stock_value' => 10,
+            'notes' => 'Order Sales XL Pak Budi',
+            'record_expense' => '1',
+            'payment_method' => 'cash',
+            'expense_amount' => 175000,
+        ])->assertRedirect(route('stocks.index'));
+
+        $this->assertEquals(17, $voucher->fresh()->stock);
+
+        $expenseTx = Transaction::where('type', 'pengeluaran')->latest('id')->first();
+        $this->assertNotNull($expenseTx);
+        $this->assertEquals(175000, (float) $expenseTx->total_amount);
+        $this->assertEquals('cash', $expenseTx->payment_method);
+        $this->assertStringContainsString('[ORDER SALES]', $expenseTx->notes);
+
+        $latestStockMut = StockMutation::where('product_id', $voucher->id)->latest('id')->first();
+        $this->assertNotNull($latestStockMut);
+        $this->assertEquals(Transaction::class, $latestStockMut->reference_type);
+        $this->assertEquals($expenseTx->id, $latestStockMut->reference_id);
+        $this->assertStringContainsString('[ORDER SALES]', $latestStockMut->notes);
+
+        // 3. Penjualan voucher hasil restock Sales di kasir tidak boleh memotong Saldo Server
+        $this->actingAs($this->user)->post(route('incomes.store'), [
+            'product_id' => $voucher->id,
+            'product_name' => $voucher->name,
+            'category_id' => $vcrCat->id,
+            'payment_method' => 'cash',
+            'quantity' => 3,
+            'cost_price' => 18000,
+            'amount' => 69000,
+            'transaction_date' => now()->format('Y-m-d\TH:i'),
+        ])->assertRedirect(route('incomes.index'));
+
+        $this->assertEquals(14, $voucher->fresh()->stock);
+        $this->assertEquals(500000, (float) ServerDeposit::getPrimary()->balance);
     }
 }

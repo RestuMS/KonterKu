@@ -21,6 +21,9 @@ class StockAdjustmentRequest extends FormRequest
             'stock_value' => ['required', 'integer', "min:{$minVal}"],
             'cost_price' => ['nullable', 'numeric', 'min:0'],
             'notes' => ['nullable', 'string', 'max:255'],
+            'record_expense' => ['nullable'],
+            'payment_method' => ['nullable', 'in:cash,transfer'],
+            'expense_amount' => ['nullable', 'numeric', 'min:0'],
         ];
     }
 

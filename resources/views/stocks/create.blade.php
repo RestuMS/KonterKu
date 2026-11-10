@@ -51,25 +51,25 @@
             </div>
         </div>
 
-        <!-- BANNER INFO: VOUCHER FISIK DIKELOLA LEWAT INJECT VOUCHER -->
-        <div class="p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-amber-50 via-white to-indigo-50/70 dark:from-slate-850 dark:via-slate-800 dark:to-slate-850 border border-amber-200/90 dark:border-amber-900/50 shadow-xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <!-- BANNER INFO: KULAKAN SALES VS INJECT SALDO SERVER -->
+        <div class="p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-emerald-50 via-white to-indigo-50/70 dark:from-slate-850 dark:via-slate-800 dark:to-slate-850 border border-emerald-200/90 dark:border-emerald-900/50 shadow-xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div class="flex items-center gap-3.5">
-                <div class="w-10 h-10 rounded-2xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 text-xl font-bold border border-amber-200/60 dark:border-amber-800/60">
-                    🎟️
+                <div class="w-10 h-10 rounded-2xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 text-xl font-bold border border-emerald-200/60 dark:border-emerald-800/60">
+                    🚚
                 </div>
                 <div class="text-xs">
-                    <strong class="text-sm font-black text-slate-900 dark:text-white block">Ingin Menambah Stok Voucher Fisik?</strong>
+                    <strong class="text-sm font-black text-slate-900 dark:text-white block">Tambah Stok Voucher Fisik dari Sales / Supplier</strong>
                     <span class="text-slate-600 dark:text-slate-400">
-                        Penambahan stok voucher fisik dilakukan via menu <strong>⚡ Inject Stok Voucher</strong> agar saldo server chip langsung terpotong saat voucher diinjeksi dan tidak dobel hitung di kasir.
+                        Pilih produk voucher fisik dan aksi <strong>+ Tambah Stok</strong> di bawah. Saldo Server <strong>tidak</strong> terpotong &amp; Anda bisa sekalian mencatat pengeluarannya otomatis. <em>(Untuk inject kuota pakai Saldo Server sendiri, gunakan menu Inject Voucher).</em>
                     </span>
                 </div>
             </div>
             <a 
                 href="{{ route('stocks.inject') }}" 
-                class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-sky-600 hover:from-indigo-700 hover:to-sky-700 text-white font-black text-xs shadow-md shadow-indigo-600/20 shrink-0 transition-all cursor-pointer active:scale-95"
+                class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs shadow-md shadow-indigo-600/20 shrink-0 transition-all cursor-pointer active:scale-95"
             >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                <span>⚡ Buka Inject Voucher</span>
+                <span>⚡ Inject Saldo Server</span>
             </a>
         </div>
 
@@ -84,13 +84,17 @@
                     'code' => $p->code,
                     'stock' => (int) $p->stock,
                     'min_stock' => (int) $p->min_stock,
+                    'cost_price' => (float) $p->cost_price,
                     'unit' => $p->unit ?? 'pcs',
                     'category' => $p->category->name ?? 'Umum'
                 ])->toJson() }},
                 initialProductId: '{{ old('product_id', request('product_id', '')) }}',
                 initialType: '{{ old('adjustment_type', 'add') }}',
                 initialValue: '{{ old('stock_value', '') }}',
-                initialNotes: '{{ old('notes', '') }}'
+                initialNotes: '{{ old('notes', '') }}',
+                initialRecordExpense: {{ old('record_expense') ? 'true' : 'false' }},
+                initialPaymentMethod: '{{ old('payment_method', 'cash') }}',
+                initialExpenseAmount: '{{ old('expense_amount', '') }}'
             })"
             class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start"
         >
@@ -404,6 +408,80 @@
                         @enderror
                     </div>
 
+                    <!-- 5. KARTU OPSIONAL: CATAT OTOMATIS KE PENGELUARAN (KULAKAN SALES) -->
+                    <div 
+                        x-show="type === 'add'"
+                        x-transition
+                        class="p-5 sm:p-6 rounded-3xl bg-white dark:bg-slate-850 border border-slate-200/90 dark:border-slate-800 shadow-xs space-y-4"
+                    >
+                        <label class="flex items-start sm:items-center gap-3 cursor-pointer select-none">
+                            <input
+                                type="checkbox"
+                                name="record_expense"
+                                value="1"
+                                x-model="recordExpense"
+                                class="mt-0.5 sm:mt-0 w-5 h-5 rounded-lg border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                            >
+                            <div>
+                                <span class="text-xs sm:text-sm font-black text-slate-900 dark:text-white flex items-center gap-2 flex-wrap">
+                                    <span>🧾 Catat otomatis ke Pengeluaran Toko (Kulakan Sales)</span>
+                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300">Opsional</span>
+                                </span>
+                                <span class="text-[11px] text-slate-500 dark:text-slate-400 block mt-0.5">
+                                    Centang jika stok ini dibeli/dibayar langsung ke Sales agar uang keluar langsung tercatat di menu Pengeluaran (tidak memotong Saldo Server).
+                                </span>
+                            </div>
+                        </label>
+
+                        <div x-show="recordExpense" x-transition class="pt-4 border-t border-slate-100 dark:border-slate-800 grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                            <!-- Metode Pembayaran -->
+                            <div class="space-y-1.5">
+                                <label class="font-bold text-slate-700 dark:text-slate-300 block">
+                                    Metode Bayar ke Sales: <span class="text-rose-500">*</span>
+                                </label>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <label
+                                        :class="paymentMethod === 'cash' ? 'border-emerald-500 bg-emerald-50/70 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300 font-black' : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-600 font-semibold'"
+                                        class="px-3 py-2.5 rounded-xl border text-center cursor-pointer transition-all"
+                                    >
+                                        <input type="radio" name="payment_method" value="cash" x-model="paymentMethod" class="sr-only">
+                                        <span>💵 Cash</span>
+                                    </label>
+                                    <label
+                                        :class="paymentMethod === 'transfer' ? 'border-indigo-500 bg-indigo-50/70 text-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-300 font-black' : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-600 font-semibold'"
+                                        class="px-3 py-2.5 rounded-xl border text-center cursor-pointer transition-all"
+                                    >
+                                        <input type="radio" name="payment_method" value="transfer" x-model="paymentMethod" class="sr-only">
+                                        <span>🏦 Transfer</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Nominal Pengeluaran -->
+                            <div class="space-y-1.5">
+                                <label class="font-bold text-slate-700 dark:text-slate-300 block">
+                                    Total Dibayar ke Sales (Rp):
+                                </label>
+                                <div class="relative">
+                                    <span class="absolute inset-y-0 left-0 pl-3 flex items-center font-bold text-slate-400 pointer-events-none">Rp</span>
+                                    <input
+                                        type="number"
+                                        name="expense_amount"
+                                        x-model="expenseAmount"
+                                        @input="expenseAmountEdited = true"
+                                        min="0"
+                                        step="1"
+                                        :placeholder="suggestedExpenseAmount + ' (Otomatis)'"
+                                        class="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-mono font-bold focus:ring-2 focus:ring-emerald-500 shadow-2xs"
+                                    >
+                                </div>
+                                <span class="text-[10px] text-slate-400 block">
+                                    Otomatis dihitung dari modal produk &times; jumlah (bisa disesuaikan jika ada diskon nota).
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- TOMBOL SIMPAN PENYESUAIAN STOK -->
                     <div class="pt-2">
                         <button
@@ -463,6 +541,19 @@
                                     x-text="calculatedStock + ' ' + (selectedProduct ? selectedProduct.unit : 'pcs')"
                                 ></span>
                             </div>
+                        </div>
+
+                        <!-- Pratinjau Pengeluaran Kulakan Sales jika Dicentang -->
+                        <div 
+                            x-show="type === 'add' && recordExpense && finalExpensePreview > 0"
+                            x-transition
+                            class="p-3 rounded-2xl bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 flex items-center justify-between"
+                        >
+                            <div>
+                                <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300 block">Pengeluaran Kulakan:</span>
+                                <span class="text-[11px] text-slate-500" x-text="'Bayar ' + paymentMethod.toUpperCase()"></span>
+                            </div>
+                            <span class="font-mono font-black text-sm text-rose-600 dark:text-rose-400" x-text="'- Rp ' + Number(finalExpensePreview).toLocaleString('id-ID')"></span>
                         </div>
 
                         <!-- Peringatan Jika Stok Minus -->
@@ -538,12 +629,16 @@
                 type: config.initialType || 'add',
                 stockValue: config.initialValue !== '' ? Number(config.initialValue) : 0,
                 notes: config.initialNotes || '',
+                recordExpense: Boolean(config.initialRecordExpense),
+                paymentMethod: config.initialPaymentMethod || 'cash',
+                expenseAmount: config.initialExpenseAmount || '',
+                expenseAmountEdited: config.initialExpenseAmount !== '' && config.initialExpenseAmount !== null,
                 submitting: false,
 
                 // Koleksi saran alasan dinamis
                 reasonsMap: {
                     add: [
-                        'Kulakan Stok Baru dari Supplier',
+                        'Order / Kulakan dari Sales',
                         'Restock Barang Masuk',
                         'Bonus / Hadiah dari Distributor',
                         'Koreksi Selisih Lebih'
@@ -562,9 +657,36 @@
                     ]
                 },
 
+                init() {
+                    this.$watch('stockValue', () => this.syncExpenseAmount());
+                    this.$watch('selectedId', () => this.syncExpenseAmount());
+                    this.syncExpenseAmount();
+                },
+
+                syncExpenseAmount() {
+                    if (!this.expenseAmountEdited) {
+                        const suggested = this.suggestedExpenseAmount;
+                        this.expenseAmount = suggested > 0 ? suggested : '';
+                    }
+                },
+
                 get selectedProduct() {
                     if (!this.selectedId) return null;
                     return this.products.find(p => p.id == this.selectedId) || null;
+                },
+
+                get suggestedExpenseAmount() {
+                    if (!this.selectedProduct) return 0;
+                    const cost = Number(this.selectedProduct.cost_price || 0);
+                    const qty = Math.max(0, Number(this.stockValue || 0));
+                    return Math.round(cost * qty);
+                },
+
+                get finalExpensePreview() {
+                    if (this.expenseAmount !== '' && this.expenseAmount !== null) {
+                        return Number(this.expenseAmount || 0);
+                    }
+                    return this.suggestedExpenseAmount;
                 },
 
                 get currentStock() {
@@ -590,7 +712,8 @@
                 },
 
                 onProductChange() {
-                    // Ketika produk diganti
+                    this.expenseAmountEdited = false;
+                    this.syncExpenseAmount();
                 },
 
                 onTypeChange(newType) {
@@ -612,6 +735,7 @@
 
                 addValue(val) {
                     this.stockValue = Number(this.stockValue || 0) + Number(val);
+                    this.syncExpenseAmount();
                 },
 
                 getValueInputLabel() {

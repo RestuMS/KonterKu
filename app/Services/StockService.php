@@ -203,4 +203,44 @@ class StockService
             ]);
         });
     }
+
+    /**
+     * Catat pengeluaran kulakan / order barang dari Sales ke tabel transaksi pengeluaran.
+     */
+    public function recordKulakanExpense(
+        float $amount,
+        string $paymentMethod = 'cash',
+        string $description = 'Kulakan / Order Stok dari Sales',
+        ?int $userId = null,
+        ?\Carbon\Carbon $transactionDate = null
+    ): \App\Models\Transaction {
+        if ($amount <= 0) {
+            throw new InvalidArgumentException('Nominal pengeluaran kulakan harus lebih dari 0.');
+        }
+
+        $txDate = $transactionDate ?? now();
+        $method = in_array($paymentMethod, ['cash', 'transfer']) ? $paymentMethod : 'cash';
+
+        $expenseCategory = \App\Models\Category::firstOrCreate(
+            ['slug' => 'kulakan-sales'],
+            [
+                'name' => 'Kulakan / Belanja Stok Sales',
+                'type' => 'expense',
+                'description' => 'Pembelian stok fisik barang konter & voucher dari sales/distributor',
+            ]
+        );
+
+        $invoiceNumber = 'EXP-' . $txDate->format('Ymd') . '-' . strtoupper(substr(uniqid('', true), -5));
+
+        return \App\Models\Transaction::create([
+            'invoice_number' => $invoiceNumber,
+            'type' => 'pengeluaran',
+            'category_id' => $expenseCategory->id,
+            'user_id' => $userId ?? auth()->id(),
+            'transaction_date' => $txDate,
+            'total_amount' => $amount,
+            'payment_method' => $method,
+            'notes' => $description,
+        ]);
+    }
 }

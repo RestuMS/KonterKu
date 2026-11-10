@@ -6,10 +6,12 @@ use App\Http\Requests\StockAdjustmentRequest;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\StockMutation;
+use App\Models\Transaction;
 use App\Services\StockService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 
@@ -63,13 +65,8 @@ class StockController extends Controller
 
     public function create(): View
     {
-        // Tampilkan produk aktif non-voucher (karena voucher fisik dipusatkan pengelolaannya lewat menu Inject Voucher)
         $products = Product::with('category')
             ->where('is_active', true)
-            ->whereHas('category', function($q) {
-                $q->where('slug', 'not like', 'voucher-%')
-                  ->where('name', 'not like', 'Voucher%');
-            })
             ->orderBy('category_id', 'asc')
             ->orderBy('selling_price', 'asc')
             ->orderBy('id', 'asc')
@@ -90,6 +87,37 @@ class StockController extends Controller
             if ($type === 'set') {
                 $stockService->adjustStock($product, $val, $notes, $userId);
             } elseif ($type === 'add') {
+                $recordExpense = $request->boolean('record_expense');
+                $paymentMethod = $request->input('payment_method', 'cash');
+                $expenseAmount = $request->filled('expense_amount')
+                    ? (float) $request->expense_amount
+                    : ((float) $product->cost_price * $val);
+
+                if ($recordExpense && $expenseAmount > 0) {
+                    DB::transaction(function () use ($stockService, $product, $val, $notes, $userId, $paymentMethod, $expenseAmount) {
+                        $desc = "[ORDER SALES] Kulakan {$val} {$product->unit} {$product->name}" . ($notes ? " - {$notes}" : '');
+                        $expenseTx = $stockService->recordKulakanExpense(
+                            $expenseAmount,
+                            $paymentMethod,
+                            $desc,
+                            $userId
+                        );
+
+                        $mutationNotes = '[ORDER SALES] ' . ($notes ?: 'Kulakan / Order dari Sales');
+                        $stockService->addStock(
+                            $product,
+                            $val,
+                            Transaction::class,
+                            $expenseTx->id,
+                            $mutationNotes,
+                            $userId
+                        );
+                    });
+
+                    return redirect()->route('stocks.index')
+                        ->with('success', "Stok {$product->name} bertambah +{$val} {$product->unit} & pengeluaran kulakan Rp " . number_format($expenseAmount, 0, ',', '.') . " (" . strtoupper($paymentMethod) . ") otomatis tercatat.");
+                }
+
                 $stockService->addStock($product, $val, null, null, $notes, $userId);
             } elseif ($type === 'inject') {
                 $costPrice = $request->filled('cost_price') ? (float)$request->cost_price : (float)$product->cost_price;

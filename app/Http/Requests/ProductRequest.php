@@ -27,6 +27,10 @@ class ProductRequest extends FormRequest
                 'items.*.unit' => ['required', 'string', 'max:30'],
                 'items.*.is_active' => ['nullable'],
                 'items.*.notes' => ['nullable', 'string', 'max:500'],
+                'record_expense' => ['nullable'],
+                'payment_method' => ['nullable', 'in:cash,transfer'],
+                'expense_amount' => ['nullable', 'numeric', 'min:0'],
+                'expense_notes' => ['nullable', 'string', 'max:255'],
             ];
         }
 
@@ -43,6 +47,10 @@ class ProductRequest extends FormRequest
             'unit' => ['required', 'string', 'max:30'],
             'is_active' => ['nullable'],
             'notes' => ['nullable', 'string', 'max:500'],
+            'record_expense' => ['nullable'],
+            'payment_method' => ['nullable', 'in:cash,transfer'],
+            'expense_amount' => ['nullable', 'numeric', 'min:0'],
+            'expense_notes' => ['nullable', 'string', 'max:255'],
         ];
     }
 

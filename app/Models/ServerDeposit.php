@@ -82,15 +82,26 @@ class ServerDeposit extends Model
             }
         }
 
-        // Jika ini adalah voucher fisik yang stoknya berasal dari INJECT VOUCHER (saldo server sudah dipotong di awal),
-        // maka saat penjualan kasir TIDAK memotong saldo server lagi (mencegah double cut).
-        $isVoucher = str_contains($catText, 'voucher') || str_contains($prodText, 'voucher');
-        if ($isVoucher && $product && !in_array(strtolower($product->unit ?? ''), ['transaksi', 'trx'])) {
-            $hasInjectedStock = \App\Models\StockMutation::where('product_id', $product->id)
-                ->where('type', 'in')
-                ->where('notes', 'like', '%[INJECT VOUCHER]%')
+        // Produk fisik (Voucher Fisik maupun Kartu Perdana, bukan layanan digital unit 'transaksi'/'trx')
+        // yang stoknya berasal dari INJECT VOUCHER (saldo server sudah dipotong di awal) ATAU dari
+        // kulakan fisik / ORDER SALES / input stok produk, TIDAK boleh memotong saldo server saat penjualan kasir/kasbon.
+        $isPhysicalVoucherOrPerdana = (
+            str_contains($catText, 'voucher') || str_contains($prodText, 'voucher') ||
+            str_contains($catText, 'perdana') || str_contains($prodText, 'perdana')
+        );
+
+        if ($isPhysicalVoucherOrPerdana && $product && !in_array(strtolower($product->unit ?? ''), ['transaksi', 'trx'])) {
+            $hasPrePaidPhysicalStock = \App\Models\StockMutation::where('product_id', $product->id)
+                ->where(function ($q) {
+                    $q->where('type', 'in')
+                      ->orWhere(function ($adj) {
+                          $adj->where('type', 'adjustment')
+                              ->whereColumn('stock_after', '>', 'stock_before');
+                      });
+                })
                 ->exists();
-            if ($hasInjectedStock) {
+
+            if ($hasPrePaidPhysicalStock) {
                 return false;
             }
         }
