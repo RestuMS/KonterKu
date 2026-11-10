@@ -1,0 +1,238 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\Category;
+use App\Models\Product;
+use App\Models\ServerDeposit;
+use App\Models\ServerDepositMutation;
+use App\Models\StockMutation;
+use App\Models\Transaction;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
+class VoucherInjectionTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private User $user;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->user = User::factory()->create();
+    }
+
+    public function test_inject_voucher_form_renders_successfully(): void
+    {
+        ServerDeposit::setBalance(500000);
+
+        $response = $this->actingAs($this->user)->get(route('stocks.inject'));
+
+        $response->assertOk();
+        $response->assertSee('Inject Stok Voucher');
+        $response->assertSee('Konversi Saldo');
+    }
+
+    public function test_inject_voucher_deducts_server_deposit_and_increases_physical_stock(): void
+    {
+        ServerDeposit::setBalance(500000);
+
+        $category = Category::create([
+            'name' => 'Voucher Tri',
+            'slug' => 'voucher-tri',
+            'type' => 'product',
+        ]);
+
+        $voucher = Product::create([
+            'category_id' => $category->id,
+            'name' => 'Voucher Tri 10GB',
+            'code' => 'VCR-TRI-10GB',
+            'cost_price' => 20000,
+            'selling_price' => 25000,
+            'stock' => 5,
+            'min_stock' => 2,
+            'unit' => 'pcs',
+            'is_active' => true,
+        ]);
+
+        $response = $this->actingAs($this->user)->post(route('stocks.process-inject'), [
+            'product_id' => $voucher->id,
+            'quantity' => 10,
+            'cost_price' => 20000,
+            'notes' => 'Inject batch Rita seri 001-010',
+        ]);
+
+        $response->assertRedirect(route('stocks.inject'));
+        $response->assertSessionHas('success');
+
+        // 1. Saldo server harus berkurang 200.000 (10 x 20.000): 500.000 - 200.000 = 300.000
+        $this->assertEquals(300000, (float) ServerDeposit::getPrimary()->balance);
+
+        // 2. Stok fisik voucher harus bertambah 10 unit: 5 + 10 = 15
+        $this->assertEquals(15, $voucher->fresh()->stock);
+
+        // 3. Mutasi stok masuk tercatat
+        $stockMutation = StockMutation::where('product_id', $voucher->id)
+            ->where('type', 'in')
+            ->latest('id')
+            ->first();
+
+        $this->assertNotNull($stockMutation);
+        $this->assertEquals(10, $stockMutation->quantity);
+        $this->assertStringContainsString('[INJECT VOUCHER]', $stockMutation->notes);
+
+        // 4. Mutasi saldo server keluar tercatat
+        $serverMutation = ServerDepositMutation::where('type', 'out')->latest('id')->first();
+        $this->assertNotNull($serverMutation);
+        $this->assertEquals(200000, (float) $serverMutation->amount);
+        $this->assertStringContainsString('[INJECT VOUCHER]', $serverMutation->notes);
+
+        // 5. Kedua mutasi saling terhubung
+        $this->assertEquals($serverMutation->id, $stockMutation->reference_id);
+        $this->assertEquals($stockMutation->id, $serverMutation->reference_id);
+    }
+
+    public function test_selling_injected_physical_voucher_reduces_stock_and_does_not_double_deduct_server_deposit(): void
+    {
+        // Kondisi awal: Saldo server 500.000
+        ServerDeposit::setBalance(500000);
+
+        $category = Category::create([
+            'name' => 'Voucher Tri',
+            'slug' => 'voucher-tri',
+            'type' => 'product',
+        ]);
+
+        $voucher = Product::create([
+            'category_id' => $category->id,
+            'name' => 'Voucher Tri 10GB',
+            'code' => 'VCR-TRI-10GB',
+            'cost_price' => 20000,
+            'selling_price' => 25000,
+            'stock' => 0,
+            'min_stock' => 2,
+            'unit' => 'pcs',
+            'is_active' => true,
+        ]);
+
+        // 1. Proses Inject 10 pcs voucher via Saldo Server (Saldo terpotong 200.000: 500.000 -> 300.000)
+        $this->actingAs($this->user)->post(route('stocks.process-inject'), [
+            'product_id' => $voucher->id,
+            'quantity' => 10,
+            'cost_price' => 20000,
+        ]);
+
+        $this->assertEquals(10, $voucher->fresh()->stock);
+        $this->assertEquals(300000, (float) ServerDeposit::getPrimary()->balance);
+
+        // 2. Beberapa hari kemudian, pembeli datang beli 1 pcs Voucher Tri seharga 25.000 tunai di kasir
+        $response = $this->actingAs($this->user)->post(route('incomes.store'), [
+            'product_id' => $voucher->id,
+            'product_name' => $voucher->name,
+            'category_id' => $category->id,
+            'payment_method' => 'cash',
+            'quantity' => 1,
+            'cost_price' => 20000,
+            'amount' => 25000,
+            'transaction_date' => now()->format('Y-m-d\TH:i'),
+        ]);
+
+        $response->assertRedirect(route('incomes.index'));
+        $response->assertSessionHas('success');
+
+        // 1. Stok fisik voucher harus berkurang dari 10 menjadi 9
+        $this->assertEquals(9, $voucher->fresh()->stock);
+
+        // 2. Saldo server HARUS TETAP 300.000 (TIDAK BOLEH DOUBLE CUT!)
+        $this->assertEquals(300000, (float) ServerDeposit::getPrimary()->balance);
+
+        // 3. Tidak ada mutasi pengurangan saldo server untuk transaksi kasir ini
+        $tx = Transaction::where('type', 'pemasukan')->latest('id')->first();
+        $this->assertNotNull($tx);
+        $this->assertDatabaseMissing('server_deposit_mutations', [
+            'reference_type' => Transaction::class,
+            'reference_id' => $tx->id,
+        ]);
+    }
+
+    public function test_selling_digital_product_still_deducts_server_deposit(): void
+    {
+        ServerDeposit::setBalance(300000);
+
+        $pulsaCategory = Category::create([
+            'name' => 'Pulsa Tri',
+            'slug' => 'pulsa-tri',
+            'type' => 'product',
+        ]);
+
+        $digitalPulsa = Product::create([
+            'category_id' => $pulsaCategory->id,
+            'name' => 'Pulsa Tri 10.000',
+            'code' => 'PULSA-TRI-10K',
+            'cost_price' => 10100,
+            'selling_price' => 12000,
+            'stock' => 0,
+            'unit' => 'transaksi',
+            'is_active' => true,
+        ]);
+
+        // Penjualan pulsa reguler digital (unit 'transaksi')
+        $response = $this->actingAs($this->user)->post(route('incomes.store'), [
+            'product_id' => $digitalPulsa->id,
+            'product_name' => $digitalPulsa->name,
+            'category_id' => $pulsaCategory->id,
+            'payment_method' => 'cash',
+            'quantity' => 1,
+            'cost_price' => 10100,
+            'amount' => 12000,
+            'customer_target' => '089876543210',
+            'transaction_date' => now()->format('Y-m-d\TH:i'),
+        ]);
+
+        $response->assertRedirect(route('incomes.index'));
+
+        // Saldo server HARUS terpotong sebesar modal (10.100): 300.000 - 10.100 = 289.900
+        $this->assertEquals(289900, (float) ServerDeposit::getPrimary()->balance);
+    }
+
+    public function test_report_saldo_server_separates_kasir_vs_inject(): void
+    {
+        ServerDeposit::setBalance(1000000);
+
+        $category = Category::create([
+            'name' => 'Voucher Tri',
+            'slug' => 'voucher-tri',
+            'type' => 'product',
+        ]);
+
+        $voucher = Product::create([
+            'category_id' => $category->id,
+            'name' => 'Voucher Tri 5GB',
+            'code' => 'VCR-TRI-5GB',
+            'cost_price' => 15000,
+            'selling_price' => 18000,
+            'stock' => 0,
+            'unit' => 'pcs',
+            'is_active' => true,
+        ]);
+
+        // Inject 10 pcs voucher (Modal: 150.000)
+        $this->actingAs($this->user)->post(route('stocks.process-inject'), [
+            'product_id' => $voucher->id,
+            'quantity' => 10,
+            'cost_price' => 15000,
+        ]);
+
+        // Buka laporan saldo server
+        $response = $this->actingAs($this->user)->get(route('reports.index', ['tab' => 'saldo_server']));
+        $response->assertOk();
+
+        $serverSummary = $response->viewData('serverSummary');
+        $this->assertNotNull($serverSummary);
+        $this->assertEquals(150000, (float) $serverSummary['total_inject']);
+        $this->assertEquals(150000, (float) $serverSummary['total_out']);
+        $this->assertEquals(0, (float) $serverSummary['total_kasir']);
+    }
+}

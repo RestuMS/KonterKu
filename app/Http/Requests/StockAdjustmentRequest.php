@@ -13,13 +13,14 @@ class StockAdjustmentRequest extends FormRequest
 
     public function rules(): array
     {
-        $minVal = in_array($this->input('adjustment_type'), ['add', 'reduce']) ? 1 : 0;
+        $minVal = in_array($this->input('adjustment_type'), ['add', 'reduce', 'inject']) ? 1 : 0;
 
         return [
             'product_id' => ['required', 'exists:products,id'],
-            'adjustment_type' => ['required', 'in:set,add,reduce'],
+            'adjustment_type' => ['required', 'in:set,add,reduce,inject'],
             'stock_value' => ['required', 'integer', "min:{$minVal}"],
-            'notes' => ['required', 'string', 'max:255'],
+            'cost_price' => ['nullable', 'numeric', 'min:0'],
+            'notes' => ['nullable', 'string', 'max:255'],
         ];
     }
 

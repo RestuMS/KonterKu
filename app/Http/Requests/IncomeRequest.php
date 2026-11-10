@@ -129,10 +129,10 @@ class IncomeRequest extends FormRequest
                     }
                 }
 
-                // 2. Validasi Ketersediaan Stok Produk Katalog
+                // 2. Validasi Ketersediaan Stok Produk Katalog (Hanya untuk produk berstok fisik, bukan unit digital transaksi)
                 if ($this->filled('product_id')) {
                     $product = Product::find($this->product_id);
-                    if ($product) {
+                    if ($product && $product->unit !== 'transaksi') {
                         $qty = (int) ($this->quantity ?? 1);
                         if ($product->stock < $qty) {
                             $validator->errors()->add(

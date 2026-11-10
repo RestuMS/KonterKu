@@ -244,12 +244,16 @@ class ReportController extends Controller
 
             $totalIn = (float) (clone $depositQuery)->where('type', 'in')->sum('amount');
             $totalOut = (float) (clone $depositQuery)->where('type', 'out')->sum('amount');
+            $totalInject = (float) (clone $depositQuery)->where('type', 'out')->where('notes', 'like', '%[INJECT VOUCHER]%')->sum('amount');
+            $totalKasir = max(0, $totalOut - $totalInject);
             $serverDeposit = ServerDeposit::getPrimary();
 
             $serverSummary = [
                 'current_balance' => (float) $serverDeposit->balance,
                 'total_in' => $totalIn,
                 'total_out' => $totalOut,
+                'total_inject' => $totalInject,
+                'total_kasir' => $totalKasir,
                 'mutation_count' => (clone $depositQuery)->count(),
             ];
 

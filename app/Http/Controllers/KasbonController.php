@@ -169,7 +169,7 @@ class KasbonController extends Controller
             }
 
             // Kurangi saldo server deposit aplikasi konter jika produk digital server
-            $isServer = \App\Models\ServerDeposit::isServerProduct($product?->category, $productName);
+            $isServer = \App\Models\ServerDeposit::isServerProduct($product?->category, $productName, $product);
             $deductDeposit = ($costPrice > 0) ? ($costPrice * $quantity) : $amount;
             if ($isServer && $deductDeposit > 0) {
                 \App\Models\ServerDeposit::deductBalance(
@@ -240,7 +240,7 @@ class KasbonController extends Controller
             }
 
             // 2. Penyesuaian saldo server jika kasbon ini layanan digital server
-            $isServer = \App\Models\ServerDeposit::isServerProduct($kasbon->product?->category, $kasbon->product_name);
+            $isServer = \App\Models\ServerDeposit::isServerProduct($kasbon->product?->category, $kasbon->product_name, $kasbon->product);
             if ($isServer) {
                 $oldDeduct = ($kasbon->cost_price > 0) ? ($kasbon->cost_price * $oldQty) : (float) $kasbon->amount;
                 $newDeduct = ($costPrice > 0) ? ($costPrice * $newQty) : $amount;

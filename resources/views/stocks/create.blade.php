@@ -25,17 +25,29 @@
                     </div>
                 </div>
 
-                <x-button 
-                    href="{{ route('stocks.index') }}" 
-                    variant="secondary" 
-                    size="sm"
-                    class="bg-white hover:bg-slate-50 text-slate-700 dark:bg-slate-800 dark:text-slate-200 border-slate-200 dark:border-slate-700 font-bold text-xs shadow-2xs self-start sm:self-auto"
-                >
-                    <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
-                    </svg>
-                    <span>Log Mutasi Stok</span>
-                </x-button>
+                <div class="flex items-center gap-2 flex-wrap self-start sm:self-auto">
+                    <a 
+                        href="{{ route('stocks.inject') }}" 
+                        class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-md shadow-indigo-600/25 cursor-pointer"
+                    >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                        </svg>
+                        <span>⚡ Inject Voucher</span>
+                    </a>
+
+                    <x-button 
+                        href="{{ route('stocks.index') }}" 
+                        variant="secondary" 
+                        size="sm"
+                        class="bg-white hover:bg-slate-50 text-slate-700 dark:bg-slate-800 dark:text-slate-200 border-slate-200 dark:border-slate-700 font-bold text-xs shadow-2xs"
+                    >
+                        <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                        </svg>
+                        <span>Log Mutasi Stok</span>
+                    </x-button>
+                </div>
             </div>
         </div>
 

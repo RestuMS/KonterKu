@@ -64,20 +64,21 @@ class StockService
         ?string $referenceType = null,
         ?int $referenceId = null,
         ?string $notes = null,
-        ?int $userId = null
+        ?int $userId = null,
+        ?\Carbon\Carbon $mutationDate = null
     ): StockMutation {
         if ($quantity <= 0) {
             throw new InvalidArgumentException('Jumlah penambahan stok harus lebih dari 0.');
         }
 
-        return DB::transaction(function () use ($product, $quantity, $referenceType, $referenceId, $notes, $userId) {
+        return DB::transaction(function () use ($product, $quantity, $referenceType, $referenceId, $notes, $userId, $mutationDate) {
             $product->refresh();
             $stockBefore = $product->stock;
             $stockAfter = $stockBefore + $quantity;
 
             $product->update(['stock' => $stockAfter]);
 
-            return StockMutation::create([
+            $mutation = new StockMutation([
                 'product_id' => $product->id,
                 'user_id' => $userId,
                 'type' => 'in',
@@ -88,6 +89,84 @@ class StockService
                 'reference_id' => $referenceId,
                 'notes' => $notes,
             ]);
+
+            if ($mutationDate) {
+                $mutation->created_at = $mutationDate;
+                $mutation->updated_at = $mutationDate;
+            }
+
+            $mutation->save();
+
+            return $mutation;
+        });
+    }
+
+    /**
+     * Inject voucher kosong: Menambah stok fisik voucher dan memotong saldo server secara atomik.
+     *
+     * @return array{product: Product, quantity: int, total_cost: float, stock_mutation: StockMutation, server_mutation: \App\Models\ServerDepositMutation, deposit: \App\Models\ServerDeposit}
+     */
+    public function injectVoucher(
+        Product $product,
+        int $quantity,
+        float $costPerUnit,
+        ?string $notes = null,
+        ?int $userId = null,
+        ?\Carbon\Carbon $injectDate = null
+    ): array {
+        if ($quantity <= 0) {
+            throw new InvalidArgumentException('Jumlah voucher yang di-inject harus lebih dari 0.');
+        }
+
+        if ($costPerUnit < 0) {
+            throw new InvalidArgumentException('Harga modal tidak boleh bernilai negatif.');
+        }
+
+        return DB::transaction(function () use ($product, $quantity, $costPerUnit, $notes, $userId, $injectDate) {
+            $totalCost = (float) ($quantity * $costPerUnit);
+            $date = $injectDate ?? now();
+
+            // 1. Potong Saldo Server
+            $serverNotes = "[INJECT VOUCHER] Inject {$quantity} pcs {$product->name} (Masuk Stok Fisik)" . ($notes ? " - {$notes}" : '');
+            $deposit = \App\Models\ServerDeposit::deductBalance(
+                $totalCost,
+                $serverNotes,
+                StockMutation::class,
+                null,
+                $date
+            );
+
+            // Ambil mutasi saldo server yang baru saja dibuat
+            $serverMutation = \App\Models\ServerDepositMutation::where('server_deposit_id', \App\Models\ServerDeposit::getPrimary()->id)
+                ->where('type', 'out')
+                ->latest('id')
+                ->first();
+
+            // 2. Tambah Stok Fisik Produk
+            $stockNotes = "[INJECT VOUCHER] Inject {$quantity} pcs dari Saldo Server (Modal: Rp " . number_format($totalCost, 0, ',', '.') . ")" . ($notes ? " - {$notes}" : '');
+            $stockMutation = $this->addStock(
+                $product,
+                $quantity,
+                \App\Models\ServerDepositMutation::class,
+                $serverMutation?->id,
+                $stockNotes,
+                $userId,
+                $date
+            );
+
+            // 3. Tautkan ID mutasi stok ke mutasi saldo server
+            if ($serverMutation && $stockMutation) {
+                $serverMutation->update(['reference_id' => $stockMutation->id]);
+            }
+
+            return [
+                'product' => $product,
+                'quantity' => $quantity,
+                'total_cost' => $totalCost,
+                'stock_mutation' => $stockMutation,
+                'server_mutation' => $serverMutation,
+                'deposit' => $deposit,
+            ];
         });
     }
 

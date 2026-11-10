@@ -1594,7 +1594,7 @@
                         </div>
                     </div>
 
-                    <!-- 3. Total Saldo Terpotong Kasir (-) -->
+                    <!-- 3. Total Saldo Terpotong Kasir & Inject (-) -->
                     <div class="p-5 rounded-3xl bg-white dark:bg-slate-850 border border-slate-200/80 dark:border-slate-800 shadow-xs relative overflow-hidden">
                         <div class="flex items-center justify-between">
                             <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Saldo Terpotong (-)</span>
@@ -1606,7 +1606,16 @@
                             <div class="text-2xl font-black text-rose-600 dark:text-rose-400 font-mono tracking-tight">
                                 -@rupiah($serverSummary['total_out'] ?? 0)
                             </div>
-                            <span class="text-[11px] text-slate-500 mt-1 block">Modal transaksi pulsa/kuota/token</span>
+                            <div class="mt-2 text-[10px] space-y-0.5 text-slate-500 border-t border-slate-100 dark:border-slate-800 pt-1.5">
+                                <div class="flex justify-between">
+                                    <span>Kasir Konsumen:</span>
+                                    <span class="font-bold text-slate-700 dark:text-slate-300">@rupiah($serverSummary['total_kasir'] ?? 0)</span>
+                                </div>
+                                <div class="flex justify-between text-indigo-600 dark:text-indigo-400 font-bold">
+                                    <span>Inject Stok Voucher:</span>
+                                    <span>@rupiah($serverSummary['total_inject'] ?? 0)</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
 

@@ -98,6 +98,18 @@
                     <span>+ Isi / Top-Up</span>
                 </button>
 
+                <!-- Tombol 1b: Inject Stok Voucher -->
+                <a
+                    href="{{ route('stocks.inject') }}"
+                    class="px-3.5 py-2.5 rounded-2xl bg-gradient-to-r from-indigo-500 to-sky-600 hover:from-indigo-400 hover:to-sky-500 text-white font-bold text-xs shadow-md shadow-indigo-600/30 flex items-center justify-center gap-1.5 active:scale-95 transition-all cursor-pointer"
+                    title="Aktivasi / Inject Voucher Kosong menggunakan Saldo Server"
+                >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                    </svg>
+                    <span>⚡ Inject Voucher</span>
+                </a>
+
                 <!-- Tombol 2: Koreksi / Set Saldo Baru -->
                 <button
                     type="button"

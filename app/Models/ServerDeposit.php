@@ -58,9 +58,9 @@ class ServerDeposit extends Model
 
     /**
      * Tentukan apakah transaksi / produk ini menggunakan saldo server all provider.
-     * Produk fisik konter (aksesoris hp, casing, tempered glass, charger, kabel data, jasa servis) TIDAK memotong saldo server.
+     * Produk fisik konter (aksesoris hp, casing, tempered glass) dan Voucher Fisik yang telah di-inject TIDAK memotong saldo server saat transaksi kasir.
      */
-    public static function isServerProduct(?Category $category = null, ?string $productName = null): bool
+    public static function isServerProduct(?Category $category = null, ?string $productName = null, ?Product $product = null): bool
     {
         $catText = strtolower(($category?->name ?? '') . ' ' . ($category?->slug ?? ''));
         $prodText = strtolower($productName ?? '');
@@ -78,6 +78,19 @@ class ServerDeposit extends Model
         ];
         foreach ($nonServerKeywords as $kw) {
             if (str_contains($combined, $kw)) {
+                return false;
+            }
+        }
+
+        // Jika ini adalah voucher fisik yang stoknya berasal dari INJECT VOUCHER (saldo server sudah dipotong di awal),
+        // maka saat penjualan kasir TIDAK memotong saldo server lagi (mencegah double cut).
+        $isVoucher = str_contains($catText, 'voucher') || str_contains($prodText, 'voucher');
+        if ($isVoucher && $product && !in_array(strtolower($product->unit ?? ''), ['transaksi', 'trx'])) {
+            $hasInjectedStock = \App\Models\StockMutation::where('product_id', $product->id)
+                ->where('type', 'in')
+                ->where('notes', 'like', '%[INJECT VOUCHER]%')
+                ->exists();
+            if ($hasInjectedStock) {
                 return false;
             }
         }

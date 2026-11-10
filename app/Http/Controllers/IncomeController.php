@@ -173,12 +173,14 @@ class IncomeController extends Controller
 
             // Hitung modal HPP yang memotong saldo server aplikasi konter
             $deductDepositAmount = 0;
+            $catalogProduct = null;
 
             // Jika transaksi terkait produk dari katalog
             if ($request->filled('product_id')) {
                 $product = Product::lockForUpdate()->findOrFail($request->product_id);
+                $catalogProduct = $product;
 
-                if ($product->stock < $qty) {
+                if ($product->unit !== 'transaksi' && $product->stock < $qty) {
                     DB::rollBack();
                     return back()->withInput()->with('error', "Stok produk {$product->name} tidak mencukupi (sisa stok: {$product->stock} {$product->unit}).");
                 }
@@ -196,16 +198,18 @@ class IncomeController extends Controller
                     'subtotal' => $totalAmount,
                 ]);
 
-                // Kurangi stok produk secara atomik dengan menyertakan tanggal mutasi sesuai tanggal transaksi
-                $stockService->reduceStock(
-                    $product,
-                    $qty,
-                    Transaction::class,
-                    $transaction->id,
-                    "Penjualan invoice: {$invoiceNumber}" . ($isBackdated ? " (Transaksi susulan tgl {$transactionDate->format('d/m/Y')})" : ''),
-                    Auth::id(),
-                    $transactionDate
-                );
+                // Kurangi stok produk secara atomik hanya untuk barang fisik
+                if ($product->unit !== 'transaksi') {
+                    $stockService->reduceStock(
+                        $product,
+                        $qty,
+                        Transaction::class,
+                        $transaction->id,
+                        "Penjualan invoice: {$invoiceNumber}" . ($isBackdated ? " (Transaksi susulan tgl {$transactionDate->format('d/m/Y')})" : ''),
+                        Auth::id(),
+                        $transactionDate
+                    );
+                }
             } elseif ($request->filled('product_name')) {
                 // Jika transaksi jasa / produk manual tanpa ID katalog
                 $costPrice = (float) ($request->cost_price ?? 0);
@@ -224,7 +228,7 @@ class IncomeController extends Controller
 
             // Otomatis kurangi saldo server deposit aplikasi konter jika produk/layanan digital server
             $deposit = null;
-            $isServerProduct = \App\Models\ServerDeposit::isServerProduct($cat, $request->product_name);
+            $isServerProduct = \App\Models\ServerDeposit::isServerProduct($cat, $request->product_name, $catalogProduct);
             if ($isServerProduct && $deductDepositAmount > 0) {
                 $deposit = \App\Models\ServerDeposit::deductBalance(
                     $deductDepositAmount, 
@@ -332,7 +336,8 @@ class IncomeController extends Controller
 
             $newCategory = Category::find($request->category_id);
             $productName = $firstItem?->product_name ?? '';
-            $isServerProduct = \App\Models\ServerDeposit::isServerProduct($newCategory, $productName);
+            $catalogProduct = $firstItem?->product_id ? Product::find($firstItem->product_id) : null;
+            $isServerProduct = \App\Models\ServerDeposit::isServerProduct($newCategory, $productName, $catalogProduct);
 
             if ($existingMutation) {
                 $prevDeducted = (float) $existingMutation->amount;

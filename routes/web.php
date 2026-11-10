@@ -67,6 +67,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/stocks', [StockController::class, 'index'])->name('stocks.index');
     Route::get('/stocks/create', [StockController::class, 'create'])->name('stocks.create');
     Route::post('/stocks', [StockController::class, 'store'])->name('stocks.store');
+    Route::get('/stocks/inject', [StockController::class, 'injectForm'])->name('stocks.inject');
+    Route::post('/stocks/inject', [StockController::class, 'processInject'])->name('stocks.process-inject');
 
     // Laporan
     Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
