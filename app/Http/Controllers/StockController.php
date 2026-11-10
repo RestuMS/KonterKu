@@ -3,12 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StockAdjustmentRequest;
+use App\Models\Category;
 use App\Models\Product;
 use App\Models\StockMutation;
 use App\Services\StockService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class StockController extends Controller
@@ -115,6 +117,7 @@ class StockController extends Controller
             ->orderBy('id', 'asc')
             ->get();
 
+        $categories = Category::whereIn('type', ['product', 'all'])->orderBy('id')->get();
         $serverDeposit = \App\Models\ServerDeposit::getPrimary();
 
         $recentInjects = StockMutation::with(['product.category', 'user'])
@@ -124,32 +127,85 @@ class StockController extends Controller
             ->limit(8)
             ->get();
 
-        return view('stocks.inject', compact('products', 'serverDeposit', 'recentInjects'));
+        return view('stocks.inject', compact('products', 'categories', 'serverDeposit', 'recentInjects'));
     }
 
     /**
      * Proses transaksi inject voucher (potong saldo server + tambah stok fisik secara atomik).
+     * Mendukung:
+     * 1. Pilih voucher yang pernah dibuat (dropdown).
+     * 2. Daftarkan voucher baru langsung satu pintu di form inject ini.
      */
     public function processInject(Request $request, StockService $stockService): RedirectResponse
     {
-        $validated = $request->validate([
-            'product_id' => ['required', 'exists:products,id'],
-            'quantity' => ['required', 'integer', 'min:1'],
-            'cost_price' => ['required', 'numeric', 'min:0'],
-            'inject_date' => ['nullable', 'date'],
-            'notes' => ['nullable', 'string', 'max:255'],
-        ], [
-            'product_id.required' => 'Produk voucher wajib dipilih.',
-            'product_id.exists' => 'Produk voucher tidak valid.',
-            'quantity.required' => 'Jumlah inject wajib diisi.',
-            'quantity.min' => 'Jumlah inject minimal 1 pcs.',
-            'cost_price.required' => 'Harga modal (HPP) wajib diisi.',
-            'cost_price.min' => 'Harga modal tidak boleh bernilai negatif.',
-        ]);
+        $isNew = $request->boolean('is_new') || $request->filled('new_product_name');
 
-        $product = Product::findOrFail($validated['product_id']);
-        $qty = (int) $validated['quantity'];
-        $costPrice = (float) $validated['cost_price'];
+        if ($isNew) {
+            $validated = $request->validate([
+                'new_product_name' => ['required', 'string', 'max:150'],
+                'category_id'      => ['required', 'exists:categories,id'],
+                'selling_price'    => ['required', 'numeric', 'min:0'],
+                'quantity'         => ['required', 'integer', 'min:1'],
+                'cost_price'       => ['required', 'numeric', 'min:0'],
+                'inject_date'      => ['nullable', 'date'],
+                'notes'            => ['nullable', 'string', 'max:255'],
+            ], [
+                'new_product_name.required' => 'Nama voucher baru wajib diisi.',
+                'category_id.required'      => 'Kategori operator voucher wajib dipilih.',
+                'selling_price.required'    => 'Harga jual kasir wajib diisi.',
+                'cost_price.required'       => 'Harga modal (HPP server) wajib diisi.',
+                'quantity.required'         => 'Jumlah inject minimal 1 lembar.',
+                'quantity.min'              => 'Jumlah inject minimal 1 lembar.',
+            ]);
+
+            $name = trim($validated['new_product_name']);
+            $costPrice = (float) $validated['cost_price'];
+            $sellingPrice = (float) $validated['selling_price'];
+            $qty = (int) $validated['quantity'];
+
+            // Buat kode SKU otomatis yang unik dan rapi
+            $cleanName = preg_replace('/[^A-Za-z0-9]/', '', strtoupper($name));
+            $baseCode = 'VCR-' . substr($cleanName, 0, 10);
+            $code = $baseCode;
+            $counter = 1;
+            while (Product::where('code', $code)->exists()) {
+                $code = "{$baseCode}-{$counter}";
+                $counter++;
+            }
+
+            // Daftarkan produk voucher baru langsung di sistem dengan stok awal 0
+            $product = Product::create([
+                'category_id'   => $validated['category_id'],
+                'name'          => $name,
+                'code'          => $code,
+                'cost_price'    => $costPrice,
+                'selling_price' => $sellingPrice,
+                'stock'         => 0,
+                'min_stock'     => 2,
+                'unit'          => 'pcs',
+                'is_active'     => true,
+            ]);
+        } else {
+            $validated = $request->validate([
+                'product_id'  => ['required', 'exists:products,id'],
+                'quantity'    => ['required', 'integer', 'min:1'],
+                'cost_price'  => ['required', 'numeric', 'min:0'],
+                'inject_date' => ['nullable', 'date'],
+                'notes'       => ['nullable', 'string', 'max:255'],
+            ], [
+                'product_id.required' => 'Produk voucher wajib dipilih.',
+                'product_id.exists'   => 'Produk voucher tidak valid.',
+                'quantity.required'   => 'Jumlah inject wajib diisi minimal 1 lembar.',
+                'quantity.min'        => 'Jumlah inject minimal 1 lembar.',
+                'cost_price.required' => 'Harga modal (HPP server) wajib diisi.',
+                'cost_price.min'      => 'Harga modal tidak boleh bernilai negatif.',
+            ]);
+
+            $product = Product::findOrFail($validated['product_id']);
+            $qty = (int) $validated['quantity'];
+            $costPrice = (float) $validated['cost_price'];
+        }
+
         $injectDate = $request->filled('inject_date') ? \Carbon\Carbon::parse($request->inject_date) : now();
 
         try {
@@ -162,8 +218,11 @@ class StockController extends Controller
                 $injectDate
             );
 
-            return redirect()->route('stocks.inject')
-                ->with('success', "⚡ Berhasil melakukan inject {$qty} pcs {$product->name}! Saldo server terpotong Rp " . number_format($result['total_cost'], 0, ',', '.') . " dan otomatis masuk ke stok fisik etalase.");
+            $msg = $isNew
+                ? "⚡ Berhasil mendaftarkan voucher '{$product->name}' & langsung inject {$qty} pcs! Saldo server terpotong Rp " . number_format($result['total_cost'], 0, ',', '.') . " dan otomatis siap dijual di kasir."
+                : "⚡ Berhasil inject {$qty} pcs {$product->name}! Saldo server terpotong Rp " . number_format($result['total_cost'], 0, ',', '.') . " dan otomatis masuk ke stok fisik etalase.";
+
+            return redirect()->route('stocks.inject')->with('success', $msg);
         } catch (\Throwable $e) {
             return back()->withInput()->with('error', 'Gagal memproses inject voucher: ' . $e->getMessage());
         }

@@ -32,7 +32,7 @@ class VoucherInjectionTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('Inject Stok Voucher');
-        $response->assertSee('Konversi Saldo');
+        $response->assertSee('Satu Pintu');
     }
 
     public function test_inject_voucher_deducts_server_deposit_and_increases_physical_stock(): void
@@ -234,5 +234,68 @@ class VoucherInjectionTest extends TestCase
         $this->assertEquals(150000, (float) $serverSummary['total_inject']);
         $this->assertEquals(150000, (float) $serverSummary['total_out']);
         $this->assertEquals(0, (float) $serverSummary['total_kasir']);
+    }
+
+    public function test_can_register_and_inject_new_voucher_directly_in_one_step(): void
+    {
+        ServerDeposit::setBalance(500000);
+
+        $category = Category::create([
+            'name' => 'Voucher Telkomsel',
+            'slug' => 'voucher-telkomsel',
+            'type' => 'product',
+        ]);
+
+        // Daftarkan voucher baru langsung di menu inject tanpa lewat menu stok/produk dulu
+        $response = $this->actingAs($this->user)->post(route('stocks.process-inject'), [
+            'is_new' => '1',
+            'new_product_name' => 'Voucher Telkomsel 3GB 7 Hari',
+            'category_id' => $category->id,
+            'cost_price' => 16500,
+            'selling_price' => 20000,
+            'quantity' => 10,
+            'notes' => 'Inject perdana tanpa buka menu produk',
+        ]);
+
+        $response->assertRedirect(route('stocks.inject'));
+        $response->assertSessionHas('success');
+
+        // 1. Produk otomatis terbuat di database
+        $product = Product::where('name', 'Voucher Telkomsel 3GB 7 Hari')->first();
+        $this->assertNotNull($product);
+        $this->assertEquals(16500, (float) $product->cost_price);
+        $this->assertEquals(20000, (float) $product->selling_price);
+        $this->assertEquals(10, $product->stock); // Stok langsung terisi 10 pcs
+        $this->assertEquals('pcs', $product->unit);
+
+        // 2. Saldo server langsung terpotong (10 x 16.500 = 165.000): 500.000 - 165.000 = 335.000
+        $this->assertEquals(335000, (float) ServerDeposit::getPrimary()->balance);
+
+        // 3. Mutasi stok dan mutasi server deposit tercatat saling terhubung
+        $this->assertDatabaseHas('stock_mutations', [
+            'product_id' => $product->id,
+            'type' => 'in',
+            'quantity' => 10,
+        ]);
+        $this->assertDatabaseHas('server_deposit_mutations', [
+            'type' => 'out',
+            'amount' => 165000,
+        ]);
+
+        // 4. Langsung bisa dijual di kasir dan saldo server tidak terpotong dobel
+        $cashierResponse = $this->actingAs($this->user)->post(route('incomes.store'), [
+            'product_id' => $product->id,
+            'product_name' => $product->name,
+            'category_id' => $category->id,
+            'payment_method' => 'cash',
+            'quantity' => 1,
+            'cost_price' => 16500,
+            'amount' => 20000,
+            'transaction_date' => now()->format('Y-m-d\TH:i'),
+        ]);
+
+        $cashierResponse->assertRedirect(route('incomes.index'));
+        $this->assertEquals(9, $product->fresh()->stock); // Stok berkurang jadi 9
+        $this->assertEquals(335000, (float) ServerDeposit::getPrimary()->balance); // Saldo server tidak terpotong dobel
     }
 }
