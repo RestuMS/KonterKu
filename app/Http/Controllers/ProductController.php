@@ -70,7 +70,12 @@ class ProductController extends Controller
     public function create(): View
     {
         $this->ensureCategoriesExist();
-        $categories = Category::whereIn('type', ['product', 'all'])->orderBy('name')->get();
+        // Voucher fisik dipusatkan penginputannya melalui menu "Inject Voucher" agar saldo server & stok fisik sinkron satu pintu
+        $categories = Category::whereIn('type', ['product', 'all'])
+            ->where('slug', 'not like', 'voucher-%')
+            ->where('name', 'not like', 'Voucher%')
+            ->orderBy('name')
+            ->get();
         $existingCodes = Product::pluck('code')->toArray();
         return view('products.create', compact('categories', 'existingCodes'));
     }

@@ -59,23 +59,6 @@
             </div>
         </div>
 
-        @php
-            $voucherProducts = $products->filter(fn($p) => 
-                str_contains(strtolower($p->category->name ?? ''), 'voucher') || 
-                str_contains(strtolower($p->name), 'voucher') ||
-                str_contains(strtolower($p->category->name ?? ''), 'perdana') ||
-                str_contains(strtolower($p->name), 'perdana')
-            );
-            $otherProducts = $products->reject(fn($p) => $voucherProducts->contains('id', $p->id));
-
-            $voucherCategories = $categories->filter(fn($c) => 
-                str_contains(strtolower($c->name), 'voucher') || 
-                str_contains(strtolower($c->name), 'perdana') ||
-                str_contains(strtolower($c->slug), 'voucher')
-            );
-            $otherCategories = $categories->reject(fn($c) => $voucherCategories->contains('id', $c->id));
-        @endphp
-
         <!-- ================================================================= -->
         <!-- 2. WORKSPACE INJECT (FORM INPUT + LIVE SIMULASI SIDEBAR)          -->
         <!-- ================================================================= -->
@@ -86,7 +69,7 @@
                     'id' => $p->id,
                     'name' => $p->name,
                     'code' => $p->code,
-                    'category' => $p->category->name ?? 'Umum',
+                    'category' => $p->category->name ?? 'Voucher Fisik',
                     'stock' => (int) $p->stock,
                     'unit' => $p->unit ?? 'pcs',
                     'cost_price' => (float) $p->cost_price,
@@ -98,7 +81,7 @@
                 initialCost: '{{ old('cost_price', '') }}',
                 initialSell: '{{ old('selling_price', '') }}',
                 initialName: '{{ old('new_product_name', '') }}',
-                initialCatId: '{{ old('category_id', $voucherCategories->first()->id ?? '') }}',
+                initialCatId: '{{ old('category_id', $categories->first()->id ?? '') }}',
             })"
             class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start"
         >
@@ -175,20 +158,9 @@
                                     x-model="newCategoryId"
                                     class="w-full text-xs sm:text-sm font-semibold rounded-2xl border @error('category_id') border-rose-500 ring-2 ring-rose-500/20 @else border-slate-300 dark:border-slate-600 @enderror bg-slate-50/50 dark:bg-slate-800 text-slate-900 dark:text-white py-3 px-3.5 focus:ring-2 focus:ring-indigo-500 shadow-2xs transition-all"
                                 >
-                                    @if($voucherCategories->isNotEmpty())
-                                        <optgroup label="🎟️ Kategori Voucher Fisik">
-                                            @foreach($voucherCategories as $c)
-                                                <option value="{{ $c->id }}">{{ $c->name }}</option>
-                                            @endforeach
-                                        </optgroup>
-                                    @endif
-                                    @if($otherCategories->isNotEmpty())
-                                        <optgroup label="📦 Kategori Lainnya">
-                                            @foreach($otherCategories as $c)
-                                                <option value="{{ $c->id }}">{{ $c->name }}</option>
-                                            @endforeach
-                                        </optgroup>
-                                    @endif
+                                    @foreach($categories as $c)
+                                        <option value="{{ $c->id }}">{{ $c->name }}</option>
+                                    @endforeach
                                 </select>
                             </div>
                         </div>
@@ -246,27 +218,14 @@
                                 @change="onProductChange()"
                                 class="w-full text-xs sm:text-sm font-semibold rounded-2xl border @error('product_id') border-rose-500 ring-2 ring-rose-500/20 @else border-slate-300 dark:border-slate-600 @enderror bg-slate-50/50 dark:bg-slate-800 text-slate-900 dark:text-white py-3 px-3.5 focus:ring-2 focus:ring-indigo-500 shadow-2xs transition-all"
                             >
-                                <option value="">-- Pilih Voucher Yang Akan Di-inject --</option>
-                                
-                                @if($voucherProducts->isNotEmpty())
-                                    <optgroup label="🎟️ Voucher Fisik & Kuota Operator">
-                                        @foreach($voucherProducts as $p)
-                                            <option value="{{ $p->id }}" {{ old('product_id', request('product_id')) == $p->id ? 'selected' : '' }}>
-                                                {{ $p->name }} (Modal: @rupiah($p->cost_price) | Jual: @rupiah($p->selling_price))
-                                            </option>
-                                        @endforeach
-                                    </optgroup>
-                                @endif
-
-                                @if($otherProducts->isNotEmpty())
-                                    <optgroup label="📦 Produk Fisik Lainnya">
-                                        @foreach($otherProducts as $p)
-                                            <option value="{{ $p->id }}" {{ old('product_id', request('product_id')) == $p->id ? 'selected' : '' }}>
-                                                {{ $p->name }} (Modal: @rupiah($p->cost_price) | Jual: @rupiah($p->selling_price))
-                                            </option>
-                                        @endforeach
-                                    </optgroup>
-                                @endif
+                                <option value="">-- Pilih Voucher Fisik Yang Akan Di-inject --</option>
+                                @forelse($products as $p)
+                                    <option value="{{ $p->id }}" {{ old('product_id', request('product_id')) == $p->id ? 'selected' : '' }}>
+                                        {{ $p->name }} (Modal: @rupiah($p->cost_price) | Jual: @rupiah($p->selling_price) | Sisa: {{ $p->stock }} pcs)
+                                    </option>
+                                @empty
+                                    <option value="" disabled>Belum ada voucher fisik terdaftar. Silakan gunakan tombol "+ Daftarkan & Inject Voucher Baru" di atas.</option>
+                                @endforelse
                             </select>
                         </div>
 

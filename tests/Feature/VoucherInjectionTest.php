@@ -298,4 +298,67 @@ class VoucherInjectionTest extends TestCase
         $this->assertEquals(9, $product->fresh()->stock); // Stok berkurang jadi 9
         $this->assertEquals(335000, (float) ServerDeposit::getPrimary()->balance); // Saldo server tidak terpotong dobel
     }
+
+    public function test_voucher_separation_between_products_stocks_and_inject(): void
+    {
+        $vcrCat = Category::create([
+            'name' => 'Voucher Axis',
+            'slug' => 'voucher-axis',
+            'type' => 'product',
+        ]);
+
+        $pulsaCat = Category::create([
+            'name' => 'Pulsa Axis',
+            'slug' => 'pulsa-axis',
+            'type' => 'product',
+        ]);
+
+        $vcrProduct = Product::create([
+            'category_id' => $vcrCat->id,
+            'name' => 'Voucher Axis AIGO 2GB',
+            'code' => 'VCR-AXIS-2GB',
+            'cost_price' => 8000,
+            'selling_price' => 10000,
+            'stock' => 5,
+            'min_stock' => 2,
+            'unit' => 'pcs',
+            'is_active' => true,
+        ]);
+
+        $pulsaProduct = Product::create([
+            'category_id' => $pulsaCat->id,
+            'name' => 'Pulsa Axis 10.000',
+            'code' => 'PULSA-AXIS-10K',
+            'cost_price' => 10100,
+            'selling_price' => 12000,
+            'stock' => 0,
+            'min_stock' => 0,
+            'unit' => 'transaksi',
+            'is_active' => true,
+        ]);
+
+        // 1. /products/create tidak boleh menampilkan kategori voucher fisik
+        $productCreateResponse = $this->actingAs($this->user)->get(route('products.create'));
+        $productCreateResponse->assertOk();
+        $catsInProductCreate = $productCreateResponse->viewData('categories');
+        $this->assertFalse($catsInProductCreate->contains('id', $vcrCat->id));
+        $this->assertTrue($catsInProductCreate->contains('id', $pulsaCat->id));
+
+        // 2. /stocks/create (penyesuaian stok umum) tidak menampilkan voucher fisik
+        $stockCreateResponse = $this->actingAs($this->user)->get(route('stocks.create'));
+        $stockCreateResponse->assertOk();
+        $productsInStockCreate = $stockCreateResponse->viewData('products');
+        $this->assertFalse($productsInStockCreate->contains('id', $vcrProduct->id));
+        $this->assertTrue($productsInStockCreate->contains('id', $pulsaProduct->id));
+
+        // 3. /stocks/inject hanya menampilkan produk dan kategori voucher fisik
+        $injectResponse = $this->actingAs($this->user)->get(route('stocks.inject'));
+        $injectResponse->assertOk();
+        $productsInInject = $injectResponse->viewData('products');
+        $catsInInject = $injectResponse->viewData('categories');
+        $this->assertTrue($productsInInject->contains('id', $vcrProduct->id));
+        $this->assertFalse($productsInInject->contains('id', $pulsaProduct->id));
+        $this->assertTrue($catsInInject->contains('id', $vcrCat->id));
+        $this->assertFalse($catsInInject->contains('id', $pulsaCat->id));
+    }
 }

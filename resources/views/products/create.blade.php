@@ -4,9 +4,8 @@
     </x-slot:header>
 
     @php
-        // Mengelompokkan kategori secara sistematis
+        // Mengelompokkan kategori secara sistematis (Voucher fisik dipusatkan lewat menu Inject Voucher)
         $pulsaCats = $categories->filter(fn($c) => str_starts_with(strtolower($c->name), 'pulsa'));
-        $voucherCats = $categories->filter(fn($c) => str_starts_with(strtolower($c->name), 'voucher'));
         $paketCats = $categories->filter(fn($c) => str_starts_with(strtolower($c->name), 'paket internet'));
         $perdanaCats = $categories->filter(fn($c) => str_starts_with(strtolower($c->name), 'kartu perdana'));
         $ewalletCats = $categories->filter(fn($c) => str_starts_with(strtolower($c->name), 'e-wallet'));
@@ -688,6 +687,31 @@
             </div>
         </div>
 
+        <!-- BANNER KHUSUS: INPUT VOUCHER FISIK DIPUSATKAN LEWAT INJECT VOUCHER -->
+        <div class="bg-gradient-to-r from-amber-50 via-white to-indigo-50/70 dark:from-slate-850 dark:via-slate-800 dark:to-slate-850 rounded-3xl p-5 border border-amber-200/90 dark:border-amber-900/50 shadow-xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div class="flex items-center gap-3.5">
+                <div class="w-11 h-11 rounded-2xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 text-xl font-bold border border-amber-200/60 dark:border-amber-800/60">
+                    🎟️
+                </div>
+                <div class="text-xs">
+                    <div class="flex items-center gap-2">
+                        <strong class="text-sm font-black text-slate-900 dark:text-white">Mau Tambah / Input Stok Voucher Fisik?</strong>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">Satu Pintu</span>
+                    </div>
+                    <p class="text-slate-600 dark:text-slate-400 mt-0.5">
+                        Pendaftaran & penambahan stok voucher fisik (Tri, Telkomsel, XL, Axis, Indosat, dll) kini dipusatkan di menu <strong>⚡ Inject Stok Voucher</strong> agar saldo server digital langsung terpotong saat voucher diinjeksi dan stok fisik etalase bertambah akurat.
+                    </p>
+                </div>
+            </div>
+            <a 
+                href="{{ route('stocks.inject') }}" 
+                class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-sky-600 hover:from-indigo-700 hover:to-sky-700 text-white font-black text-xs shadow-md shadow-indigo-600/20 shrink-0 transition-all cursor-pointer active:scale-95"
+            >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                <span>⚡ Buka Form Inject Voucher</span>
+            </a>
+        </div>
+
         <!-- PANDUAN LOGIKA KATEGORI & STOK AWAL -->
         <div class="bg-gradient-to-r from-blue-50/90 via-indigo-50/80 to-purple-50/80 dark:from-slate-800 dark:via-slate-800/90 dark:to-slate-800 rounded-3xl p-5 border border-indigo-100 dark:border-slate-700 shadow-2xs">
             <div class="flex items-start gap-3.5">
@@ -701,7 +725,7 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2.5 text-slate-600 dark:text-slate-300">
                         <div class="p-3 rounded-2xl bg-white/90 dark:bg-slate-750/90 border border-slate-200/70 dark:border-slate-700">
                             <strong class="text-emerald-700 dark:text-emerald-300 font-bold flex items-center gap-1.5 mb-1 text-xs">
-                                <span>📦</span> 1. Produk Fisik (Voucher Fisik, Perdana, Aksesoris)
+                                <span>📦</span> 1. Produk Fisik Non-Voucher (Kartu Perdana, Aksesoris)
                             </strong>
                             <p class="leading-relaxed text-[11.5px] text-slate-600 dark:text-slate-300">
                                 Isi <strong>Stok Awal</strong> sesuai jumlah fisik barang riil yang ada di rak/laci (satuan: <em>pcs, voucher, kartu</em>). Sistem otomatis mencatat mutasi stok awal masuk dan memotong stok setiap kali kasir mencatat transaksi penjualan.
@@ -794,13 +818,6 @@
                                     @if($pulsaCats->isNotEmpty())
                                         <optgroup label="📱 Pulsa Reguler (All Operator)">
                                             @foreach($pulsaCats as $cat)
-                                                <option value="{{ $cat->id }}">{{ $cat->name }}</option>
-                                            @endforeach
-                                        </optgroup>
-                                    @endif
-                                    @if($voucherCats->isNotEmpty())
-                                        <optgroup label="🎟️ Voucher Fisik & Kuota">
-                                            @foreach($voucherCats as $cat)
                                                 <option value="{{ $cat->id }}">{{ $cat->name }}</option>
                                             @endforeach
                                         </optgroup>
@@ -1235,17 +1252,10 @@
                             @change="onBatchCategoryChange()"
                             class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-750 text-slate-900 dark:text-white font-semibold focus:ring-2 focus:ring-indigo-500 shadow-2xs text-xs"
                         >
-                            <option value="">-- Pilih Kategori (Misal: Pulsa Telkomsel, Top Up Game, Voucher Tri, E-Wallet DANA) --</option>
+                            <option value="">-- Pilih Kategori (Misal: Pulsa Telkomsel, Top Up Game, E-Wallet DANA) --</option>
                             @if($pulsaCats->isNotEmpty())
                                 <optgroup label="📱 Pulsa Reguler (All Operator)">
                                     @foreach($pulsaCats as $cat)
-                                        <option value="{{ $cat->id }}">{{ $cat->name }}</option>
-                                    @endforeach
-                                </optgroup>
-                            @endif
-                            @if($voucherCats->isNotEmpty())
-                                <optgroup label="🎟️ Voucher Fisik & Kuota">
-                                    @foreach($voucherCats as $cat)
                                         <option value="{{ $cat->id }}">{{ $cat->name }}</option>
                                     @endforeach
                                 </optgroup>

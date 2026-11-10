@@ -51,6 +51,28 @@
             </div>
         </div>
 
+        <!-- BANNER INFO: VOUCHER FISIK DIKELOLA LEWAT INJECT VOUCHER -->
+        <div class="p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-amber-50 via-white to-indigo-50/70 dark:from-slate-850 dark:via-slate-800 dark:to-slate-850 border border-amber-200/90 dark:border-amber-900/50 shadow-xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div class="flex items-center gap-3.5">
+                <div class="w-10 h-10 rounded-2xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 text-xl font-bold border border-amber-200/60 dark:border-amber-800/60">
+                    🎟️
+                </div>
+                <div class="text-xs">
+                    <strong class="text-sm font-black text-slate-900 dark:text-white block">Ingin Menambah Stok Voucher Fisik?</strong>
+                    <span class="text-slate-600 dark:text-slate-400">
+                        Penambahan stok voucher fisik dilakukan via menu <strong>⚡ Inject Stok Voucher</strong> agar saldo server chip langsung terpotong saat voucher diinjeksi dan tidak dobel hitung di kasir.
+                    </span>
+                </div>
+            </div>
+            <a 
+                href="{{ route('stocks.inject') }}" 
+                class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-sky-600 hover:from-indigo-700 hover:to-sky-700 text-white font-black text-xs shadow-md shadow-indigo-600/20 shrink-0 transition-all cursor-pointer active:scale-95"
+            >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                <span>⚡ Buka Inject Voucher</span>
+            </a>
+        </div>
+
         <!-- ================================================================= -->
         <!-- 2. WORKSPACE FORM 2-KOLOM (FORM INPUT + LIVE SIMULASI SIDEBAR)     -->
         <!-- ================================================================= -->

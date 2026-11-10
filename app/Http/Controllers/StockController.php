@@ -63,8 +63,13 @@ class StockController extends Controller
 
     public function create(): View
     {
+        // Tampilkan produk aktif non-voucher (karena voucher fisik dipusatkan pengelolaannya lewat menu Inject Voucher)
         $products = Product::with('category')
             ->where('is_active', true)
+            ->whereHas('category', function($q) {
+                $q->where('slug', 'not like', 'voucher-%')
+                  ->where('name', 'not like', 'Voucher%');
+            })
             ->orderBy('category_id', 'asc')
             ->orderBy('selling_price', 'asc')
             ->orderBy('id', 'asc')
@@ -110,14 +115,29 @@ class StockController extends Controller
      */
     public function injectForm(Request $request): View
     {
+        // Khusus produk voucher fisik
         $products = Product::with('category')
             ->where('is_active', true)
+            ->where(function ($q) {
+                $q->whereHas('category', function ($catQuery) {
+                    $catQuery->where('slug', 'like', 'voucher-%')
+                             ->orWhere('name', 'like', 'Voucher%');
+                })->orWhere('name', 'like', 'Voucher%');
+            })
             ->orderBy('category_id', 'asc')
             ->orderBy('selling_price', 'asc')
             ->orderBy('id', 'asc')
             ->get();
 
-        $categories = Category::whereIn('type', ['product', 'all'])->orderBy('id')->get();
+        // Khusus kategori voucher fisik operator
+        $categories = Category::whereIn('type', ['product', 'all'])
+            ->where(function ($q) {
+                $q->where('slug', 'like', 'voucher-%')
+                  ->orWhere('name', 'like', 'Voucher%');
+            })
+            ->orderBy('id')
+            ->get();
+
         $serverDeposit = \App\Models\ServerDeposit::getPrimary();
 
         $recentInjects = StockMutation::with(['product.category', 'user'])
