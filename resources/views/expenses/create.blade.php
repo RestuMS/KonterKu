@@ -25,7 +25,7 @@
                             Pencatatan Pengeluaran Kas
                         </h2>
                         <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-                            Pilih kategori cepat: jajan, beli kuota, beli mainan, beli bensin, atau operasional toko.
+                            Pilih kategori cepat: tagihan sales, jajan, beli kuota, beli mainan, beli bensin, atau operasional toko.
                         </p>
                     </div>
                 </div>
@@ -85,9 +85,33 @@
                             ></span>
                         </div>
 
-                        <!-- Grid Kartu Kategori Preset -->
+                        <!-- Grid Kartu Kategori Preset (3x2 Rapi) -->
                         <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                            <!-- 1. Jajan -->
+                            <!-- 1. Tagihan Sales -->
+                            <button
+                                type="button"
+                                @click="selectPresetByName('sales', 'Bayar tagihan / kulakan stok ke Sales')"
+                                :class="isCategoryActive('sales') ? 'border-amber-500 ring-2 ring-amber-500/30 bg-amber-50/70 dark:bg-amber-950/40 text-amber-950 dark:text-amber-200' : 'border-slate-200 dark:border-slate-700 hover:border-amber-300 dark:hover:border-slate-600 bg-slate-50/50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-300'"
+                                class="p-3.5 rounded-2xl border text-left transition-all cursor-pointer group relative overflow-hidden"
+                            >
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 dark:bg-amber-950/80 dark:text-amber-300 flex items-center justify-center shrink-0 shadow-2xs group-hover:scale-105 transition-transform">
+                                        <!-- SVG Tagihan Sales / Kulakan -->
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-black text-xs">Tagihan Sales</h4>
+                                        <p class="text-[10px] text-slate-400 mt-0.5 leading-tight">Kulakan voucher, perdana</p>
+                                    </div>
+                                </div>
+                                <div x-show="isCategoryActive('sales')" class="absolute top-2 right-2 text-amber-600">
+                                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                                </div>
+                            </button>
+
+                            <!-- 2. Jajan -->
                             <button
                                 type="button"
                                 @click="selectPresetByName('jajan', 'Jajan makan siang / camilan')"
@@ -208,24 +232,24 @@
                                     <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
                                 </div>
                             </button>
+                        </div>
 
-                            <!-- 6. Kategori Lainnya (Dropdown Selector) -->
-                            <div class="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/60 flex flex-col justify-center">
-                                <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
-                                    Pilih Manual:
-                                </label>
-                                <select 
-                                    name="category_id" 
-                                    x-model="categoryId"
-                                    @change="onManualCategoryChange()"
-                                    class="w-full text-xs font-bold rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white py-1.5 px-2 focus:ring-2 focus:ring-rose-500 shadow-2xs"
-                                >
-                                    <option value="">-- Kategori Lain --</option>
-                                    @foreach($categories as $cat)
-                                        <option value="{{ $cat->id }}">{{ $cat->name }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
+                        <!-- Kategori Manual Dropdown (Di Bawah 6 Kartu Preset) -->
+                        <div class="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/60 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
+                            <label class="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider shrink-0">
+                                Atau Pilih Manual Kategori:
+                            </label>
+                            <select 
+                                name="category_id" 
+                                x-model="categoryId"
+                                @change="onManualCategoryChange()"
+                                class="w-full sm:w-72 text-xs font-bold rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white py-2 px-3 focus:ring-2 focus:ring-rose-500 shadow-2xs"
+                            >
+                                <option value="">-- Pilih Kategori Pengeluaran --</option>
+                                @foreach($categories as $cat)
+                                    <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+                                @endforeach
+                            </select>
                         </div>
 
                         @error('category_id')
@@ -558,6 +582,7 @@
 
                 // Koleksi saran keterangan berdasarkan kata kunci kategori
                 suggestionsMap: {
+                    sales: ['Bayar Tagihan Sales Tri', 'Bayar Nota Sales Telkomsel', 'Pelunasan Kulakan Voucher XL / Axis', 'Bayar Order Kartu Perdana ke Sales', 'Pelunasan Nota Distributor'],
                     jajan: ['Makan Siang & Minum', 'Kopi & Gorengan', 'Snack / Cemilan Santai', 'Beli Minuman Dingin', 'Jajan Sore'],
                     kuota: ['Beli Paket Kuota 25GB', 'Kuota Data Darurat Kasir', 'Perpanjang Paket Data', 'Voucher Kuota Harian'],
                     mainan: ['Beli Mainan Anak', 'Top-up Game Santai', 'Beli Aksesoris Mainan', 'Koleksi Miniatur'],
@@ -573,6 +598,7 @@
 
                 get currentSuggestions() {
                     const name = this.selectedCategoryName.toLowerCase();
+                    if (name.includes('sales') || name.includes('kulakan')) return this.suggestionsMap.sales;
                     if (name.includes('jajan')) return this.suggestionsMap.jajan;
                     if (name.includes('kuota')) return this.suggestionsMap.kuota;
                     if (name.includes('mainan')) return this.suggestionsMap.mainan;
@@ -583,11 +609,17 @@
 
                 isCategoryActive(keyword) {
                     const name = this.selectedCategoryName.toLowerCase();
+                    if (keyword === 'sales') return name.includes('sales') || name.includes('kulakan');
                     return name.includes(keyword);
                 },
 
                 selectPresetByName(keyword, defaultNote) {
-                    const match = this.categories.find(c => c.name.toLowerCase().includes(keyword));
+                    const match = this.categories.find(c => {
+                        const lower = c.name.toLowerCase();
+                        return keyword === 'sales'
+                            ? (lower.includes('sales') || lower.includes('kulakan'))
+                            : lower.includes(keyword);
+                    });
                     if (match) {
                         this.categoryId = match.id;
                         if (!this.notes || this.isDefaultPresetNote(this.notes)) {
@@ -598,6 +630,7 @@
 
                 isDefaultPresetNote(note) {
                     const defaults = [
+                        'Bayar tagihan / kulakan stok ke Sales',
                         'Jajan makan siang / camilan',
                         'Beli paket kuota data',
                         'Beli mainan / hiburan',

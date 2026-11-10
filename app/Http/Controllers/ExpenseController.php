@@ -49,27 +49,10 @@ class ExpenseController extends Controller
 
         $expenses = $query->latest('transaction_date')->paginate(12)->withQueryString();
         
-        // Pastikan kategori preset pengeluaran standar selalu tersedia
-        $standardPresets = [
-            ['name' => 'Beli Jajan', 'slug' => 'jajan'],
-            ['name' => 'Beli Kuota', 'slug' => 'beli-kuota'],
-            ['name' => 'Beli Mainan', 'slug' => 'beli-mainan'],
-            ['name' => 'Beli Bensin', 'slug' => 'beli-bensin'],
-            ['name' => 'Operasional Toko', 'slug' => 'operasional-toko'],
-        ];
-        foreach ($standardPresets as $preset) {
-            Category::firstOrCreate(
-                ['slug' => $preset['slug']],
-                ['name' => $preset['name'], 'type' => 'expense']
-            );
-        }
-
-        $categories = Category::whereIn('type', ['expense', 'transaction', 'all'])
-            ->whereNotIn('name', ['Transfer Uang', 'Tarik Tunai', 'Pulsa All Provider'])
-            ->orderBy('name')
-            ->get();
+        $categories = $this->getExpenseCategories();
 
         $presetCategories = [
+            'sales'       => $categories->first(fn($c) => str_contains(strtolower($c->name), 'sales') || str_contains(strtolower($c->slug), 'sales')),
             'jajan'       => $categories->first(fn($c) => str_contains(strtolower($c->name), 'jajan') || str_contains(strtolower($c->slug), 'jajan')),
             'kuota'       => $categories->first(fn($c) => str_contains(strtolower($c->name), 'kuota') || str_contains(strtolower($c->slug), 'kuota')),
             'mainan'      => $categories->first(fn($c) => str_contains(strtolower($c->name), 'mainan') || str_contains(strtolower($c->slug), 'mainan')),
@@ -100,10 +83,13 @@ class ExpenseController extends Controller
         ));
     }
 
-    public function create(): View
+    /**
+     * Pastikan kategori preset pengeluaran standar (termasuk Tagihan Sales) tersedia & kembalikan daftarnya.
+     */
+    protected function getExpenseCategories()
     {
-        // Pastikan kategori preset pengeluaran standar selalu tersedia
         $standardPresets = [
+            ['name' => 'Tagihan Sales', 'slug' => 'kulakan-sales'],
             ['name' => 'Beli Jajan', 'slug' => 'jajan'],
             ['name' => 'Beli Kuota', 'slug' => 'beli-kuota'],
             ['name' => 'Beli Mainan', 'slug' => 'beli-mainan'],
@@ -117,10 +103,15 @@ class ExpenseController extends Controller
             );
         }
 
-        $categories = Category::whereIn('type', ['expense', 'transaction', 'all'])
+        return Category::whereIn('type', ['expense', 'transaction', 'all'])
             ->whereNotIn('name', ['Transfer Uang', 'Tarik Tunai', 'Pulsa All Provider'])
             ->orderBy('name')
             ->get();
+    }
+
+    public function create(): View
+    {
+        $categories = $this->getExpenseCategories();
 
         // 5 pengeluaran terakhir untuk referensi cepat kasir
         $recentExpenses = Transaction::with('category')
@@ -161,10 +152,7 @@ class ExpenseController extends Controller
             abort(404);
         }
 
-        $categories = Category::whereIn('type', ['expense', 'transaction', 'all'])
-            ->whereNotIn('name', ['Transfer Uang', 'Tarik Tunai', 'Pulsa All Provider'])
-            ->orderBy('name')
-            ->get();
+        $categories = $this->getExpenseCategories();
 
         return view('expenses.edit', compact('expense', 'categories'));
     }

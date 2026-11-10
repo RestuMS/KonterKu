@@ -533,4 +533,29 @@ class VoucherInjectionTest extends TestCase
         $this->assertEquals(14, $voucher->fresh()->stock);
         $this->assertEquals(500000, (float) ServerDeposit::getPrimary()->balance);
     }
+
+    public function test_expense_module_includes_tagihan_sales_preset_and_filter(): void
+    {
+        $createRes = $this->actingAs($this->user)->get(route('expenses.create'));
+        $createRes->assertOk();
+        $createRes->assertSee('Tagihan Sales');
+
+        $salesCategory = Category::where('slug', 'kulakan-sales')->first();
+        $this->assertNotNull($salesCategory);
+        $this->assertEquals('Tagihan Sales', $salesCategory->name);
+
+        // Simpan tagihan sales langsung dari form pengeluaran manual
+        $this->actingAs($this->user)->post(route('expenses.store'), [
+            'category_id' => $salesCategory->id,
+            'amount' => 350000,
+            'payment_method' => 'transfer',
+            'notes' => 'Bayar Tagihan Sales Tri',
+            'transaction_date' => now()->format('Y-m-d\TH:i'),
+        ])->assertRedirect(route('expenses.index'));
+
+        $indexRes = $this->actingAs($this->user)->get(route('expenses.index', ['category_id' => $salesCategory->id]));
+        $indexRes->assertOk();
+        $indexRes->assertSee('Tagihan Sales');
+        $indexRes->assertSee('Bayar Tagihan Sales Tri');
+    }
 }

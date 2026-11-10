@@ -224,9 +224,9 @@ class StockService
         $expenseCategory = \App\Models\Category::firstOrCreate(
             ['slug' => 'kulakan-sales'],
             [
-                'name' => 'Kulakan / Belanja Stok Sales',
+                'name' => 'Tagihan Sales',
                 'type' => 'expense',
-                'description' => 'Pembelian stok fisik barang konter & voucher dari sales/distributor',
+                'description' => 'Pembayaran tagihan & kulakan stok barang konter atau voucher dari sales/distributor',
             ]
         );
 

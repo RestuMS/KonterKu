@@ -228,6 +228,16 @@
                     Semua
                 </a>
 
+                @if(isset($presetCategories['sales']) && $presetCategories['sales'])
+                    <a
+                        href="{{ route('expenses.index', array_merge(request()->except(['page']), ['category_id' => $presetCategories['sales']->id])) }}"
+                        class="px-3 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shrink-0 {{ request('category_id') == $presetCategories['sales']->id ? 'bg-amber-600 text-white font-bold shadow-xs' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200' }}"
+                    >
+                        <span>🚚</span>
+                        <span>Tagihan Sales</span>
+                    </a>
+                @endif
+
                 @if(isset($presetCategories['jajan']) && $presetCategories['jajan'])
                     <a
                         href="{{ route('expenses.index', array_merge(request()->except(['page']), ['category_id' => $presetCategories['jajan']->id])) }}"

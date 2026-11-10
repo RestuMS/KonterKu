@@ -1177,10 +1177,8 @@
                 </div>
             </div>
 
-            <!-- OPSI KEUANGAN: KULAKAN / ORDER DARI SALES -->
+            <!-- OPSI KEUANGAN: KULAKAN / TAGIHAN SALES -->
             <div 
-                x-show="grandTotalStockCost > 0"
-                x-transition
                 class="p-5 rounded-3xl bg-white dark:bg-slate-800 border border-slate-200/90 dark:border-slate-700 shadow-xs space-y-4"
             >
                 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -1194,11 +1192,11 @@
                         >
                         <div>
                             <span class="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2 flex-wrap">
-                                <span>🧾 Catat otomatis ke Pengeluaran Toko (Kulakan Sales)</span>
+                                <span>🧾 Catat otomatis ke Pengeluaran Toko (Tagihan Sales)</span>
                                 <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-700 dark:bg-indigo-950/70 dark:text-indigo-300">Opsional</span>
                             </span>
                             <span class="text-xs text-slate-500 dark:text-slate-400 block mt-0.5">
-                                Centang jika stok awal barang ini baru Anda beli/bayar langsung ke Sales (uang keluar tercatat di menu Pengeluaran, tidak memotong Saldo Server).
+                                Centang jika stok awal barang ini baru Anda beli/bayar ke Sales agar langsung masuk ke kategori <strong>Tagihan Sales</strong> di menu Pengeluaran (tidak memotong Saldo Server).
                             </span>
                         </div>
                     </label>

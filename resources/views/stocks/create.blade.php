@@ -424,11 +424,11 @@
                             >
                             <div>
                                 <span class="text-xs sm:text-sm font-black text-slate-900 dark:text-white flex items-center gap-2 flex-wrap">
-                                    <span>🧾 Catat otomatis ke Pengeluaran Toko (Kulakan Sales)</span>
+                                    <span>🧾 Catat otomatis ke Pengeluaran Toko (Tagihan Sales)</span>
                                     <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300">Opsional</span>
                                 </span>
                                 <span class="text-[11px] text-slate-500 dark:text-slate-400 block mt-0.5">
-                                    Centang jika stok ini dibeli/dibayar langsung ke Sales agar uang keluar langsung tercatat di menu Pengeluaran (tidak memotong Saldo Server).
+                                    Centang jika stok ini dibeli/dibayar ke Sales agar langsung tercatat di kategori <strong>Tagihan Sales</strong> pada menu Pengeluaran (tidak memotong Saldo Server).
                                 </span>
                             </div>
                         </label>
