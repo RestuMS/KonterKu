@@ -313,6 +313,12 @@ class CategorySeeder extends Seeder
                 'type' => 'transaction',
                 'description' => 'Pengeluaran operasional konter (listrik, sewa, perlengkapan toko)',
             ],
+            [
+                'name' => 'Kulakan Saldo / Deposit',
+                'slug' => 'kulakan-deposit',
+                'type' => 'expense',
+                'description' => 'Pengisian / pembelian saldo deposit server aplikasi All Provider',
+            ],
         ];
 
         foreach ($categories as $cat) {

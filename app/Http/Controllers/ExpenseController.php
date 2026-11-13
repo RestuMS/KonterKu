@@ -53,6 +53,7 @@ class ExpenseController extends Controller
 
         $presetCategories = [
             'sales'       => $categories->first(fn($c) => str_contains(strtolower($c->name), 'sales') || str_contains(strtolower($c->slug), 'sales')),
+            'deposit'     => $categories->first(fn($c) => str_contains(strtolower($c->name), 'deposit') || str_contains(strtolower($c->slug), 'deposit')),
             'jajan'       => $categories->first(fn($c) => str_contains(strtolower($c->name), 'jajan') || str_contains(strtolower($c->slug), 'jajan')),
             'kuota'       => $categories->first(fn($c) => str_contains(strtolower($c->name), 'kuota') || str_contains(strtolower($c->slug), 'kuota')),
             'mainan'      => $categories->first(fn($c) => str_contains(strtolower($c->name), 'mainan') || str_contains(strtolower($c->slug), 'mainan')),
@@ -90,6 +91,7 @@ class ExpenseController extends Controller
     {
         $standardPresets = [
             ['name' => 'Tagihan Sales', 'slug' => 'kulakan-sales'],
+            ['name' => 'Kulakan Saldo / Deposit', 'slug' => 'kulakan-deposit'],
             ['name' => 'Beli Jajan', 'slug' => 'jajan'],
             ['name' => 'Beli Kuota', 'slug' => 'beli-kuota'],
             ['name' => 'Beli Mainan', 'slug' => 'beli-mainan'],
@@ -109,6 +111,7 @@ class ExpenseController extends Controller
                       $q->whereIn('type', ['transaction', 'all'])
                         ->whereIn('slug', [
                             'kulakan-sales',
+                            'kulakan-deposit',
                             'jajan',
                             'beli-kuota',
                             'beli-mainan',

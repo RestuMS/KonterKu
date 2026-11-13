@@ -44,6 +44,80 @@ class ServerDepositTest extends TestCase
         $this->assertEquals(1500000, (float) ServerDeposit::getPrimary()->balance);
     }
 
+    public function test_user_can_topup_server_deposit_accumulating_existing_remaining_balance(): void
+    {
+        $user = User::factory()->create();
+
+        // Saldo awal masih tersisa Rp 350.000
+        ServerDeposit::setBalance(350000);
+
+        // Tambah lagi saldo Rp 500.000
+        $response = $this->actingAs($user)->post('/server-deposit/topup', [
+            'amount' => 500000,
+            'notes' => 'Top-up deposit via transfer',
+        ]);
+
+        $response->assertRedirect('/dashboard');
+        $response->assertSessionHas('success');
+
+        // Saldo akhir harus akumulatif: 350.000 + 500.000 = 850.000
+        $deposit = ServerDeposit::getPrimary();
+        $this->assertEquals(850000, (float) $deposit->balance);
+
+        $this->assertDatabaseHas('server_deposit_mutations', [
+            'server_deposit_id' => $deposit->id,
+            'type' => 'in',
+            'amount' => 500000,
+            'balance_before' => 350000,
+            'balance_after' => 850000,
+        ]);
+    }
+
+    public function test_user_can_topup_server_deposit_and_automatically_record_expense(): void
+    {
+        $user = User::factory()->create();
+
+        ServerDeposit::setBalance(200000);
+
+        // Top-up Rp 600.000 dengan centang catat otomatis ke pengeluaran
+        $response = $this->actingAs($user)->post('/server-deposit/topup', [
+            'amount' => 600000,
+            'record_expense' => '1',
+            'payment_method' => 'transfer',
+            'notes' => 'Isi ulang agen SiDOMPUL via BCA',
+        ]);
+
+        $response->assertRedirect('/dashboard');
+        $response->assertSessionHas('success');
+
+        // Saldo terakumulasi: 200.000 + 600.000 = 800.000
+        $deposit = ServerDeposit::getPrimary();
+        $this->assertEquals(800000, (float) $deposit->balance);
+
+        // Pengeluaran tercatat di tabel transactions
+        $this->assertDatabaseHas('transactions', [
+            'type' => 'pengeluaran',
+            'total_amount' => 600000,
+            'payment_method' => 'transfer',
+        ]);
+
+        $expense = \App\Models\Transaction::where('type', 'pengeluaran')
+            ->where('total_amount', 600000)
+            ->first();
+
+        $this->assertNotNull($expense);
+        $this->assertEquals('kulakan-deposit', $expense->category->slug);
+
+        // Mutasi saldo merujuk pada transaksi pengeluaran
+        $this->assertDatabaseHas('server_deposit_mutations', [
+            'server_deposit_id' => $deposit->id,
+            'type' => 'in',
+            'amount' => 600000,
+            'reference_type' => 'transaction',
+            'reference_id' => $expense->id,
+        ]);
+    }
+
     public function test_user_can_adjust_server_deposit_balance(): void
     {
         $user = User::factory()->create();

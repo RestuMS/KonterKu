@@ -3,10 +3,19 @@
         topupModal: false,
         adjustModal: false,
         settingsModal: false,
+        currentBalance: {{ (float) ($serverDeposit->balance ?? 0) }},
         topupAmount: 500000,
+        recordExpense: false,
+        paymentMethod: 'transfer',
         newBalance: {{ (float) ($serverDeposit->balance ?? 0) }},
         setTopup(val) {
-            this.topupAmount = val;
+            this.topupAmount = Number(val);
+        },
+        get finalBalance() {
+            return Number(this.currentBalance || 0) + Number(this.topupAmount || 0);
+        },
+        formatRupiah(num) {
+            return new Intl.NumberFormat('id-ID').format(Math.max(0, num || 0));
         }
     }"
     class="mb-8"
@@ -158,7 +167,7 @@
             @csrf
 
             <p class="text-xs text-slate-500 dark:text-slate-400">
-                Masukkan nominal isi ulang deposit yang baru saja Anda transfer ke aplikasi server agen.
+                Masukkan nominal isi ulang deposit. Sistem akan <strong>menjumlahkan</strong> saldo ini dengan sisa saldo lama Anda.
             </p>
 
             <!-- Pilihan Cepat Nominal Top-Up -->
@@ -170,42 +179,48 @@
                     <button
                         type="button"
                         @click="setTopup(100000)"
-                        class="px-2.5 py-1.5 rounded-xl text-xs font-bold font-mono border border-slate-200 dark:border-slate-700 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 hover:text-indigo-600 transition-colors cursor-pointer"
+                        class="px-2.5 py-1.5 rounded-xl text-xs font-bold font-mono border transition-all cursor-pointer"
+                        :class="topupAmount === 100000 ? 'bg-indigo-600 text-white border-indigo-600 shadow-2xs font-extrabold' : 'border-slate-200 dark:border-slate-700 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 hover:text-indigo-600'"
                     >
                         + 100.000
                     </button>
                     <button
                         type="button"
                         @click="setTopup(200000)"
-                        class="px-2.5 py-1.5 rounded-xl text-xs font-bold font-mono border border-slate-200 dark:border-slate-700 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 hover:text-indigo-600 transition-colors cursor-pointer"
+                        class="px-2.5 py-1.5 rounded-xl text-xs font-bold font-mono border transition-all cursor-pointer"
+                        :class="topupAmount === 200000 ? 'bg-indigo-600 text-white border-indigo-600 shadow-2xs font-extrabold' : 'border-slate-200 dark:border-slate-700 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 hover:text-indigo-600'"
                     >
                         + 200.000
                     </button>
                     <button
                         type="button"
                         @click="setTopup(500000)"
-                        class="px-2.5 py-1.5 rounded-xl text-xs font-bold font-mono border border-slate-200 dark:border-slate-700 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 hover:text-indigo-600 transition-colors cursor-pointer"
+                        class="px-2.5 py-1.5 rounded-xl text-xs font-bold font-mono border transition-all cursor-pointer"
+                        :class="topupAmount === 500000 ? 'bg-indigo-600 text-white border-indigo-600 shadow-2xs font-extrabold' : 'border-slate-200 dark:border-slate-700 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 hover:text-indigo-600'"
                     >
                         + 500.000
                     </button>
                     <button
                         type="button"
                         @click="setTopup(1000000)"
-                        class="px-2.5 py-1.5 rounded-xl text-xs font-bold font-mono border border-slate-200 dark:border-slate-700 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 hover:text-indigo-600 transition-colors cursor-pointer"
+                        class="px-2.5 py-1.5 rounded-xl text-xs font-bold font-mono border transition-all cursor-pointer"
+                        :class="topupAmount === 1000000 ? 'bg-indigo-600 text-white border-indigo-600 shadow-2xs font-extrabold' : 'border-slate-200 dark:border-slate-700 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 hover:text-indigo-600'"
                     >
                         + 1.000.000
                     </button>
                     <button
                         type="button"
                         @click="setTopup(2000000)"
-                        class="px-2.5 py-1.5 rounded-xl text-xs font-bold font-mono border border-slate-200 dark:border-slate-700 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 hover:text-indigo-600 transition-colors cursor-pointer"
+                        class="px-2.5 py-1.5 rounded-xl text-xs font-bold font-mono border transition-all cursor-pointer"
+                        :class="topupAmount === 2000000 ? 'bg-indigo-600 text-white border-indigo-600 shadow-2xs font-extrabold' : 'border-slate-200 dark:border-slate-700 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 hover:text-indigo-600'"
                     >
                         + 2.000.000
                     </button>
                     <button
                         type="button"
                         @click="setTopup(5000000)"
-                        class="px-2.5 py-1.5 rounded-xl text-xs font-bold font-mono border border-slate-200 dark:border-slate-700 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 hover:text-indigo-600 transition-colors cursor-pointer"
+                        class="px-2.5 py-1.5 rounded-xl text-xs font-bold font-mono border transition-all cursor-pointer"
+                        :class="topupAmount === 5000000 ? 'bg-indigo-600 text-white border-indigo-600 shadow-2xs font-extrabold' : 'border-slate-200 dark:border-slate-700 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 hover:text-indigo-600'"
                     >
                         + 5.000.000
                     </button>
@@ -225,12 +240,98 @@
                         type="number"
                         name="amount"
                         id="amount"
-                        x-model="topupAmount"
+                        x-model.number="topupAmount"
                         required
                         min="1000"
                         step="1000"
                         class="w-full pl-10 pr-3.5 py-2.5 rounded-2xl border border-slate-300 dark:border-slate-600 text-sm font-black font-mono dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
                     >
+                </div>
+            </div>
+
+            <!-- KOTAK SIMULASI LIVE PERHITUNGAN AKUMULATIF SALDO -->
+            <div class="p-3.5 rounded-2xl bg-gradient-to-r from-emerald-50/70 via-slate-50 to-indigo-50/70 dark:from-slate-800 dark:via-slate-800 dark:to-slate-800 border border-emerald-100 dark:border-slate-700 space-y-2">
+                <div class="flex items-center justify-between text-xs">
+                    <span class="text-slate-600 dark:text-slate-400 font-medium">Sisa Saldo Awal Saat Ini:</span>
+                    <span class="font-bold font-mono text-slate-700 dark:text-slate-200">
+                        Rp <span x-text="formatRupiah(currentBalance)"></span>
+                    </span>
+                </div>
+                <div class="flex items-center justify-between text-xs">
+                    <span class="text-emerald-700 dark:text-emerald-400 font-semibold">+ Nominal Ditambahkan:</span>
+                    <span class="font-bold font-mono text-emerald-600 dark:text-emerald-400">
+                        + Rp <span x-text="formatRupiah(topupAmount)"></span>
+                    </span>
+                </div>
+                <div class="pt-2 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                    <div class="flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        <span class="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white">Estimasi Saldo Akhir:</span>
+                    </div>
+                    <span class="text-sm font-black font-mono text-emerald-600 dark:text-emerald-400">
+                        = Rp <span x-text="formatRupiah(finalBalance)"></span>
+                    </span>
+                </div>
+                <p class="text-[10px] text-slate-500 dark:text-slate-400 italic leading-relaxed pt-0.5">
+                    *Sisa saldo lama tersimpan aman dan otomatis diakumulasikan (dijumlahkan) ke saldo baru.
+                </p>
+            </div>
+
+            <!-- OPSI CENTANG: CATAT OTOMATIS KE PENGELUARAN TOKO -->
+            <div class="p-3.5 rounded-2xl bg-indigo-50/60 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/50 space-y-2.5">
+                <label class="flex items-start gap-2.5 cursor-pointer select-none">
+                    <input
+                        type="checkbox"
+                        name="record_expense"
+                        value="1"
+                        x-model="recordExpense"
+                        class="w-4 h-4 mt-0.5 rounded-md border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                    >
+                    <div>
+                        <span class="text-xs font-bold text-slate-800 dark:text-slate-200 block">
+                            Catat otomatis ke Pengeluaran Toko (Kulakan Saldo)
+                        </span>
+                        <span class="text-[11px] text-slate-500 dark:text-slate-400 leading-tight block mt-0.5">
+                            Mengurangi uang kas/rekening toko Anda di laporan keuangan agar pembukuan kas tetap sinkron.
+                        </span>
+                    </div>
+                </label>
+
+                <div x-show="recordExpense" x-cloak class="pt-2.5 border-t border-indigo-100 dark:border-indigo-900/40 space-y-2.5">
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1.5">
+                            Metode Pembayaran Kulakan:
+                        </label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <label
+                                class="flex items-center gap-2 p-2 rounded-xl border cursor-pointer text-xs font-semibold transition-all"
+                                :class="paymentMethod === 'transfer' ? 'border-indigo-500 bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-2xs ring-1 ring-indigo-500/20' : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'"
+                            >
+                                <input type="radio" name="payment_method" value="transfer" x-model="paymentMethod" class="sr-only">
+                                <span>🏦 Transfer Bank</span>
+                            </label>
+                            <label
+                                class="flex items-center gap-2 p-2 rounded-xl border cursor-pointer text-xs font-semibold transition-all"
+                                :class="paymentMethod === 'cash' ? 'border-indigo-500 bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-2xs ring-1 ring-indigo-500/20' : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'"
+                            >
+                                <input type="radio" name="payment_method" value="cash" x-model="paymentMethod" class="sr-only">
+                                <span>💵 Cash (Uang Kasir)</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="topup_notes" class="block text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">
+                            Catatan Top-Up (Opsional):
+                        </label>
+                        <input
+                            type="text"
+                            name="notes"
+                            id="topup_notes"
+                            placeholder="Contoh: Isi via BCA / Mandiri / Agen SiDOMPUL"
+                            class="w-full px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-600 text-xs dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400"
+                        >
+                    </div>
                 </div>
             </div>
 
@@ -244,7 +345,7 @@
                 </button>
                 <button
                     type="submit"
-                    class="px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs cursor-pointer flex items-center gap-1.5"
+                    class="px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs cursor-pointer flex items-center gap-1.5 active:scale-95 transition-all"
                 >
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M12 4v16m8-8H4"/></svg>
                     <span>Tambahkan ke Saldo</span>

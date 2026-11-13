@@ -238,6 +238,16 @@
                     </a>
                 @endif
 
+                @if(isset($presetCategories['deposit']) && $presetCategories['deposit'])
+                    <a
+                        href="{{ route('expenses.index', array_merge(request()->except(['page']), ['category_id' => $presetCategories['deposit']->id])) }}"
+                        class="px-3 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shrink-0 {{ request('category_id') == $presetCategories['deposit']->id ? 'bg-emerald-600 text-white font-bold shadow-xs' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200' }}"
+                    >
+                        <span>💳</span>
+                        <span>Kulakan Saldo</span>
+                    </a>
+                @endif
+
                 @if(isset($presetCategories['jajan']) && $presetCategories['jajan'])
                     <a
                         href="{{ route('expenses.index', array_merge(request()->except(['page']), ['category_id' => $presetCategories['jajan']->id])) }}"

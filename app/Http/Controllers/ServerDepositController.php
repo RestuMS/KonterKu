@@ -2,11 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Category;
 use App\Models\ServerDeposit;
 use App\Models\ServerDepositMutation;
+use App\Models\Transaction;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class ServerDepositController extends Controller
@@ -95,21 +98,85 @@ class ServerDepositController extends Controller
 
     /**
      * Top-up / Tambah saldo deposit server aplikasi.
+     * Logika: Saldo Akhir = Saldo Awal Tersisa + Nominal Top-Up (Akumulatif).
+     * Opsional: Otomatis dicatat ke Pengeluaran Kas Toko (Kulakan Saldo).
      */
     public function topup(Request $request): RedirectResponse
     {
         $validated = $request->validate([
             'amount' => ['required', 'numeric', 'min:1000'],
+            'record_expense' => ['nullable', 'boolean'],
+            'payment_method' => ['nullable', 'string', 'in:cash,transfer'],
+            'notes' => ['nullable', 'string', 'max:500'],
         ], [
             'amount.required' => 'Nominal top-up saldo wajib diisi.',
             'amount.numeric' => 'Nominal top-up harus berupa angka valid.',
             'amount.min' => 'Nominal top-up minimal Rp 1.000.',
         ]);
 
-        $deposit = ServerDeposit::addBalance((float) $validated['amount'], 'Top-Up / Tambah Saldo Manual');
+        $amount = (float) $validated['amount'];
+        $recordExpense = $request->boolean('record_expense');
+        $paymentMethod = $validated['payment_method'] ?? 'transfer';
+        $userNotes = $validated['notes'] ?? null;
 
-        return $this->redirectBackOrDashboard()
-            ->with('success', 'Saldo deposit berhasil ditambah sebesar Rp ' . number_format($validated['amount'], 0, ',', '.') . '. Saldo saat ini: Rp ' . number_format($deposit->balance, 0, ',', '.') . '.');
+        $expenseTransaction = null;
+        $deposit = null;
+
+        DB::transaction(function () use ($amount, $recordExpense, $paymentMethod, $userNotes, &$expenseTransaction, &$deposit) {
+            $deposit = ServerDeposit::getPrimary();
+            $serverName = $deposit->name ?? 'Server All Provider';
+
+            if ($recordExpense) {
+                $expenseCategory = Category::firstOrCreate(
+                    ['slug' => 'kulakan-deposit'],
+                    [
+                        'name' => 'Kulakan Saldo / Deposit',
+                        'type' => 'expense',
+                        'description' => 'Pengisian / pembelian saldo deposit server aplikasi All Provider',
+                    ]
+                );
+
+                $txDate = now();
+                $invoiceNumber = 'EXP-' . $txDate->format('Ymd') . '-' . strtoupper(substr(uniqid('', true), -5));
+
+                $expenseNotes = 'Kulakan / Top-Up Saldo ' . $serverName;
+                if ($userNotes) {
+                    $expenseNotes .= ' (' . $userNotes . ')';
+                }
+
+                $expenseTransaction = Transaction::create([
+                    'invoice_number' => $invoiceNumber,
+                    'type' => 'pengeluaran',
+                    'category_id' => $expenseCategory->id,
+                    'user_id' => auth()->id(),
+                    'transaction_date' => $txDate,
+                    'total_amount' => $amount,
+                    'payment_method' => $paymentMethod,
+                    'notes' => $expenseNotes,
+                ]);
+            }
+
+            $mutationReason = 'Top-Up / Tambah Saldo Manual';
+            if ($userNotes) {
+                $mutationReason .= ': ' . $userNotes;
+            } elseif ($recordExpense) {
+                $mutationReason .= ' (Tercatat di Pengeluaran Toko - ' . ($paymentMethod === 'cash' ? 'Cash' : 'Transfer') . ')';
+            }
+
+            $deposit = ServerDeposit::addBalance(
+                $amount,
+                $mutationReason,
+                $expenseTransaction ? 'transaction' : null,
+                $expenseTransaction?->id
+            );
+        });
+
+        $msg = 'Saldo deposit berhasil ditambah sebesar Rp ' . number_format($amount, 0, ',', '.') . '. Saldo saat ini: Rp ' . number_format($deposit->balance, 0, ',', '.') . '.';
+        if ($expenseTransaction) {
+            $msg .= ' Serta otomatis dicatat di Pengeluaran Toko (' . $expenseTransaction->invoice_number . ').';
+        }
+
+        return $this->redirectBackOrDashboard()->with('success', $msg);
     }
 
     /**
