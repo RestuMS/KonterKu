@@ -589,7 +589,33 @@
     <!-- MODAL 1: TOP-UP / TAMBAH SALDO DEPOSIT                                -->
     <!-- ===================================================================== -->
     <x-modal name="topup-deposit-modal" title="Top-Up / Tambah Saldo Deposit Server" maxWidth="md">
-        <form method="POST" action="{{ route('server-deposit.topup') }}" class="space-y-4">
+        <form
+            method="POST"
+            action="{{ route('server-deposit.topup') }}"
+            x-data="{
+                currentBalance: {{ (float) ($serverDeposit->balance ?? 0) }},
+                topupAmount: 500000,
+                recordExpense: false,
+                paymentMethod: 'transfer',
+                setTopup(val) {
+                    this.topupAmount = Number(val);
+                    this.$nextTick(() => {
+                        const inp = this.$el.closest('form').querySelector('input[name=amount]');
+                        if (inp) {
+                            inp.value = Number(val);
+                            inp.dispatchEvent(new Event('input', { bubbles: true }));
+                        }
+                    });
+                },
+                get finalBalance() {
+                    return Number(this.currentBalance || 0) + Number(this.topupAmount || 0);
+                },
+                formatRupiah(num) {
+                    return new Intl.NumberFormat('id-ID').format(Math.max(0, num || 0));
+                }
+            }"
+            class="space-y-4"
+        >
             @csrf
 
             <p class="text-xs text-slate-500 dark:text-slate-400">
@@ -784,7 +810,12 @@
     <!-- MODAL 2: KOREKSI / SET SALDO REAL SECARA MANUAL                       -->
     <!-- ===================================================================== -->
     <x-modal name="adjust-deposit-modal" title="Koreksi / Set Sisa Saldo Server" maxWidth="md">
-        <form method="POST" action="{{ route('server-deposit.adjust') }}" class="space-y-4">
+        <form
+            method="POST"
+            action="{{ route('server-deposit.adjust') }}"
+            x-data="{ newBalance: {{ (float) ($serverDeposit->balance ?? 0) }} }"
+            class="space-y-4"
+        >
             @csrf
 
             <p class="text-xs text-slate-500 dark:text-slate-400">
