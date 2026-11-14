@@ -747,7 +747,7 @@
                                     name="cost_price"
                                     x-model="costPrice"
                                     min="0"
-                                    step="0.01"
+                                    step="any"
                                     required
                                     class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-750 text-slate-900 dark:text-white text-xs font-mono font-bold focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                                 >
@@ -768,7 +768,7 @@
                                     name="selling_price"
                                     x-model="sellingPrice"
                                     min="0"
-                                    step="0.01"
+                                    step="any"
                                     required
                                     class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-750 text-slate-900 dark:text-white text-xs font-mono font-bold focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                                 >

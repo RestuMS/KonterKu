@@ -6,6 +6,7 @@ use App\Models\Category;
 use App\Models\ServerDeposit;
 use App\Models\ServerDepositMutation;
 use App\Models\Transaction;
+use App\Support\CurrencyHelper;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -103,15 +104,19 @@ class ServerDepositController extends Controller
      */
     public function topup(Request $request): RedirectResponse
     {
+        if ($request->has('amount')) {
+            $request->merge(['amount' => CurrencyHelper::parse($request->input('amount'))]);
+        }
+
         $validated = $request->validate([
-            'amount' => ['required', 'numeric', 'min:1000'],
+            'amount' => ['required', 'numeric', 'min:1'],
             'record_expense' => ['nullable', 'boolean'],
             'payment_method' => ['nullable', 'string', 'in:cash,transfer'],
             'notes' => ['nullable', 'string', 'max:500'],
         ], [
             'amount.required' => 'Nominal top-up saldo wajib diisi.',
             'amount.numeric' => 'Nominal top-up harus berupa angka valid.',
-            'amount.min' => 'Nominal top-up minimal Rp 1.000.',
+            'amount.min' => 'Nominal top-up minimal Rp 1.',
         ]);
 
         $amount = (float) $validated['amount'];
@@ -184,6 +189,10 @@ class ServerDepositController extends Controller
      */
     public function adjust(Request $request): RedirectResponse
     {
+        if ($request->has('new_balance')) {
+            $request->merge(['new_balance' => CurrencyHelper::parse($request->input('new_balance'))]);
+        }
+
         $validated = $request->validate([
             'new_balance' => ['required', 'numeric', 'min:0'],
         ], [
@@ -203,6 +212,10 @@ class ServerDepositController extends Controller
      */
     public function updateSettings(Request $request): RedirectResponse
     {
+        if ($request->has('min_alert_balance')) {
+            $request->merge(['min_alert_balance' => CurrencyHelper::parse($request->input('min_alert_balance'))]);
+        }
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'min_alert_balance' => ['required', 'numeric', 'min:0'],

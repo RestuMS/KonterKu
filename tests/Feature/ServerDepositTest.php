@@ -132,6 +132,34 @@ class ServerDepositTest extends TestCase
         $this->assertEquals(875000, (float) ServerDeposit::getPrimary()->balance);
     }
 
+    public function test_user_can_topup_and_adjust_with_irregular_and_formatted_numbers(): void
+    {
+        $user = User::factory()->create();
+
+        ServerDeposit::setBalance(0);
+
+        // 1. Top-up dengan angka tak bulat (contoh: 579678)
+        $response1 = $this->actingAs($user)->post('/server-deposit/topup', [
+            'amount' => 579678,
+        ]);
+        $response1->assertRedirect('/dashboard');
+        $this->assertEquals(579678, (float) ServerDeposit::getPrimary()->balance);
+
+        // 2. Top-up dengan format koma ribuan Indonesia ('579,678')
+        $response2 = $this->actingAs($user)->post('/server-deposit/topup', [
+            'amount' => '579,678',
+        ]);
+        $response2->assertRedirect('/dashboard');
+        $this->assertEquals(1159356, (float) ServerDeposit::getPrimary()->balance);
+
+        // 3. Koreksi saldo dengan format string bertitik ('579.678')
+        $response3 = $this->actingAs($user)->post('/server-deposit/adjust', [
+            'new_balance' => '579.678',
+        ]);
+        $response3->assertRedirect('/dashboard');
+        $this->assertEquals(579678, (float) ServerDeposit::getPrimary()->balance);
+    }
+
     public function test_user_can_update_server_deposit_settings(): void
     {
         $user = User::factory()->create();

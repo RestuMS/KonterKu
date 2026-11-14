@@ -343,7 +343,7 @@
                                     type="number"
                                     name="amount"
                                     min="0.01"
-                                    step="0.01"
+                                    step="any"
                                     x-model="amount"
                                     required
                                     placeholder="0"

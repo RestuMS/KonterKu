@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\Product;
+use App\Support\CurrencyHelper;
 use Illuminate\Foundation\Http\FormRequest;
 
 class KasbonRequest extends FormRequest
@@ -10,6 +11,20 @@ class KasbonRequest extends FormRequest
     public function authorize(): bool
     {
         return true;
+    }
+
+    protected function prepareForValidation(): void
+    {
+        $merge = [];
+        if ($this->has('amount')) {
+            $merge['amount'] = CurrencyHelper::parse($this->input('amount'));
+        }
+        if ($this->has('cost_price') && $this->input('cost_price') !== null && $this->input('cost_price') !== '') {
+            $merge['cost_price'] = CurrencyHelper::parse($this->input('cost_price'));
+        }
+        if (!empty($merge)) {
+            $this->merge($merge);
+        }
     }
 
     public function rules(): array

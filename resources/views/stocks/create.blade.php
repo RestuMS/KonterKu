@@ -470,7 +470,7 @@
                                         x-model="expenseAmount"
                                         @input="expenseAmountEdited = true"
                                         min="0"
-                                        step="1"
+                                        step="any"
                                         :placeholder="suggestedExpenseAmount + ' (Otomatis)'"
                                         class="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-mono font-bold focus:ring-2 focus:ring-emerald-500 shadow-2xs"
                                     >

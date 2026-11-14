@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Support\CurrencyHelper;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -10,6 +11,36 @@ class ProductRequest extends FormRequest
     public function authorize(): bool
     {
         return true;
+    }
+
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('items') && is_array($this->items)) {
+            $items = $this->items;
+            foreach ($items as $k => $item) {
+                if (isset($item['cost_price'])) {
+                    $items[$k]['cost_price'] = CurrencyHelper::parse($item['cost_price']);
+                }
+                if (isset($item['selling_price'])) {
+                    $items[$k]['selling_price'] = CurrencyHelper::parse($item['selling_price']);
+                }
+            }
+            $this->merge(['items' => $items]);
+        }
+
+        $merge = [];
+        if ($this->has('cost_price') && $this->input('cost_price') !== null) {
+            $merge['cost_price'] = CurrencyHelper::parse($this->input('cost_price'));
+        }
+        if ($this->has('selling_price') && $this->input('selling_price') !== null) {
+            $merge['selling_price'] = CurrencyHelper::parse($this->input('selling_price'));
+        }
+        if ($this->has('expense_amount') && $this->input('expense_amount') !== null) {
+            $merge['expense_amount'] = CurrencyHelper::parse($this->input('expense_amount'));
+        }
+        if (!empty($merge)) {
+            $this->merge($merge);
+        }
     }
 
     public function rules(): array

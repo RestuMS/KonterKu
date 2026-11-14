@@ -594,21 +594,33 @@
             action="{{ route('server-deposit.topup') }}"
             x-data="{
                 currentBalance: {{ (float) ($serverDeposit->balance ?? 0) }},
-                topupAmount: 500000,
+                topupAmount: '500.000',
                 recordExpense: false,
                 paymentMethod: 'transfer',
+                cleanNumber(val) {
+                    if (val === null || val === undefined) return 0;
+                    let s = String(val).trim().replace(/[^\d.,]/g, '');
+                    if (/^\d{1,3}[.,]\d{3}$/.test(s)) {
+                        s = s.replace(/[.,]/g, '');
+                    } else if (/^\d{1,3}([,.]\d{3})+/.test(s)) {
+                        s = s.replace(/[,.]/g, '');
+                    } else {
+                        s = s.replace(/,/g, '');
+                    }
+                    return parseFloat(s) || 0;
+                },
                 setTopup(val) {
-                    this.topupAmount = Number(val);
+                    this.topupAmount = new Intl.NumberFormat('id-ID').format(val);
                     this.$nextTick(() => {
                         const inp = this.$el.closest('form').querySelector('input[name=amount]');
                         if (inp) {
-                            inp.value = Number(val);
+                            inp.value = this.topupAmount;
                             inp.dispatchEvent(new Event('input', { bubbles: true }));
                         }
                     });
                 },
                 get finalBalance() {
-                    return Number(this.currentBalance || 0) + Number(this.topupAmount || 0);
+                    return Number(this.currentBalance || 0) + this.cleanNumber(this.topupAmount);
                 },
                 formatRupiah(num) {
                     return new Intl.NumberFormat('id-ID').format(Math.max(0, num || 0));
@@ -632,7 +644,7 @@
                         type="button"
                         @click="setTopup(100000)"
                         class="px-2.5 py-1.5 rounded-xl text-xs font-bold font-mono border transition-all cursor-pointer"
-                        :class="topupAmount === 100000 ? 'bg-indigo-600 text-white border-indigo-600 shadow-2xs font-extrabold' : 'border-slate-200 dark:border-slate-700 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 hover:text-indigo-600'"
+                        :class="cleanNumber(topupAmount) === 100000 ? 'bg-indigo-600 text-white border-indigo-600 shadow-2xs font-extrabold' : 'border-slate-200 dark:border-slate-700 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 hover:text-indigo-600'"
                     >
                         + 100.000
                     </button>
@@ -640,7 +652,7 @@
                         type="button"
                         @click="setTopup(200000)"
                         class="px-2.5 py-1.5 rounded-xl text-xs font-bold font-mono border transition-all cursor-pointer"
-                        :class="topupAmount === 200000 ? 'bg-indigo-600 text-white border-indigo-600 shadow-2xs font-extrabold' : 'border-slate-200 dark:border-slate-700 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 hover:text-indigo-600'"
+                        :class="cleanNumber(topupAmount) === 200000 ? 'bg-indigo-600 text-white border-indigo-600 shadow-2xs font-extrabold' : 'border-slate-200 dark:border-slate-700 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 hover:text-indigo-600'"
                     >
                         + 200.000
                     </button>
@@ -648,7 +660,7 @@
                         type="button"
                         @click="setTopup(500000)"
                         class="px-2.5 py-1.5 rounded-xl text-xs font-bold font-mono border transition-all cursor-pointer"
-                        :class="topupAmount === 500000 ? 'bg-indigo-600 text-white border-indigo-600 shadow-2xs font-extrabold' : 'border-slate-200 dark:border-slate-700 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 hover:text-indigo-600'"
+                        :class="cleanNumber(topupAmount) === 500000 ? 'bg-indigo-600 text-white border-indigo-600 shadow-2xs font-extrabold' : 'border-slate-200 dark:border-slate-700 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 hover:text-indigo-600'"
                     >
                         + 500.000
                     </button>
@@ -656,7 +668,7 @@
                         type="button"
                         @click="setTopup(1000000)"
                         class="px-2.5 py-1.5 rounded-xl text-xs font-bold font-mono border transition-all cursor-pointer"
-                        :class="topupAmount === 1000000 ? 'bg-indigo-600 text-white border-indigo-600 shadow-2xs font-extrabold' : 'border-slate-200 dark:border-slate-700 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 hover:text-indigo-600'"
+                        :class="cleanNumber(topupAmount) === 1000000 ? 'bg-indigo-600 text-white border-indigo-600 shadow-2xs font-extrabold' : 'border-slate-200 dark:border-slate-700 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 hover:text-indigo-600'"
                     >
                         + 1.000.000
                     </button>
@@ -664,7 +676,7 @@
                         type="button"
                         @click="setTopup(2000000)"
                         class="px-2.5 py-1.5 rounded-xl text-xs font-bold font-mono border transition-all cursor-pointer"
-                        :class="topupAmount === 2000000 ? 'bg-indigo-600 text-white border-indigo-600 shadow-2xs font-extrabold' : 'border-slate-200 dark:border-slate-700 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 hover:text-indigo-600'"
+                        :class="cleanNumber(topupAmount) === 2000000 ? 'bg-indigo-600 text-white border-indigo-600 shadow-2xs font-extrabold' : 'border-slate-200 dark:border-slate-700 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 hover:text-indigo-600'"
                     >
                         + 2.000.000
                     </button>
@@ -672,7 +684,7 @@
                         type="button"
                         @click="setTopup(5000000)"
                         class="px-2.5 py-1.5 rounded-xl text-xs font-bold font-mono border transition-all cursor-pointer"
-                        :class="topupAmount === 5000000 ? 'bg-indigo-600 text-white border-indigo-600 shadow-2xs font-extrabold' : 'border-slate-200 dark:border-slate-700 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 hover:text-indigo-600'"
+                        :class="cleanNumber(topupAmount) === 5000000 ? 'bg-indigo-600 text-white border-indigo-600 shadow-2xs font-extrabold' : 'border-slate-200 dark:border-slate-700 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 hover:text-indigo-600'"
                     >
                         + 5.000.000
                     </button>
@@ -689,13 +701,13 @@
                         Rp
                     </span>
                     <input
-                        type="number"
+                        type="text"
+                        inputmode="numeric"
                         name="amount"
                         id="amount"
-                        x-model.number="topupAmount"
-                        min="1000"
-                        step="1000"
+                        x-model="topupAmount"
                         required
+                        placeholder="Contoh: 579.678"
                         class="w-full pl-10 pr-3.5 py-2.5 rounded-2xl border border-slate-300 dark:border-slate-600 text-sm font-mono font-bold dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
                     >
                 </div>
@@ -712,7 +724,7 @@
                 <div class="flex items-center justify-between text-xs">
                     <span class="text-emerald-700 dark:text-emerald-400 font-semibold">+ Nominal Ditambahkan:</span>
                     <span class="font-bold font-mono text-emerald-600 dark:text-emerald-400">
-                        + Rp <span x-text="formatRupiah(topupAmount)"></span>
+                        + Rp <span x-text="formatRupiah(cleanNumber(topupAmount))"></span>
                     </span>
                 </div>
                 <div class="pt-2 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between">
@@ -813,7 +825,21 @@
         <form
             method="POST"
             action="{{ route('server-deposit.adjust') }}"
-            x-data="{ newBalance: {{ (float) ($serverDeposit->balance ?? 0) }} }"
+            x-data="{
+                newBalance: '{{ number_format((float) ($serverDeposit->balance ?? 0), 0, ',', '.') }}',
+                cleanNumber(val) {
+                    if (val === null || val === undefined) return 0;
+                    let s = String(val).trim().replace(/[^\d.,]/g, '');
+                    if (/^\d{1,3}[.,]\d{3}$/.test(s)) {
+                        s = s.replace(/[.,]/g, '');
+                    } else if (/^\d{1,3}([,.]\d{3})+/.test(s)) {
+                        s = s.replace(/[,.]/g, '');
+                    } else {
+                        s = s.replace(/,/g, '');
+                    }
+                    return parseFloat(s) || 0;
+                }
+            }"
             class="space-y-4"
         >
             @csrf
@@ -831,12 +857,12 @@
                         Rp
                     </span>
                     <input
-                        type="number"
+                        type="text"
+                        inputmode="numeric"
                         name="new_balance"
                         id="new_balance"
-                        x-model.number="newBalance"
-                        min="0"
-                        step="any"
+                        x-model="newBalance"
+                        placeholder="Contoh: 579.678"
                         required
                         class="w-full pl-9 pr-3 py-2.5 rounded-2xl border border-slate-300 dark:border-slate-600 text-sm font-mono font-bold dark:bg-slate-800 text-slate-900 dark:text-slate-100"
                     >

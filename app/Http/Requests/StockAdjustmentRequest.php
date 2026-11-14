@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Support\CurrencyHelper;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StockAdjustmentRequest extends FormRequest
@@ -9,6 +10,20 @@ class StockAdjustmentRequest extends FormRequest
     public function authorize(): bool
     {
         return true;
+    }
+
+    protected function prepareForValidation(): void
+    {
+        $merge = [];
+        if ($this->has('cost_price') && $this->input('cost_price') !== null && $this->input('cost_price') !== '') {
+            $merge['cost_price'] = CurrencyHelper::parse($this->input('cost_price'));
+        }
+        if ($this->has('expense_amount') && $this->input('expense_amount') !== null && $this->input('expense_amount') !== '') {
+            $merge['expense_amount'] = CurrencyHelper::parse($this->input('expense_amount'));
+        }
+        if (!empty($merge)) {
+            $this->merge($merge);
+        }
     }
 
     public function rules(): array

@@ -1546,7 +1546,7 @@
                                             type="number"
                                             name="cost_price"
                                             min="0"
-                                            step="0.01"
+                                            step="any"
                                             x-model.number="costPrice"
                                             class="w-full pl-9 pr-3 py-2 rounded-xl border @error('cost_price') border-rose-500 ring-1 ring-rose-500 @else border-slate-300 dark:border-slate-600 @enderror bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-xs font-mono font-bold focus:ring-2 focus:ring-indigo-500 shadow-2xs"
                                         >
@@ -1604,7 +1604,7 @@
                                             type="number"
                                             name="unit_price"
                                             min="0"
-                                            step="0.01"
+                                            step="any"
                                             x-model.number="sellingPrice"
                                             @input="updateTotalFromUnit()"
                                             placeholder="0"
@@ -1629,7 +1629,7 @@
                                             type="number"
                                             name="amount"
                                             min="0.01"
-                                            step="0.01"
+                                            step="any"
                                             x-model.number="totalAmount"
                                             @input="updateUnitFromTotal()"
                                             required

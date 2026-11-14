@@ -1058,7 +1058,7 @@
                                     :name="`items[${index}][cost_price]`"
                                     x-model="item.cost_price"
                                     min="0"
-                                    step="0.01"
+                                    step="any"
                                     placeholder="Contoh: 9800"
                                     required
                                     class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-750 text-slate-900 dark:text-white text-xs font-mono font-bold focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 shadow-2xs"
@@ -1075,7 +1075,7 @@
                                     :name="`items[${index}][selling_price]`"
                                     x-model="item.selling_price"
                                     min="0"
-                                    step="0.01"
+                                    step="any"
                                     placeholder="Contoh: 12000"
                                     required
                                     class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-750 text-slate-900 dark:text-white text-xs font-mono font-bold focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 shadow-2xs"
@@ -1241,7 +1241,7 @@
                                 name="expense_amount"
                                 x-model="customExpenseAmount"
                                 min="0"
-                                step="1"
+                                step="any"
                                 :placeholder="Math.round(grandTotalStockCost) + ' (Otomatis)'"
                                 class="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-750 text-slate-900 dark:text-white font-mono font-bold focus:ring-2 focus:ring-indigo-500 shadow-2xs"
                             >

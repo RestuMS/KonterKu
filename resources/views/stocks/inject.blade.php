@@ -182,7 +182,7 @@
                                     name="selling_price"
                                     x-model.number="sellingPrice"
                                     min="0"
-                                    step="1"
+                                    step="any"
                                     placeholder="Contoh: 15000"
                                     class="w-full pl-11 pr-4 py-3 rounded-2xl border @error('selling_price') border-rose-500 ring-2 ring-rose-500/20 @else border-slate-300 dark:border-slate-600 @enderror bg-slate-50/50 dark:bg-slate-800 text-slate-900 dark:text-white font-mono font-bold text-base focus:ring-2 focus:ring-indigo-500 shadow-2xs transition-all"
                                 >
@@ -334,7 +334,7 @@
                                         name="cost_price"
                                         x-model.number="costPrice"
                                         min="0"
-                                        step="1"
+                                        step="any"
                                         required
                                         placeholder="0"
                                         class="w-full pl-11 pr-4 py-3.5 rounded-2xl border @error('cost_price') border-rose-500 ring-2 ring-rose-500/20 @else border-slate-300 dark:border-slate-600 @enderror bg-slate-50/50 dark:bg-slate-800 text-slate-900 dark:text-white font-mono font-black text-xl focus:ring-3 focus:ring-emerald-500/20 focus:border-emerald-500 shadow-2xs transition-all"
