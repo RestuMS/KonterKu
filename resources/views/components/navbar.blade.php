@@ -1,7 +1,7 @@
 @props(['title' => 'Dashboard'])
 
 @php
-    $lowStockCount = $lowStockCount ?? (\App\Models\Product::where('is_active', true)->whereColumn('stock', '<=', 'min_stock')->count());
+    $lowStockCount = $lowStockCount ?? 0;
 @endphp
 
 <header class="sticky top-0 z-30 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-700/80 transition-colors">

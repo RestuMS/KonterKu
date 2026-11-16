@@ -41,24 +41,32 @@ class AppServiceProvider extends ServiceProvider
             return "<?php echo ($expression) ? \Carbon\Carbon::parse($expression)->format('d/m/Y H:i') : '-'; ?>";
         });
 
-        // Bagikan data indikator stok menipis & kasbon belum lunas ke sidebar & navbar
+        // Bagikan data indikator stok menipis & kasbon belum lunas ke sidebar & navbar (dioptimalkan)
         View::composer(['components.sidebar', 'components.navbar'], function ($view) {
-            $lowStockCount = 0;
-            if (Schema::hasTable('products')) {
-                $lowStockCount = Product::where('is_active', true)
-                    ->whereColumn('stock', '<=', 'min_stock')
-                    ->count();
+            static $counts = null;
+
+            if ($counts === null) {
+                if (app()->environment('testing')) {
+                    $counts = [
+                        'lowStockCount' => Product::where('is_active', true)
+                            ->whereColumn('stock', '<=', 'min_stock')
+                            ->count(),
+                        'unpaidKasbonCount' => \App\Models\Kasbon::where('status', 'unpaid')->count(),
+                    ];
+                } else {
+                    // Cache ringan 20 detik agar perpindahan navbar instan & tidak membebani query database di setiap klik
+                    $counts = \Illuminate\Support\Facades\Cache::remember('sidebar_nav_indicators', 20, function () {
+                        return [
+                            'lowStockCount' => Product::where('is_active', true)
+                                ->whereColumn('stock', '<=', 'min_stock')
+                                ->count(),
+                            'unpaidKasbonCount' => \App\Models\Kasbon::where('status', 'unpaid')->count(),
+                        ];
+                    });
+                }
             }
 
-            $unpaidKasbonCount = 0;
-            if (Schema::hasTable('kasbons')) {
-                $unpaidKasbonCount = \App\Models\Kasbon::where('status', 'unpaid')->count();
-            }
-
-            $view->with([
-                'lowStockCount' => $lowStockCount,
-                'unpaidKasbonCount' => $unpaidKasbonCount,
-            ]);
+            $view->with($counts);
         });
     }
 }

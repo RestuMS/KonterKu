@@ -7,21 +7,15 @@
     <title>{{ $title ?? 'KonterKu' }} — Kelola Keuangan & Stok Konter</title>
 
     <!-- Favicon -->
-    @if(file_exists(public_path('images/favicon.png')))
-        <link rel="icon" type="image/png" href="{{ asset('images/favicon.png') }}">
-    @elseif(file_exists(public_path('images/logo.png')))
-        <link rel="icon" type="image/png" href="{{ asset('images/logo.png') }}">
-    @elseif(file_exists(public_path('images/logo.svg')))
-        <link rel="icon" type="image/svg+xml" href="{{ asset('images/logo.svg') }}">
-    @elseif(file_exists(public_path('favicon.svg')))
-        <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}">
-    @else
-        <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
-    @endif
+    <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}">
+    <link rel="alternate icon" href="{{ asset('favicon.ico') }}">
 
-    <!-- Google Fonts -->
+    <!-- DNS Prefetch & Preconnect untuk Kecepatan Loading -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com">
+    <link rel="dns-prefetch" href="https://fonts.gstatic.com">
+    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
     <!-- Tailwind CSS / Vite -->
@@ -98,6 +92,43 @@
             </footer>
         </div>
     </div>
+
+    <!-- Instant Prefetch Navigation untuk Perpindahan Menu Super Cepat -->
+    <script>
+        (function() {
+            const prefetched = new Set();
+            function prefetchUrl(url) {
+                if (!url || prefetched.has(url)) return;
+                try {
+                    const parsed = new URL(url, window.location.origin);
+                    if (parsed.origin !== window.location.origin) return;
+                    if (parsed.pathname === window.location.pathname && parsed.search === window.location.search) return;
+                    if (parsed.pathname.includes('/logout') || parsed.pathname.includes('/delete') || parsed.pathname.includes('/download') || parsed.pathname.includes('/export')) return;
+                    
+                    prefetched.add(url);
+                    const link = document.createElement('link');
+                    link.rel = 'prefetch';
+                    link.href = url;
+                    link.as = 'document';
+                    document.head.appendChild(link);
+                } catch (e) {}
+            }
+
+            document.addEventListener('mouseover', function(e) {
+                const a = e.target.closest('a');
+                if (a && a.href && !a.hasAttribute('download') && a.target !== '_blank') {
+                    prefetchUrl(a.href);
+                }
+            }, { passive: true });
+
+            document.addEventListener('touchstart', function(e) {
+                const a = e.target.closest('a');
+                if (a && a.href && !a.hasAttribute('download') && a.target !== '_blank') {
+                    prefetchUrl(a.href);
+                }
+            }, { passive: true });
+        })();
+    </script>
 
     {{ $scripts ?? '' }}
 </body>

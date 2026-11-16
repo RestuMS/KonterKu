@@ -7,21 +7,15 @@
     <title>{{ $title ?? 'Autentikasi' }} — KonterKu</title>
 
     <!-- Favicon -->
-    @if(file_exists(public_path('images/favicon.png')))
-        <link rel="icon" type="image/png" href="{{ asset('images/favicon.png') }}">
-    @elseif(file_exists(public_path('images/logo.png')))
-        <link rel="icon" type="image/png" href="{{ asset('images/logo.png') }}">
-    @elseif(file_exists(public_path('images/logo.svg')))
-        <link rel="icon" type="image/svg+xml" href="{{ asset('images/logo.svg') }}">
-    @elseif(file_exists(public_path('favicon.svg')))
-        <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}">
-    @else
-        <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
-    @endif
+    <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}">
+    <link rel="alternate icon" href="{{ asset('favicon.ico') }}">
 
-    <!-- Google Fonts -->
+    <!-- DNS Prefetch & Preconnect untuk Kecepatan Loading -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com">
+    <link rel="dns-prefetch" href="https://fonts.gstatic.com">
+    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
     <!-- Tailwind CSS / Vite -->
