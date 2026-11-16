@@ -617,6 +617,7 @@
                 const cogsData = {!! json_encode(array_column($dailyTrend, 'cogs')) !!};
                 const grossProfitData = {!! json_encode(array_column($dailyTrend, 'gross_profit')) !!};
                 const expenseData = {!! json_encode(array_column($dailyTrend, 'expense')) !!};
+                const kulakanData = {!! json_encode(array_column($dailyTrend, 'kulakan_expense')) !!};
 
                 // Gradient mulus untuk Laba Bersih
                 const profitGradient = ctx.createLinearGradient(0, 0, 0, 290);
@@ -685,13 +686,18 @@
                                         const cogs = cogsData[idx] || 0;
                                         const gross = grossProfitData[idx] || 0;
                                         const exp = expenseData[idx] || 0;
-                                        return [
+                                        const kulakan = (kulakanData && kulakanData[idx]) ? kulakanData[idx] : 0;
+                                        const lines = [
                                             '───────────────────────',
                                             '• Omzet Kasir: Rp ' + inc.toLocaleString('id-ID'),
-                                            '• Modal Kulakan (HPP): -Rp ' + cogs.toLocaleString('id-ID'),
+                                            '• Modal HPP Terjual: -Rp ' + cogs.toLocaleString('id-ID'),
                                             '• Laba Kotor Penjualan: Rp ' + gross.toLocaleString('id-ID'),
-                                            '• Beban Pengeluaran: -Rp ' + exp.toLocaleString('id-ID'),
+                                            '• Beban Operasional: -Rp ' + exp.toLocaleString('id-ID'),
                                         ];
+                                        if (kulakan > 0) {
+                                            lines.push('• Kulakan Stok/Saldo: Rp ' + kulakan.toLocaleString('id-ID') + ' (Aset)');
+                                        }
+                                        return lines;
                                     }
                                 }
                             }
@@ -707,6 +713,7 @@
                                 }
                             },
                             y: {
+                                suggestedMin: 0,
                                 grid: {
                                     color: 'rgba(148, 163, 184, 0.12)',
                                     drawBorder: false,

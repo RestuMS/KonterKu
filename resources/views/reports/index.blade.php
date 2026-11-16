@@ -366,9 +366,15 @@
                         <div class="mt-3">
                             <div class="text-2xl font-black font-mono tracking-tight text-rose-600 dark:text-rose-400">- @rupiah($financialSummary['total_expense'])</div>
                             <div class="mt-2 text-xs text-slate-500 dark:text-slate-400 flex items-center justify-between">
-                                <span>Jajan, bensin, toko</span>
+                                <span>Operasional: @rupiah($financialSummary['operational_expense'] ?? $financialSummary['total_expense'])</span>
                                 <span class="font-bold font-mono px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 text-[11px]">{{ $financialSummary['expense_count'] }} Catatan</span>
                             </div>
+                            @if(($financialSummary['kulakan_expense'] ?? 0) > 0)
+                                <div class="mt-1 text-[11px] text-slate-500 dark:text-slate-400 flex items-center justify-between">
+                                    <span>Kulakan Stok/Saldo (Aset):</span>
+                                    <span class="font-mono font-semibold text-slate-700 dark:text-slate-300">@rupiah($financialSummary['kulakan_expense'])</span>
+                                </div>
+                            @endif
                         </div>
                     </div>
 
@@ -385,7 +391,7 @@
                                 {{ $financialSummary['net_profit'] >= 0 ? '+' : '' }}@rupiah($financialSummary['net_profit'])
                             </div>
                             <div class="mt-2 text-xs text-slate-500 dark:text-slate-400 flex items-center justify-between">
-                                <span>Omzet &minus; HPP &minus; Beban</span>
+                                <span>Laba Kotor &minus; Beban Toko</span>
                                 <span class="font-bold font-mono px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 text-[11px]">Keuntungan Riil</span>
                             </div>
                             <div class="mt-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-400 flex items-center justify-between">
@@ -485,14 +491,18 @@
                 $totalCogs = (float) ($financialSummary['total_cogs'] ?? 0);
                 $grossProfit = (float) ($financialSummary['gross_profit'] ?? 0);
                 $totalExpense = (float) ($financialSummary['total_expense'] ?? 0);
+                $operationalExpense = (float) ($financialSummary['operational_expense'] ?? $totalExpense);
+                $kulakanExpense = (float) ($financialSummary['kulakan_expense'] ?? 0);
                 $netProfit = (float) ($financialSummary['net_profit'] ?? 0);
                 $incomeCount = (int) ($financialSummary['income_count'] ?? 0);
                 $expenseCount = (int) ($financialSummary['expense_count'] ?? 0);
+                $operationalCount = (int) ($financialSummary['operational_count'] ?? $expenseCount);
+                $kulakanCount = (int) ($financialSummary['kulakan_count'] ?? 0);
 
                 // Rasio & Margin Finansial
                 $grossMarginPct = $totalIncome > 0 ? round(($grossProfit / $totalIncome) * 100, 1) : 0;
                 $cogsPct = $totalIncome > 0 ? min(100, max(0, round(($totalCogs / $totalIncome) * 100, 1))) : 0;
-                $expensePct = $totalIncome > 0 ? min(100, max(0, round(($totalExpense / $totalIncome) * 100, 1))) : 0;
+                $expensePct = $totalIncome > 0 ? min(100, max(0, round(($operationalExpense / $totalIncome) * 100, 1))) : 0;
                 $netProfitPct = $totalIncome > 0 ? round(($netProfit / $totalIncome) * 100, 1) : 0;
                 $netProfitBarWidth = max(0, min(100, $netProfitPct));
                 $avgProfitPerTx = $incomeCount > 0 ? round($grossProfit / $incomeCount) : 0;
@@ -653,8 +663,8 @@
                                     </span>
                                 </div>
                                 <div>
-                                    <div class="text-base font-black font-mono text-rose-600 dark:text-rose-400">- @rupiah($totalExpense)</div>
-                                    <span class="text-[10px] text-slate-400">{{ $expenseCount }}x Pengeluaran Toko</span>
+                                    <div class="text-base font-black font-mono text-rose-600 dark:text-rose-400">- @rupiah($operationalExpense)</div>
+                                    <span class="text-[10px] text-slate-400">{{ $operationalCount }}x Beban Operasional</span>
                                 </div>
                             </div>
 
@@ -726,7 +736,7 @@
                                 </div>
                             </div>
                             <div class="text-right font-mono">
-                                <span class="font-bold text-rose-700 dark:text-rose-400 block">@rupiah($totalExpense)</span>
+                                <span class="font-bold text-rose-700 dark:text-rose-400 block">@rupiah($operationalExpense)</span>
                                 <span class="text-[10px] text-slate-400">{{ $expensePct }}%</span>
                             </div>
                         </div>
@@ -841,14 +851,31 @@
                                         </div>
                                     </div>
                                     <span class="font-mono font-bold text-rose-600 dark:text-rose-400 text-sm">
-                                        - @rupiah($totalExpense)
+                                        - @rupiah($operationalExpense)
                                     </span>
                                 </div>
                                 <div class="flex items-center justify-between text-[11px] text-slate-400 pt-2 border-t border-rose-200/60 dark:border-slate-700/60">
-                                    <span>Jumlah Catatan Beban Toko</span>
-                                    <span class="font-mono font-semibold text-rose-600">{{ $expenseCount }} catatan</span>
+                                    <span>Jumlah Catatan Beban Operasional</span>
+                                    <span class="font-mono font-semibold text-rose-600">{{ $operationalCount }} catatan</span>
                                 </div>
                             </div>
+
+                            @if($kulakanExpense > 0)
+                                <!-- INFO BELANJA STOK / KULAKAN SALDO (ASET TOKO) -->
+                                <div class="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/70 dark:border-slate-700/60 flex items-center justify-between text-xs">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-base">📦</span>
+                                        <div>
+                                            <span class="font-bold text-slate-800 dark:text-slate-200 block">Belanja Modal Stok & Saldo Server (Aset Toko)</span>
+                                            <span class="text-[11px] text-slate-500">Tidak memotong laba toko karena modal barang terjual sudah tercakup di HPP (B)</span>
+                                        </div>
+                                    </div>
+                                    <div class="text-right font-mono">
+                                        <span class="font-bold text-slate-700 dark:text-slate-300 block">@rupiah($kulakanExpense)</span>
+                                        <span class="text-[10px] text-slate-400">{{ $kulakanCount }} transaksi</span>
+                                    </div>
+                                </div>
+                            @endif
 
                             <!-- BAGIAN E: LABA KEUNTUNGAN BERSIH AKHIR (FINAL = C - D) -->
                             <div class="p-5 rounded-2xl bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 dark:from-emerald-950/50 dark:to-slate-800 border-2 border-emerald-400/90 dark:border-emerald-700 shadow-sm flex items-center justify-between">

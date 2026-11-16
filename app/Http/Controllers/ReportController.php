@@ -559,7 +559,9 @@ class ReportController extends Controller
                 fputcsv($handle, ['Total Pemasukan (Omzet Kasir)', $financialSummary['total_income']]);
                 fputcsv($handle, ['Beban Pokok Penjualan (Modal HPP Terdata)', $financialSummary['total_cogs']]);
                 fputcsv($handle, ['Laba Kotor Penjualan (Gross Profit)', $financialSummary['gross_profit']]);
-                fputcsv($handle, ['Total Beban Pengeluaran Toko', $financialSummary['total_expense']]);
+                fputcsv($handle, ['Beban Pengeluaran Operasional Toko', $financialSummary['operational_expense']]);
+                fputcsv($handle, ['Belanja Modal Kulakan Stok & Saldo Server (Aset Persediaan)', $financialSummary['kulakan_expense']]);
+                fputcsv($handle, ['Total Seluruh Pengeluaran Kas', $financialSummary['total_expense']]);
                 fputcsv($handle, ['Laba Keuntungan Bersih Toko (Net Profit)', $financialSummary['net_profit']]);
                 fputcsv($handle, ['Arus Kas Bersih (Net Cash Flow)', $financialSummary['net_cashflow']]);
                 fputcsv($handle, ['Kelengkapan Data HPP Item Transaksi (%)', $financialSummary['cost_coverage_percentage'] . '%']);
@@ -574,11 +576,28 @@ class ReportController extends Controller
      */
     private function calculateFinancialSummary(Carbon $start, Carbon $end): array
     {
-        $transactions = Transaction::whereBetween('transaction_date', [$start, $end])->get();
+        $transactions = Transaction::with('category')->whereBetween('transaction_date', [$start, $end])->get();
 
         $totalIncome = (float) $transactions->where('type', 'pemasukan')->sum('total_amount');
-        $totalExpense = (float) $transactions->where('type', 'pengeluaran')->sum('total_amount');
+        $expenseTransactions = $transactions->where('type', 'pengeluaran');
+        $totalExpense = (float) $expenseTransactions->sum('total_amount');
         $netCashflow = $totalIncome - $totalExpense;
+
+        // Pisahkan Belanja Modal / Kulakan Stok & Saldo Server (Aset Toko) vs Beban Operasional Toko
+        $kulakanExpense = 0.0;
+        $operationalExpense = 0.0;
+        $kulakanCount = 0;
+        $operationalCount = 0;
+
+        foreach ($expenseTransactions as $expTx) {
+            if ($expTx->isKulakan()) {
+                $kulakanExpense += (float) $expTx->total_amount;
+                $kulakanCount++;
+            } else {
+                $operationalExpense += (float) $expTx->total_amount;
+                $operationalCount++;
+            }
+        }
 
         $incomeIds = $transactions->where('type', 'pemasukan')->pluck('id');
 
@@ -597,7 +616,9 @@ class ReportController extends Controller
         }
 
         $grossProfit = $totalIncome - $totalCogs;
-        $netProfit = $grossProfit - $totalExpense;
+        // Laba Bersih Toko = Laba Kotor Penjualan - Beban Operasional Toko
+        // (Belanja modal kulakan stok/saldo tidak memotong laba karena modal barang yang terjual sudah terpotong di HPP)
+        $netProfit = $grossProfit - $operationalExpense;
 
         $hasCompleteCostData = $totalSaleItemCount === 0 || ($totalSaleItemCount > 0 && $itemsWithValidCostCount === $totalSaleItemCount);
         $costCoveragePercentage = $totalSaleItemCount > 0 ? round(($itemsWithValidCostCount / $totalSaleItemCount) * 100, 1) : 100;
@@ -628,6 +649,10 @@ class ReportController extends Controller
         return [
             'total_income' => $totalIncome,
             'total_expense' => $totalExpense,
+            'operational_expense' => $operationalExpense,
+            'kulakan_expense' => $kulakanExpense,
+            'operational_count' => $operationalCount,
+            'kulakan_count' => $kulakanCount,
             'net_cashflow' => $netCashflow,
             'total_cogs' => $totalCogs,
             'gross_profit' => $grossProfit,

@@ -56,8 +56,9 @@ class ReportService
         $endDate = Carbon::now()->endOfDay();
 
         // Ambil transaksi dalam rentang hari tersebut
-        $transactions = Transaction::whereBetween('transaction_date', [$startDate, $endDate])
-            ->select('id', 'type', 'total_amount', 'transaction_date')
+        $transactions = Transaction::with('category')
+            ->whereBetween('transaction_date', [$startDate, $endDate])
+            ->select('id', 'type', 'category_id', 'total_amount', 'transaction_date', 'notes')
             ->get();
 
         $incomeIds = $transactions->where('type', 'pemasukan')->pluck('id');
@@ -85,7 +86,8 @@ class ReportService
             });
 
             $income = (float) $dayTxs->where('type', 'pemasukan')->sum('total_amount');
-            $expense = (float) $dayTxs->where('type', 'pengeluaran')->sum('total_amount');
+            $dayExpenses = $dayTxs->where('type', 'pengeluaran');
+            $totalExpense = (float) $dayExpenses->sum('total_amount');
 
             $cogs = 0;
             foreach ($dayTxs->where('type', 'pemasukan') as $incTx) {
@@ -93,13 +95,29 @@ class ReportService
             }
 
             $grossProfit = $income - $cogs;
-            $netProfit = $grossProfit - $expense;
+
+            $operationalExpense = 0.0;
+            $kulakanExpense = 0.0;
+            foreach ($dayExpenses as $expTx) {
+                if ($expTx->isKulakan()) {
+                    $kulakanExpense += (float) $expTx->total_amount;
+                } else {
+                    $operationalExpense += (float) $expTx->total_amount;
+                }
+            }
+
+            // Laba Bersih = Laba Kotor Penjualan - Beban Operasional Toko
+            // (Modal kulakan persediaan tidak memotong laba karena modal barang terjual sudah terhitung di HPP)
+            $netProfit = $grossProfit - $operationalExpense;
 
             $trend[] = [
                 'date' => $dateStr,
                 'label' => $dayLabel,
                 'income' => $income,
-                'expense' => $expense,
+                'expense' => $operationalExpense,
+                'total_expense' => $totalExpense,
+                'operational_expense' => $operationalExpense,
+                'kulakan_expense' => $kulakanExpense,
                 'cogs' => (float) $cogs,
                 'gross_profit' => (float) $grossProfit,
                 'net_profit' => (float) $netProfit,

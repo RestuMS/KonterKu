@@ -60,3 +60,4 @@ class CurrencyHelper
         return is_numeric($val) ? (float) $val : $default;
     }
 }
+

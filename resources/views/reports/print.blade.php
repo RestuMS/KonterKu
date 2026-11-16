@@ -317,9 +317,15 @@
                         <td class="text-right font-mono font-bold income">Rp {{ number_format($financialSummary['gross_profit'], 0, ',', '.') }}</td>
                     </tr>
                     <tr>
-                        <td><strong>D. Beban Pengeluaran Toko & Operasional</strong> ({{ $financialSummary['expense_count'] }} Catatan)</td>
-                        <td class="text-right font-mono font-bold expense">- Rp {{ number_format($financialSummary['total_expense'], 0, ',', '.') }}</td>
+                        <td><strong>D. Beban Pengeluaran Toko & Operasional</strong> ({{ $financialSummary['operational_count'] ?? $financialSummary['expense_count'] }} Catatan)</td>
+                        <td class="text-right font-mono font-bold expense">- Rp {{ number_format($financialSummary['operational_expense'] ?? $financialSummary['total_expense'], 0, ',', '.') }}</td>
                     </tr>
+                    @if(($financialSummary['kulakan_expense'] ?? 0) > 0)
+                    <tr style="color: #64748b; font-size: 11px;">
+                        <td>* <em>Belanja Modal Stok & Saldo Server (Aset Toko, tidak memotong laba)</em></td>
+                        <td class="text-right font-mono">Rp {{ number_format($financialSummary['kulakan_expense'], 0, ',', '.') }}</td>
+                    </tr>
+                    @endif
                     <tr style="background-color: #f0fdf4;">
                         <td><strong>E. Laba Keuntungan Bersih Toko (Net Profit = C &minus; D)</strong></td>
                         <td class="text-right font-mono font-bold income" style="font-size: 13px;">Rp {{ number_format($financialSummary['net_profit'], 0, ',', '.') }}</td>

@@ -48,13 +48,16 @@ class DashboardController extends Controller
             ->whereDate('transaction_date', $today)
             ->sum('total_amount');
 
-        $todayExpense = (float) Transaction::where('type', 'pengeluaran')
+        $todayExpenses = Transaction::with('category')->where('type', 'pengeluaran')
             ->whereDate('transaction_date', $today)
-            ->sum('total_amount');
+            ->get();
+        $todayExpense = (float) $todayExpenses->sum('total_amount');
+        $todayOperationalExpense = (float) $todayExpenses->reject(fn($t) => $t->isKulakan())->sum('total_amount');
+        $todayKulakanExpense = (float) $todayExpenses->filter(fn($t) => $t->isKulakan())->sum('total_amount');
 
         $todayTransactionsCount = Transaction::whereDate('transaction_date', $today)->count();
 
-        // Modal HPP & Laba Bersih Hari Ini
+        // Modal HPP & Laba Bersih Hari Ini (Beban operasional toko memotong laba, kulakan stok/saldo masuk aset)
         $todayIncomeIds = Transaction::where('type', 'pemasukan')
             ->whereDate('transaction_date', $today)
             ->pluck('id');
@@ -62,16 +65,19 @@ class DashboardController extends Controller
             ->selectRaw('SUM(cost_price * quantity) as total_cogs')
             ->value('total_cogs') ?? 0);
         $todayGrossProfit = $todayIncome - $todayCogs;
-        $todayNetProfit = $todayGrossProfit - $todayExpense;
+        $todayNetProfit = $todayGrossProfit - $todayOperationalExpense;
 
         // 2. Statistik Bulan Ini
         $monthlyIncome = (float) Transaction::where('type', 'pemasukan')
             ->whereBetween('transaction_date', [$startOfMonth, $endOfMonth])
             ->sum('total_amount');
 
-        $monthlyExpense = (float) Transaction::where('type', 'pengeluaran')
+        $monthlyExpenses = Transaction::with('category')->where('type', 'pengeluaran')
             ->whereBetween('transaction_date', [$startOfMonth, $endOfMonth])
-            ->sum('total_amount');
+            ->get();
+        $monthlyExpense = (float) $monthlyExpenses->sum('total_amount');
+        $monthlyOperationalExpense = (float) $monthlyExpenses->reject(fn($t) => $t->isKulakan())->sum('total_amount');
+        $monthlyKulakanExpense = (float) $monthlyExpenses->filter(fn($t) => $t->isKulakan())->sum('total_amount');
 
         // Modal HPP & Laba Bersih Bulan Ini
         $monthlyIncomeIds = Transaction::where('type', 'pemasukan')
@@ -81,7 +87,7 @@ class DashboardController extends Controller
             ->selectRaw('SUM(cost_price * quantity) as total_cogs')
             ->value('total_cogs') ?? 0);
         $monthlyGrossProfit = $monthlyIncome - $monthlyCogs;
-        $monthlyNetProfit = $monthlyGrossProfit - $monthlyExpense;
+        $monthlyNetProfit = $monthlyGrossProfit - $monthlyOperationalExpense;
         $monthlyNet = $monthlyIncome - $monthlyExpense; // Saldo kas flow
 
         // 3. Produk & Stok

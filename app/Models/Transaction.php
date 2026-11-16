@@ -89,4 +89,28 @@ class Transaction extends Model
 
         return $this->transaction_date->toDateString() < $this->created_at->toDateString();
     }
+
+    /**
+     * Cek apakah transaksi pengeluaran merupakan belanja stok persediaan / kulakan saldo server (Aset Toko).
+     */
+    public function isKulakan(): bool
+    {
+        if ($this->type !== 'pengeluaran') {
+            return false;
+        }
+
+        $slug = $this->category?->slug ?? '';
+        $catName = strtolower($this->category?->name ?? '');
+        $notes = strtolower($this->notes ?? '');
+
+        return in_array($slug, ['kulakan-sales', 'kulakan-deposit'])
+            || str_contains($slug, 'kulakan')
+            || str_contains($catName, 'kulakan')
+            || str_contains($catName, 'tagihan sales')
+            || str_contains($catName, 'deposit')
+            || str_contains($notes, '[order sales]')
+            || str_contains($notes, 'kulakan')
+            || str_contains($notes, 'top-up saldo')
+            || str_contains($notes, 'isi saldo');
+    }
 }
