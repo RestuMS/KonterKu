@@ -332,6 +332,12 @@
                     this.mode = newMode;
                     this.validationErrors = [];
                     if (newMode === 'transfer') {
+                        // Jika kasir sudah mengetik di customerTarget, bawa ke transferAccount dan sebaliknya
+                        if (!this.transferAccount && this.customerTarget) {
+                            this.transferAccount = this.customerTarget;
+                        } else if (this.transferAccount && !this.customerTarget) {
+                            this.customerTarget = this.transferAccount;
+                        }
                         this.applyTransfer();
                     } else {
                         this.autoMatchCategoryDb();
@@ -497,12 +503,16 @@
                     const bank = this.transferBank === 'Lainnya' ? (this.customBank || 'Bank') : this.transferBank;
                     const isTransfer = this.transferType === 'transfer';
 
+                    // Sinkronisasi otomatis no rekening / no HP dua arah antara form transfer dan form ringkasan
+                    const acc = (this.transferAccount || this.customerTarget || '').trim();
+                    this.transferAccount = acc;
+                    this.customerTarget = acc;
+
                     this.selectedProductId = '';
                     this.costPrice = nom;
                     this.sellingPrice = nom + fee;
                     this.qty = 1;
                     this.totalAmount = nom + fee;
-                    this.customerTarget = this.transferAccount;
                     
                     let title = (isTransfer ? 'Transfer ' : 'Tarik Tunai ') + bank + ' Rp ' + this.formatRupiah(nom);
                     if (this.transferRecipient.trim()) {
@@ -511,7 +521,7 @@
                     this.productName = title;
 
                     this.notes = (isTransfer ? 'Layanan Transfer ' : 'Layanan Tarik Tunai ') +
-                        bank + ' (No/Rek: ' + (this.transferAccount || '-') + ')' +
+                        bank + ' (No/Rek: ' + (acc || '-') + ')' +
                         (this.transferRecipient ? ' Penerima: ' + this.transferRecipient : '') +
                         ' | Biaya Admin: Rp ' + this.formatRupiah(fee);
 
@@ -596,8 +606,12 @@
 
                     // 6. Validasi Khusus Layanan Transfer / Tarik Tunai
                     if (this.mode === 'transfer') {
-                        if (!this.transferAccount || !this.transferAccount.trim()) {
+                        const acc = (this.transferAccount || this.customerTarget || '').trim();
+                        if (!acc) {
                             this.validationErrors.push('No. Rekening / No. HP Tujuan wajib diisi untuk layanan transfer / tarik tunai.');
+                        } else {
+                            this.transferAccount = acc;
+                            this.customerTarget = acc;
                         }
                         const transferNom = parseFloat(this.transferNominal) || 0;
                         if (transferNom < 1000) {
@@ -765,6 +779,18 @@
                     this.timerId = setInterval(() => {
                         this.updateRealTime();
                     }, 1000);
+
+                    // Sinkronisasi real-time nomor rekening / HP antara form transfer dan form ringkasan kasir
+                    this.$watch('transferAccount', (val) => {
+                        if (this.mode === 'transfer' && this.customerTarget !== val) {
+                            this.customerTarget = val || '';
+                        }
+                    });
+                    this.$watch('customerTarget', (val) => {
+                        if (this.mode === 'transfer' && this.transferAccount !== val) {
+                            this.transferAccount = val || '';
+                        }
+                    });
 
                     if (this.categoryId) {
                         const cat = this.allCategories.find(c => c.id == this.categoryId);
@@ -1248,7 +1274,10 @@
                                 <input
                                     type="text"
                                     x-model="transferAccount"
-                                    @input="applyTransfer()"
+                                    @input="customerTarget = $el.value; transferAccount = $el.value; applyTransfer();"
+                                    @change="customerTarget = $el.value; transferAccount = $el.value; applyTransfer();"
+                                    @keyup="customerTarget = $el.value; transferAccount = $el.value; applyTransfer();"
+                                    @paste="setTimeout(() => { customerTarget = $el.value; transferAccount = $el.value; applyTransfer(); }, 10)"
                                     placeholder="Contoh: 0812xxxx / No Rekening"
                                     class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-mono font-bold focus:ring-2 focus:ring-emerald-500 shadow-2xs"
                                 >
@@ -1263,6 +1292,9 @@
                                     type="text"
                                     x-model="transferRecipient"
                                     @input="applyTransfer()"
+                                    @change="applyTransfer()"
+                                    @keyup="applyTransfer()"
+                                    @paste="setTimeout(() => { applyTransfer(); }, 10)"
                                     placeholder="Contoh: Budi Santoso"
                                     class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-medium focus:ring-2 focus:ring-emerald-500 shadow-2xs"
                                 >
@@ -1395,9 +1427,11 @@
                                         <span x-show="isTargetRequired" class="text-rose-500 font-bold">*</span>
                                     </span>
                                     <span 
-                                        :class="isTargetRequired ? 'text-rose-600 dark:text-rose-400 font-bold' : (isTargetAuto ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-slate-400 font-normal')"
+                                        :class="(mode === 'transfer' && customerTarget) 
+                                            ? 'text-emerald-600 dark:text-emerald-400 font-bold' 
+                                            : (isTargetRequired ? 'text-rose-600 dark:text-rose-400 font-bold' : (isTargetAuto ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-slate-400 font-normal'))"
                                         class="text-[10px] font-mono"
-                                        x-text="isTargetRequired ? 'Wajib diisi' : (isTargetAuto ? '⚡ Otomatis' : 'Opsional')"
+                                        x-text="(mode === 'transfer' && customerTarget) ? '⚡ Terisi Otomatis' : (isTargetRequired ? 'Wajib diisi' : (isTargetAuto ? '⚡ Otomatis' : 'Opsional'))"
                                     ></span>
                                 </label>
                                 <div class="relative">
@@ -1405,8 +1439,13 @@
                                         type="text"
                                         name="customer_target"
                                         x-model="customerTarget"
+                                        @input="if (mode === 'transfer') { transferAccount = $el.value; customerTarget = $el.value; applyTransfer(); }"
+                                        @change="if (mode === 'transfer') { transferAccount = $el.value; customerTarget = $el.value; applyTransfer(); }"
+                                        @keyup="if (mode === 'transfer') { transferAccount = $el.value; customerTarget = $el.value; applyTransfer(); }"
+                                        @paste="setTimeout(() => { if (mode === 'transfer') { transferAccount = $el.value; customerTarget = $el.value; applyTransfer(); } }, 10)"
                                         :placeholder="targetPlaceholder"
                                         :required="isTargetRequired"
+                                        :class="mode === 'transfer' && customerTarget ? 'border-emerald-400 dark:border-emerald-600 bg-emerald-50/20' : ''"
                                         class="w-full pl-3.5 pr-10 py-2.5 rounded-xl border @error('customer_target') border-rose-500 ring-1 ring-rose-500 @else border-slate-300 dark:border-slate-600 @enderror bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-mono font-medium focus:ring-2 focus:ring-indigo-500 shadow-2xs"
                                     >
                                     <span class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 pointer-events-none text-xs">
@@ -1425,7 +1464,10 @@
                                 @error('customer_target')
                                     <p class="text-[11px] text-rose-500 font-bold mt-1">{{ $message }}</p>
                                 @enderror
-                                <span x-show="isTargetAuto" class="text-[10px] text-indigo-600 dark:text-indigo-400 mt-1 block font-semibold">
+                                <span x-show="mode === 'transfer' && customerTarget" class="text-[10px] text-emerald-600 dark:text-emerald-400 mt-1 block font-semibold">
+                                    ✓ Terisi otomatis dari form transfer (tidak perlu input ulang).
+                                </span>
+                                <span x-show="isTargetAuto && mode !== 'transfer'" class="text-[10px] text-indigo-600 dark:text-indigo-400 mt-1 block font-semibold">
                                     Identitas nomor / jenis kartu terisi otomatis (bisa disesuaikan jika perlu).
                                 </span>
                             </div>
