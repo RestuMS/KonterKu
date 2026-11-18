@@ -278,9 +278,9 @@
                 <small style="display: block; color: #64748b; font-size: 9px;">({{ $financialSummary['expense_count'] }} transaksi)</small>
             </div>
             <div class="summary-item">
-                <span>KAS LACI BERSIH</span>
-                <strong>Rp {{ number_format($financialSummary['net_cashflow'], 0, ',', '.') }}</strong>
-                <small style="display: block; color: #64748b; font-size: 9px;">Pemasukan - Beban Kas</small>
+                <span>KAS LACI BERSIH (TUNAI)</span>
+                <strong>Rp {{ number_format($financialSummary['cash_drawer_net'] ?? 0, 0, ',', '.') }}</strong>
+                <small style="display: block; color: #64748b; font-size: 9px;">Masuk Rp {{ number_format($financialSummary['cash_drawer_in'] ?? 0, 0, ',', '.') }} &minus; Keluar Rp {{ number_format($financialSummary['cash_drawer_out'] ?? 0, 0, ',', '.') }}</small>
             </div>
             <div class="summary-item">
                 <span>LABA KEUNTUNGAN BERSIH</span>

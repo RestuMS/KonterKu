@@ -92,6 +92,8 @@ class Transaction extends Model
 
     /**
      * Cek apakah transaksi pengeluaran merupakan belanja stok persediaan / kulakan saldo server (Aset Toko).
+     * Kategori operasional standar (jajan, bensin, kuota, mainan, operasional toko) tidak dianggap kulakan
+     * kecuali secara eksplisit ditandai oleh sistem sebagai [ORDER SALES] atau top-up deposit.
      */
     public function isKulakan(): bool
     {
@@ -99,18 +101,59 @@ class Transaction extends Model
             return false;
         }
 
-        $slug = $this->category?->slug ?? '';
+        $slug = strtolower($this->category?->slug ?? '');
         $catName = strtolower($this->category?->name ?? '');
         $notes = strtolower($this->notes ?? '');
 
-        return in_array($slug, ['kulakan-sales', 'kulakan-deposit'])
+        // 1. Kategori kulakan / aset persediaan eksplisit
+        if (
+            in_array($slug, ['kulakan-sales', 'kulakan-deposit'])
             || str_contains($slug, 'kulakan')
             || str_contains($catName, 'kulakan')
             || str_contains($catName, 'tagihan sales')
             || str_contains($catName, 'deposit')
-            || str_contains($notes, '[order sales]')
-            || str_contains($notes, 'kulakan')
+        ) {
+            return true;
+        }
+
+        // 2. Tag sistem otomatis dari fitur restock / inject / top-up saldo server
+        if (
+            str_contains($notes, '[order sales]')
+            || str_contains($notes, 'top-up saldo deposit')
+            || str_contains($notes, 'top-up saldo server')
+        ) {
+            return true;
+        }
+
+        // 3. Jika kategori operasional standar dipilih eksplisit oleh kasir, jangan timpa dengan kata umum di catatan
+        $operationalSlugs = ['jajan', 'beli-kuota', 'beli-mainan', 'beli-bensin', 'operasional-toko'];
+        if (in_array($slug, $operationalSlugs)) {
+            return false;
+        }
+
+        // 4. Fallback untuk transaksi tanpa kategori jelas / kategori custom
+        return str_contains($notes, 'kulakan')
             || str_contains($notes, 'top-up saldo')
             || str_contains($notes, 'isi saldo');
+    }
+
+    /**
+     * Cek apakah transaksi pemasukan merupakan layanan Tarik Tunai (Cash Out)
+     * di mana kasir menyerahkan uang tunai pokok dari laci kepada pelanggan.
+     */
+    public function isTarikTunai(): bool
+    {
+        if ($this->type !== 'pemasukan') {
+            return false;
+        }
+
+        $slug = strtolower($this->category?->slug ?? '');
+        $catName = strtolower($this->category?->name ?? '');
+        $notes = strtolower($this->notes ?? '');
+
+        return $slug === 'tarik-tunai'
+            || str_contains($slug, 'tarik-tunai')
+            || str_contains($catName, 'tarik tunai')
+            || str_contains($notes, 'layanan tarik tunai');
     }
 }

@@ -394,9 +394,17 @@
                                 <span>Laba Kotor &minus; Beban Toko</span>
                                 <span class="font-bold font-mono px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 text-[11px]">Keuntungan Riil</span>
                             </div>
-                            <div class="mt-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-400 flex items-center justify-between">
-                                <span>Kas Laci Masuk:</span>
-                                <span class="font-mono font-semibold text-slate-600 dark:text-slate-300">@rupiah($financialSummary['net_cashflow'])</span>
+                            <div class="mt-2 pt-2 border-t border-slate-100 dark:border-slate-800 space-y-1 text-[11px]">
+                                <div class="flex items-center justify-between text-slate-500 dark:text-slate-400">
+                                    <span>Kas Laci Masuk (Tunai):</span>
+                                    <span class="font-mono font-semibold text-emerald-600 dark:text-emerald-400">+ @rupiah($financialSummary['cash_drawer_in'] ?? 0)</span>
+                                </div>
+                                <div class="flex items-center justify-between text-slate-500 dark:text-slate-400">
+                                    <span>Kas Laci Bersih (Fisik):</span>
+                                    <span class="font-mono font-bold {{ ($financialSummary['cash_drawer_net'] ?? 0) >= 0 ? 'text-slate-800 dark:text-slate-200' : 'text-rose-600 dark:text-rose-400' }}">
+                                        {{ ($financialSummary['cash_drawer_net'] ?? 0) >= 0 ? '+' : '' }}@rupiah($financialSummary['cash_drawer_net'] ?? 0)
+                                    </span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -418,12 +426,20 @@
                                     <span class="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">💵</span>
                                     <div>
                                         <h5 class="font-bold text-slate-900 dark:text-white">Uang Tunai (Cash)</h5>
-                                        <span class="text-[10px] text-slate-400">Kas laci konter</span>
+                                        <span class="text-[10px] text-slate-400">
+                                            Kas laci fisik konter
+                                            @if(($financialSummary['cash_drawer_tarik_tunai_out'] ?? 0) > 0)
+                                                &bull; termasuk keluar Tarik Tunai
+                                            @endif
+                                        </span>
                                     </div>
                                 </div>
                                 <div class="text-right font-mono">
-                                    <div class="text-emerald-600 font-bold">+ @rupiah($financialSummary['payment_methods_income']['cash'] ?? 0)</div>
-                                    <div class="text-rose-600 text-[11px]">- @rupiah($financialSummary['payment_methods_expense']['cash'] ?? 0)</div>
+                                    <div class="text-emerald-600 font-bold">+ @rupiah($financialSummary['cash_drawer_in'] ?? 0)</div>
+                                    <div class="text-rose-600 text-[11px]">- @rupiah($financialSummary['cash_drawer_out'] ?? 0)</div>
+                                    <div class="text-[10px] font-bold pt-0.5 mt-0.5 border-t border-slate-200/70 dark:border-slate-700 {{ ($financialSummary['cash_drawer_net'] ?? 0) >= 0 ? 'text-slate-700 dark:text-slate-300' : 'text-rose-600' }}">
+                                        Bersih: {{ ($financialSummary['cash_drawer_net'] ?? 0) >= 0 ? '+' : '' }}@rupiah($financialSummary['cash_drawer_net'] ?? 0)
+                                    </div>
                                 </div>
                             </div>
 
@@ -498,6 +514,11 @@
                 $expenseCount = (int) ($financialSummary['expense_count'] ?? 0);
                 $operationalCount = (int) ($financialSummary['operational_count'] ?? $expenseCount);
                 $kulakanCount = (int) ($financialSummary['kulakan_count'] ?? 0);
+                $cashDrawerIn = (float) ($financialSummary['cash_drawer_in'] ?? 0);
+                $cashDrawerOut = (float) ($financialSummary['cash_drawer_out'] ?? 0);
+                $cashDrawerExpenseOut = (float) ($financialSummary['cash_drawer_expense_out'] ?? 0);
+                $cashDrawerTarikTunaiOut = (float) ($financialSummary['cash_drawer_tarik_tunai_out'] ?? 0);
+                $cashDrawerNet = (float) ($financialSummary['cash_drawer_net'] ?? 0);
 
                 // Rasio & Margin Finansial
                 $grossMarginPct = $totalIncome > 0 ? round(($grossProfit / $totalIncome) * 100, 1) : 0;
@@ -904,37 +925,92 @@
                         </div>
                     </div>
 
-                    <!-- KOLOM KANAN (5): BREAKDOWN BEBAN PENGELUARAN TOKO & KARTU KESEHATAN FINANSIAL -->
+                    <!-- KOLOM KANAN (5): RINGKASAN KAS LACI TUNAI, BREAKDOWN BEBAN & KESEHATAN FINANSIAL -->
                     <div class="lg:col-span-5 space-y-6">
+                        <!-- Card 0: Ringkasan Kas Laci Tunai (Uang Fisik Konter) -->
+                        <div class="p-6 rounded-3xl bg-white dark:bg-slate-850 border border-emerald-200/80 dark:border-emerald-800/60 shadow-xs space-y-4">
+                            <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+                                <h3 class="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white flex items-center gap-2">
+                                    <span class="w-6 h-6 rounded-lg bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 flex items-center justify-center text-xs">💵</span>
+                                    <span>Kas Laci Tunai (Uang Fisik)</span>
+                                </h3>
+                                <span class="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300">Khusus Cash</span>
+                            </div>
+
+                            <div class="space-y-2.5 text-xs">
+                                <div class="flex items-center justify-between p-2.5 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/40">
+                                    <div>
+                                        <span class="font-bold text-slate-800 dark:text-slate-200 block">Kas Laci Masuk (Tunai)</span>
+                                        <span class="text-[10px] text-slate-500">Penjualan tunai, kirim uang tunai &amp; admin tunai</span>
+                                    </div>
+                                    <span class="font-mono font-bold text-emerald-600 dark:text-emerald-400">+ @rupiah($cashDrawerIn)</span>
+                                </div>
+
+                                <div class="flex items-center justify-between p-2.5 rounded-xl bg-rose-50/60 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/40">
+                                    <div>
+                                        <span class="font-bold text-slate-800 dark:text-slate-200 block">Kas Laci Keluar (Tunai)</span>
+                                        <span class="text-[10px] text-slate-500">
+                                            Pengeluaran tunai (@rupiah($cashDrawerExpenseOut))
+                                            @if($cashDrawerTarikTunaiOut > 0)
+                                                + Tarik Tunai (@rupiah($cashDrawerTarikTunaiOut))
+                                            @endif
+                                        </span>
+                                    </div>
+                                    <span class="font-mono font-bold text-rose-600 dark:text-rose-400">- @rupiah($cashDrawerOut)</span>
+                                </div>
+
+                                <div class="flex items-center justify-between p-3 rounded-xl bg-slate-900 dark:bg-slate-800 text-white">
+                                    <div>
+                                        <span class="font-black uppercase tracking-wider text-[11px] block">Kas Laci Bersih (Masuk &minus; Keluar)</span>
+                                        <span class="text-[10px] text-slate-300">Selisih uang fisik di laci periode ini</span>
+                                    </div>
+                                    <span class="font-mono font-black text-sm {{ $cashDrawerNet >= 0 ? 'text-emerald-400' : 'text-rose-400' }}">
+                                        {{ $cashDrawerNet >= 0 ? '+' : '' }}@rupiah($cashDrawerNet)
+                                    </span>
+                                </div>
+
+                                <p class="text-[10px] text-slate-400 leading-relaxed pt-1">
+                                    Transaksi via <strong>QRIS</strong> &amp; <strong>Transfer Bank</strong> masuk/keluar melalui rekening bank/e-wallet sehingga tidak mengubah jumlah uang tunai di laci.
+                                </p>
+                            </div>
+                        </div>
+
                         <!-- Card 1: Breakdown Kategori Pengeluaran Toko -->
                         <div class="p-6 rounded-3xl bg-white dark:bg-slate-850 border border-slate-200/90 dark:border-slate-800 shadow-xs space-y-4">
                             <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
                                 <h3 class="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white flex items-center gap-2">
                                     <svg class="w-4 h-4 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
-                                    <span>Rincian Beban Toko</span>
+                                    <span>Rincian Pengeluaran Toko</span>
                                 </h3>
-                                <span class="text-xs font-mono font-bold text-rose-600">Total: @rupiah($totalExpense)</span>
+                                <span class="text-xs font-mono font-bold text-rose-600">Opex: @rupiah($operationalExpense)</span>
                             </div>
 
                             <div class="space-y-3">
                                 @forelse($financialSummary['expenses_by_category'] as $ebc)
                                     @php
+                                        $isKulakanCat = (bool) ($ebc->is_kulakan ?? false);
                                         $catPercent = $totalExpense > 0 ? round(($ebc->total / $totalExpense) * 100, 1) : 0;
                                     @endphp
                                     <div class="p-3 rounded-2xl bg-slate-50/80 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 space-y-1.5 text-xs">
-                                        <div class="flex items-center justify-between font-bold">
-                                            <div class="flex items-center gap-2">
-                                                <span class="w-2 h-2 rounded-full bg-rose-500"></span>
+                                        <div class="flex items-center justify-between font-bold gap-2">
+                                            <div class="flex items-center gap-1.5 flex-wrap">
+                                                <span class="w-2 h-2 rounded-full {{ $isKulakanCat ? 'bg-indigo-500' : 'bg-rose-500' }}"></span>
                                                 <span class="text-slate-800 dark:text-slate-200">{{ $ebc->category->name ?? 'Operasional Toko' }}</span>
                                                 <span class="text-[10px] font-normal text-slate-400">({{ $ebc->count }}x)</span>
+                                                @if($isKulakanCat)
+                                                    <span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300">Aset</span>
+                                                @else
+                                                    <span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300">Beban Laba</span>
+                                                @endif
                                             </div>
-                                            <span class="font-mono text-rose-600 font-black">@rupiah($ebc->total)</span>
+                                            <span class="font-mono {{ $isKulakanCat ? 'text-indigo-600 dark:text-indigo-400' : 'text-rose-600' }} font-black shrink-0">@rupiah($ebc->total)</span>
                                         </div>
                                         <div class="w-full h-1.5 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
-                                            <div style="width: {{ $catPercent }}%" class="h-full bg-rose-500 rounded-full"></div>
+                                            <div style="width: {{ $catPercent }}%" class="h-full {{ $isKulakanCat ? 'bg-indigo-500' : 'bg-rose-500' }} rounded-full"></div>
                                         </div>
-                                        <div class="flex justify-end text-[10px] text-slate-400 font-mono">
-                                            <span>{{ $catPercent }}% dari total beban</span>
+                                        <div class="flex justify-between text-[10px] text-slate-400 font-mono">
+                                            <span>{{ $isKulakanCat ? 'Tidak memotong laba (masuk HPP saat terjual)' : 'Memotong laba bersih toko' }}</span>
+                                            <span>{{ $catPercent }}%</span>
                                         </div>
                                     </div>
                                 @empty

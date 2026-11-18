@@ -11,6 +11,175 @@ use Illuminate\Support\Facades\DB;
 class ReportService
 {
     /**
+     * Mesin hitung tunggal (Single Source of Truth) untuk Dashboard & Laporan Keuangan.
+     * Menjamin perhitungan Omzet, HPP, Laba Kotor, Beban Operasional, Belanja Modal Kulakan,
+     * Laba Bersih Toko, serta Arus Kas Laci Tunai 100% seragam di seluruh aplikasi.
+     */
+    public function calculateFinancialSummary(Carbon $start, Carbon $end): array
+    {
+        $transactions = Transaction::with(['category', 'items'])
+            ->whereBetween('transaction_date', [$start, $end])
+            ->get();
+
+        $incomeTransactions = $transactions->where('type', 'pemasukan');
+        $expenseTransactions = $transactions->where('type', 'pengeluaran');
+
+        $totalIncome = (float) $incomeTransactions->sum('total_amount');
+        $totalExpense = (float) $expenseTransactions->sum('total_amount');
+        $netCashflow = $totalIncome - $totalExpense;
+
+        // Pisahkan Belanja Modal / Kulakan Stok & Saldo Server (Aset Toko) vs Beban Operasional Toko
+        $kulakanExpense = 0.0;
+        $operationalExpense = 0.0;
+        $kulakanCount = 0;
+        $operationalCount = 0;
+
+        $paymentMethodsExpense = [
+            'cash' => 0.0,
+            'qris' => 0.0,
+            'transfer' => 0.0,
+        ];
+
+        $cashDrawerExpenseOut = 0.0;
+        $expenseCategoryMap = [];
+
+        foreach ($expenseTransactions as $expTx) {
+            $amount = (float) $expTx->total_amount;
+            $isKulakan = $expTx->isKulakan();
+
+            if ($isKulakan) {
+                $kulakanExpense += $amount;
+                $kulakanCount++;
+            } else {
+                $operationalExpense += $amount;
+                $operationalCount++;
+            }
+
+            $method = strtolower($expTx->payment_method ?? 'cash');
+            if (!isset($paymentMethodsExpense[$method])) {
+                $paymentMethodsExpense[$method] = 0.0;
+            }
+            $paymentMethodsExpense[$method] += $amount;
+
+            if ($method === 'cash') {
+                $cashDrawerExpenseOut += $amount;
+            }
+
+            $catKey = ($expTx->category_id ?? 0) . '_' . ($isKulakan ? '1' : '0');
+            if (!isset($expenseCategoryMap[$catKey])) {
+                $expenseCategoryMap[$catKey] = (object) [
+                    'category_id' => $expTx->category_id,
+                    'category' => $expTx->category,
+                    'total' => 0.0,
+                    'count' => 0,
+                    'is_kulakan' => $isKulakan,
+                ];
+            }
+            $expenseCategoryMap[$catKey]->total += $amount;
+            $expenseCategoryMap[$catKey]->count++;
+        }
+
+        // Hitung HPP (COGS), Kelengkapan Modal, Metode Pembayaran Masuk, & Pergerakan Kas Laci Tunai
+        $totalCogs = 0.0;
+        $totalSaleItemCount = 0;
+        $itemsWithValidCostCount = 0;
+
+        $paymentMethodsIncome = [
+            'cash' => 0.0,
+            'qris' => 0.0,
+            'transfer' => 0.0,
+        ];
+
+        $cashDrawerIn = 0.0;
+        $cashDrawerTarikTunaiOut = 0.0;
+
+        foreach ($incomeTransactions as $incTx) {
+            $txAmount = (float) $incTx->total_amount;
+            $txCogs = 0.0;
+
+            foreach ($incTx->items as $it) {
+                $itemCost = (float) $it->cost_price * (int) $it->quantity;
+                $txCogs += $itemCost;
+                $totalSaleItemCount++;
+                if ((float) $it->cost_price > 0) {
+                    $itemsWithValidCostCount++;
+                }
+            }
+            $totalCogs += $txCogs;
+
+            $method = strtolower($incTx->payment_method ?? 'cash');
+            if (!isset($paymentMethodsIncome[$method])) {
+                $paymentMethodsIncome[$method] = 0.0;
+            }
+            $paymentMethodsIncome[$method] += $txAmount;
+
+            // Logika Akurat Pergerakan Uang Fisik di Laci Kasir (Cash Drawer):
+            // 1. Transaksi Tarik Tunai (Cash Out):
+            //    Kasir menyerahkan uang tunai pokok (txCogs) dari laci ke pelanggan -> keluar laci.
+            //    Jika metode bayar 'cash' (potong admin di tempat), biaya admin (fee) masuk ke laci.
+            //    Jika metode bayar 'transfer'/'qris' (pokok+admin ditransfer ke rekening), tidak ada tunai masuk laci.
+            // 2. Transaksi Penjualan / Transfer Kirim Uang / Pelunasan Kasbon:
+            //    Jika bayar tunai ('cash') -> seluruh total_amount masuk ke laci kasir.
+            //    Jika bayar QRIS / Transfer -> masuk ke rekening/e-wallet, BUKAN laci tunai.
+            if ($incTx->isTarikTunai()) {
+                if ($txCogs > 0) {
+                    $cashDrawerTarikTunaiOut += $txCogs;
+                }
+                if ($method === 'cash') {
+                    $adminFee = max(0.0, $txAmount - $txCogs);
+                    $cashDrawerIn += $adminFee;
+                }
+            } else {
+                if ($method === 'cash') {
+                    $cashDrawerIn += $txAmount;
+                }
+            }
+        }
+
+        $cashDrawerOut = $cashDrawerExpenseOut + $cashDrawerTarikTunaiOut;
+        $cashDrawerNet = $cashDrawerIn - $cashDrawerOut;
+
+        $grossProfit = $totalIncome - $totalCogs;
+        // Laba Bersih Toko = Laba Kotor Penjualan - Beban Operasional Toko
+        // (Belanja modal kulakan stok/saldo tidak memotong laba karena modal barang yang terjual sudah terpotong di HPP)
+        $netProfit = $grossProfit - $operationalExpense;
+
+        $hasCompleteCostData = $totalSaleItemCount === 0 || ($totalSaleItemCount > 0 && $itemsWithValidCostCount === $totalSaleItemCount);
+        $costCoveragePercentage = $totalSaleItemCount > 0 ? round(($itemsWithValidCostCount / $totalSaleItemCount) * 100, 1) : 100;
+
+        $expensesByCategory = collect(array_values($expenseCategoryMap))
+            ->sortByDesc('total')
+            ->values();
+
+        return [
+            'total_income' => $totalIncome,
+            'total_expense' => $totalExpense,
+            'operational_expense' => $operationalExpense,
+            'kulakan_expense' => $kulakanExpense,
+            'operational_count' => $operationalCount,
+            'kulakan_count' => $kulakanCount,
+            'net_cashflow' => $netCashflow,
+            'cash_drawer_in' => $cashDrawerIn,
+            'cash_drawer_out' => $cashDrawerOut,
+            'cash_drawer_expense_out' => $cashDrawerExpenseOut,
+            'cash_drawer_tarik_tunai_out' => $cashDrawerTarikTunaiOut,
+            'cash_drawer_net' => $cashDrawerNet,
+            'total_cogs' => $totalCogs,
+            'gross_profit' => $grossProfit,
+            'net_profit' => $netProfit,
+            'income_count' => $incomeTransactions->count(),
+            'expense_count' => $expenseTransactions->count(),
+            'total_sale_item_count' => $totalSaleItemCount,
+            'items_with_valid_cost_count' => $itemsWithValidCostCount,
+            'has_complete_cost_data' => $hasCompleteCostData,
+            'cost_coverage_percentage' => $costCoveragePercentage,
+            'payment_methods_income' => $paymentMethodsIncome,
+            'payment_methods_expense' => $paymentMethodsExpense,
+            'expenses_by_category' => $expensesByCategory,
+        ];
+    }
+
+    /**
      * Hitung ringkasan keuangan (pemasukan, pengeluaran, keuntungan kotor/bersih).
      */
     public function getFinancialSummary(?string $startDate = null, ?string $endDate = null): array
@@ -18,32 +187,20 @@ class ReportService
         $start = $startDate ? Carbon::parse($startDate)->startOfDay() : Carbon::now()->startOfMonth();
         $end = $endDate ? Carbon::parse($endDate)->endOfDay() : Carbon::now()->endOfDay();
 
-        $transactions = Transaction::whereBetween('transaction_date', [$start, $end])->get();
-
-        $totalIncome = $transactions->where('type', 'pemasukan')->sum('total_amount');
-        $totalExpense = $transactions->where('type', 'pengeluaran')->sum('total_amount');
-        $netIncome = $totalIncome - $totalExpense;
-
-        // Hitung estimasi keuntungan dari penjualan item produk (subtotal - (cost_price * qty))
-        $salesProfit = TransactionItem::whereHas('transaction', function ($q) use ($start, $end) {
-            $q->where('type', 'pemasukan')
-              ->whereBetween('transaction_date', [$start, $end]);
-        })->selectRaw('SUM(subtotal - (cost_price * quantity)) as total_profit')
-          ->value('total_profit') ?? 0;
-
-        $incomeCount = $transactions->where('type', 'pemasukan')->count();
-        $expenseCount = $transactions->where('type', 'pengeluaran')->count();
+        $summary = $this->calculateFinancialSummary($start, $end);
 
         return [
             'start_date' => $start->toDateString(),
             'end_date' => $end->toDateString(),
-            'total_income' => (float) $totalIncome,
-            'total_expense' => (float) $totalExpense,
-            'net_income' => (float) $netIncome,
-            'sales_profit' => (float) $salesProfit,
-            'income_count' => $incomeCount,
-            'expense_count' => $expenseCount,
-            'total_transactions' => $incomeCount + $expenseCount,
+            'total_income' => $summary['total_income'],
+            'total_expense' => $summary['total_expense'],
+            'net_income' => $summary['net_cashflow'],
+            'sales_profit' => $summary['gross_profit'],
+            'net_profit' => $summary['net_profit'],
+            'cash_drawer_net' => $summary['cash_drawer_net'],
+            'income_count' => $summary['income_count'],
+            'expense_count' => $summary['expense_count'],
+            'total_transactions' => $summary['income_count'] + $summary['expense_count'],
         ];
     }
 

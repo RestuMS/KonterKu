@@ -563,7 +563,10 @@ class ReportController extends Controller
                 fputcsv($handle, ['Belanja Modal Kulakan Stok & Saldo Server (Aset Persediaan)', $financialSummary['kulakan_expense']]);
                 fputcsv($handle, ['Total Seluruh Pengeluaran Kas', $financialSummary['total_expense']]);
                 fputcsv($handle, ['Laba Keuntungan Bersih Toko (Net Profit)', $financialSummary['net_profit']]);
-                fputcsv($handle, ['Arus Kas Bersih (Net Cash Flow)', $financialSummary['net_cashflow']]);
+                fputcsv($handle, ['Kas Laci Masuk (Tunai)', $financialSummary['cash_drawer_in']]);
+                fputcsv($handle, ['Kas Laci Keluar (Tunai & Tarik Tunai)', $financialSummary['cash_drawer_out']]);
+                fputcsv($handle, ['Kas Laci Bersih (Uang Fisik Tunai)', $financialSummary['cash_drawer_net']]);
+                fputcsv($handle, ['Arus Kas Total (Semua Metode: Tunai + QRIS + Transfer)', $financialSummary['net_cashflow']]);
                 fputcsv($handle, ['Kelengkapan Data HPP Item Transaksi (%)', $financialSummary['cost_coverage_percentage'] . '%']);
             }
 
@@ -572,100 +575,11 @@ class ReportController extends Controller
     }
 
     /**
-     * Hitung ringkasan keuangan dan analisis kelengkapan data HPP untuk akurasi laba rugi.
+     * Hitung ringkasan keuangan dan analisis kelengkapan data HPP melalui ReportService (Single Source of Truth)
+     * agar angkanya 100% seragam dengan Dashboard.
      */
     private function calculateFinancialSummary(Carbon $start, Carbon $end): array
     {
-        $transactions = Transaction::with('category')->whereBetween('transaction_date', [$start, $end])->get();
-
-        $totalIncome = (float) $transactions->where('type', 'pemasukan')->sum('total_amount');
-        $expenseTransactions = $transactions->where('type', 'pengeluaran');
-        $totalExpense = (float) $expenseTransactions->sum('total_amount');
-        $netCashflow = $totalIncome - $totalExpense;
-
-        // Pisahkan Belanja Modal / Kulakan Stok & Saldo Server (Aset Toko) vs Beban Operasional Toko
-        $kulakanExpense = 0.0;
-        $operationalExpense = 0.0;
-        $kulakanCount = 0;
-        $operationalCount = 0;
-
-        foreach ($expenseTransactions as $expTx) {
-            if ($expTx->isKulakan()) {
-                $kulakanExpense += (float) $expTx->total_amount;
-                $kulakanCount++;
-            } else {
-                $operationalExpense += (float) $expTx->total_amount;
-                $operationalCount++;
-            }
-        }
-
-        $incomeIds = $transactions->where('type', 'pemasukan')->pluck('id');
-
-        // Ambil semua item penjualan untuk periode ini
-        $saleItems = TransactionItem::whereIn('transaction_id', $incomeIds)->get();
-
-        $totalCogs = 0;
-        $totalSaleItemCount = $saleItems->count();
-        $itemsWithValidCostCount = 0;
-
-        foreach ($saleItems as $it) {
-            $totalCogs += ($it->cost_price * $it->quantity);
-            if ($it->cost_price > 0) {
-                $itemsWithValidCostCount++;
-            }
-        }
-
-        $grossProfit = $totalIncome - $totalCogs;
-        // Laba Bersih Toko = Laba Kotor Penjualan - Beban Operasional Toko
-        // (Belanja modal kulakan stok/saldo tidak memotong laba karena modal barang yang terjual sudah terpotong di HPP)
-        $netProfit = $grossProfit - $operationalExpense;
-
-        $hasCompleteCostData = $totalSaleItemCount === 0 || ($totalSaleItemCount > 0 && $itemsWithValidCostCount === $totalSaleItemCount);
-        $costCoveragePercentage = $totalSaleItemCount > 0 ? round(($itemsWithValidCostCount / $totalSaleItemCount) * 100, 1) : 100;
-
-        // Breakdown per metode pembayaran
-        $paymentMethodsIncome = Transaction::where('type', 'pemasukan')
-            ->whereBetween('transaction_date', [$start, $end])
-            ->selectRaw('payment_method, sum(total_amount) as total')
-            ->groupBy('payment_method')
-            ->pluck('total', 'payment_method')
-            ->toArray();
-
-        $paymentMethodsExpense = Transaction::where('type', 'pengeluaran')
-            ->whereBetween('transaction_date', [$start, $end])
-            ->selectRaw('payment_method, sum(total_amount) as total')
-            ->groupBy('payment_method')
-            ->pluck('total', 'payment_method')
-            ->toArray();
-
-        // Breakdown pengeluaran per kategori
-        $expensesByCategory = Transaction::with('category')
-            ->where('type', 'pengeluaran')
-            ->whereBetween('transaction_date', [$start, $end])
-            ->selectRaw('category_id, sum(total_amount) as total, count(*) as count')
-            ->groupBy('category_id')
-            ->get();
-
-        return [
-            'total_income' => $totalIncome,
-            'total_expense' => $totalExpense,
-            'operational_expense' => $operationalExpense,
-            'kulakan_expense' => $kulakanExpense,
-            'operational_count' => $operationalCount,
-            'kulakan_count' => $kulakanCount,
-            'net_cashflow' => $netCashflow,
-            'total_cogs' => $totalCogs,
-            'gross_profit' => $grossProfit,
-            'net_profit' => $netProfit,
-            'income_count' => $transactions->where('type', 'pemasukan')->count(),
-            'expense_count' => $transactions->where('type', 'pengeluaran')->count(),
-            'total_sale_item_count' => $totalSaleItemCount,
-            'items_with_valid_cost_count' => $itemsWithValidCostCount,
-            'has_complete_cost_data' => $hasCompleteCostData,
-            'cost_coverage_percentage' => $costCoveragePercentage,
-            'payment_methods_income' => $paymentMethodsIncome,
-            'payment_methods_expense' => $paymentMethodsExpense,
-            'expenses_by_category' => $expensesByCategory,
-        ];
+        return app(ReportService::class)->calculateFinancialSummary($start, $end);
     }
 }

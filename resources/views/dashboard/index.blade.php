@@ -223,7 +223,11 @@
                     <span class="inline-flex items-center gap-1 font-semibold {{ $monthlyNetProfit >= 0 ? 'text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40' : 'text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/40' }} px-2 py-0.5 rounded-md">
                         {{ $monthlyIncome > 0 ? round(($monthlyNetProfit / $monthlyIncome) * 100, 1) : 0 }}% Margin
                     </span>
-                    <span class="text-slate-400 text-[11px] font-mono">Net Profit</span>
+                    <span class="text-slate-400 text-[10px] font-mono">Kotor &minus; Beban</span>
+                </div>
+                <div class="mt-2 pt-2 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400 font-mono">
+                    <span>Kotor: @rupiah($monthlyGrossProfit)</span>
+                    <span class="text-rose-600 dark:text-rose-400">Beban: -@rupiah($monthlyOperationalExpense ?? 0)</span>
                 </div>
             </div>
         </div>

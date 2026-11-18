@@ -43,52 +43,32 @@ class DashboardController extends Controller
             ->take(4)
             ->get();
 
-        // 1. Statistik Hari Ini
-        $todayIncome = (float) Transaction::where('type', 'pemasukan')
-            ->whereDate('transaction_date', $today)
-            ->sum('total_amount');
+        // 1. Statistik Hari Ini (menggunakan mesin hitung tunggal yang sama persis dengan Laporan Laba Keuntungan)
+        $todaySummary = $reportService->calculateFinancialSummary(
+            $today->copy()->startOfDay(),
+            $today->copy()->endOfDay()
+        );
+        $todayIncome = $todaySummary['total_income'];
+        $todayExpense = $todaySummary['total_expense'];
+        $todayOperationalExpense = $todaySummary['operational_expense'];
+        $todayKulakanExpense = $todaySummary['kulakan_expense'];
+        $todayTransactionsCount = $todaySummary['income_count'] + $todaySummary['expense_count'];
+        $todayCogs = $todaySummary['total_cogs'];
+        $todayGrossProfit = $todaySummary['gross_profit'];
+        $todayNetProfit = $todaySummary['net_profit'];
+        $todayCashDrawerNet = $todaySummary['cash_drawer_net'];
 
-        $todayExpenses = Transaction::with('category')->where('type', 'pengeluaran')
-            ->whereDate('transaction_date', $today)
-            ->get();
-        $todayExpense = (float) $todayExpenses->sum('total_amount');
-        $todayOperationalExpense = (float) $todayExpenses->reject(fn($t) => $t->isKulakan())->sum('total_amount');
-        $todayKulakanExpense = (float) $todayExpenses->filter(fn($t) => $t->isKulakan())->sum('total_amount');
-
-        $todayTransactionsCount = Transaction::whereDate('transaction_date', $today)->count();
-
-        // Modal HPP & Laba Bersih Hari Ini (Beban operasional toko memotong laba, kulakan stok/saldo masuk aset)
-        $todayIncomeIds = Transaction::where('type', 'pemasukan')
-            ->whereDate('transaction_date', $today)
-            ->pluck('id');
-        $todayCogs = (float) (TransactionItem::whereIn('transaction_id', $todayIncomeIds)
-            ->selectRaw('SUM(cost_price * quantity) as total_cogs')
-            ->value('total_cogs') ?? 0);
-        $todayGrossProfit = $todayIncome - $todayCogs;
-        $todayNetProfit = $todayGrossProfit - $todayOperationalExpense;
-
-        // 2. Statistik Bulan Ini
-        $monthlyIncome = (float) Transaction::where('type', 'pemasukan')
-            ->whereBetween('transaction_date', [$startOfMonth, $endOfMonth])
-            ->sum('total_amount');
-
-        $monthlyExpenses = Transaction::with('category')->where('type', 'pengeluaran')
-            ->whereBetween('transaction_date', [$startOfMonth, $endOfMonth])
-            ->get();
-        $monthlyExpense = (float) $monthlyExpenses->sum('total_amount');
-        $monthlyOperationalExpense = (float) $monthlyExpenses->reject(fn($t) => $t->isKulakan())->sum('total_amount');
-        $monthlyKulakanExpense = (float) $monthlyExpenses->filter(fn($t) => $t->isKulakan())->sum('total_amount');
-
-        // Modal HPP & Laba Bersih Bulan Ini
-        $monthlyIncomeIds = Transaction::where('type', 'pemasukan')
-            ->whereBetween('transaction_date', [$startOfMonth, $endOfMonth])
-            ->pluck('id');
-        $monthlyCogs = (float) (TransactionItem::whereIn('transaction_id', $monthlyIncomeIds)
-            ->selectRaw('SUM(cost_price * quantity) as total_cogs')
-            ->value('total_cogs') ?? 0);
-        $monthlyGrossProfit = $monthlyIncome - $monthlyCogs;
-        $monthlyNetProfit = $monthlyGrossProfit - $monthlyOperationalExpense;
-        $monthlyNet = $monthlyIncome - $monthlyExpense; // Saldo kas flow
+        // 2. Statistik Bulan Ini (menggunakan mesin hitung tunggal yang sama persis dengan Laporan Laba Keuntungan)
+        $monthlySummary = $reportService->calculateFinancialSummary($startOfMonth, $endOfMonth);
+        $monthlyIncome = $monthlySummary['total_income'];
+        $monthlyExpense = $monthlySummary['total_expense'];
+        $monthlyOperationalExpense = $monthlySummary['operational_expense'];
+        $monthlyKulakanExpense = $monthlySummary['kulakan_expense'];
+        $monthlyCogs = $monthlySummary['total_cogs'];
+        $monthlyGrossProfit = $monthlySummary['gross_profit'];
+        $monthlyNetProfit = $monthlySummary['net_profit'];
+        $monthlyNet = $monthlySummary['net_cashflow'];
+        $monthlyCashDrawerNet = $monthlySummary['cash_drawer_net'];
 
         // 3. Produk & Stok
         $stockSummary = $reportService->getStockSummary();
@@ -116,16 +96,22 @@ class DashboardController extends Controller
         return view('dashboard.index', compact(
             'todayIncome',
             'todayExpense',
+            'todayOperationalExpense',
+            'todayKulakanExpense',
             'todayTransactionsCount',
             'todayCogs',
             'todayGrossProfit',
             'todayNetProfit',
+            'todayCashDrawerNet',
             'monthlyIncome',
             'monthlyExpense',
+            'monthlyOperationalExpense',
+            'monthlyKulakanExpense',
             'monthlyCogs',
             'monthlyGrossProfit',
             'monthlyNetProfit',
             'monthlyNet',
+            'monthlyCashDrawerNet',
             'stockSummary',
             'recentTransactions',
             'dailyTrend',
