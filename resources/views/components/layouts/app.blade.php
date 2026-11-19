@@ -52,6 +52,18 @@
             <!-- Top Navbar -->
             <x-navbar :title="$header ?? 'KonterKu'" />
 
+            @if(config('app.demo_mode', false))
+                <!-- Banner Informasi Mode Demo Portofolio -->
+                <div class="bg-gradient-to-r from-indigo-600 via-violet-600 to-emerald-600 text-white px-4 py-2 text-center text-[11px] sm:text-xs font-semibold shadow-xs print:hidden">
+                    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5">
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/20 text-[10px] font-black uppercase tracking-wider">
+                            ✨ Mode Demo Portofolio
+                        </span>
+                        <span>Data transaksi &amp; keuangan di sini adalah data simulasi. Anda bebas mencoba seluruh fitur kasir, stok, kasbon, &amp; laporan.</span>
+                    </div>
+                </div>
+            @endif
+
             <!-- Page Body -->
             <main class="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
                 <!-- Flash Notification Messages -->

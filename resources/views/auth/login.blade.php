@@ -1,10 +1,24 @@
+@php
+    $canRegister = $canRegister ?? \App\Http\Controllers\AuthController::isPublicRegistrationAllowed();
+    $isDemoMode = $isDemoMode ?? (bool) config('app.demo_mode', false);
+    $demoEmail = config('app.demo_email', 'demo@konterku.com');
+    $demoPassword = config('app.demo_password', 'demo123');
+@endphp
+
 <x-layouts.auth title="Masuk">
     <div x-data="{
         showPassword: false,
         email: '{{ old('email') }}',
         password: '',
         demoCopied: false,
-        @if(!app()->isProduction())
+        @if($isDemoMode)
+        fillDemo() {
+            this.email = '{{ $demoEmail }}';
+            this.password = '{{ $demoPassword }}';
+            this.demoCopied = true;
+            setTimeout(() => { this.demoCopied = false; }, 3000);
+        }
+        @elseif(!app()->isProduction())
         fillDemo() {
             this.email = 'admin@konterku.com';
             this.password = 'admin123';
@@ -13,8 +27,8 @@
         }
         @endif
     }">
-        <!-- Segmented Tab Navigasi Masuk / Daftar -->
-        @if(!app()->isProduction() || !\App\Models\User::exists())
+        <!-- Segmented Tab Navigasi Masuk / Daftar (Hanya tampil jika pendaftaran publik diizinkan) -->
+        @if($canRegister)
         <div class="flex items-center p-1 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 mb-6">
             <a
                 href="{{ route('login') }}"
@@ -28,6 +42,53 @@
             >
                 Daftar Akun Baru
             </a>
+        </div>
+        @endif
+
+        <!-- ============================================================= -->
+        <!-- KARTU AKSES CEPAT MODE DEMO PORTOFOLIO (HANYA SAAT DEMO_MODE) -->
+        <!-- ============================================================= -->
+        @if($isDemoMode)
+        <div class="mb-6 p-4 rounded-2xl bg-gradient-to-br from-emerald-50 via-teal-50/70 to-indigo-50 dark:from-emerald-950/50 dark:via-slate-800 dark:to-indigo-950/40 border border-emerald-200/90 dark:border-emerald-800/70 shadow-sm space-y-3">
+            <div class="flex items-center justify-between gap-2">
+                <div class="flex items-center gap-2">
+                    <span class="relative flex h-2.5 w-2.5">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                    </span>
+                    <span class="text-xs font-black uppercase tracking-wider text-emerald-900 dark:text-emerald-300">
+                        ✨ Akses Demo Portofolio
+                    </span>
+                </div>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/70 text-emerald-800 dark:text-emerald-200">
+                    Data Simulasi
+                </span>
+            </div>
+            <p class="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
+                Ingin langsung melihat Dashboard, POS Kasir, Saldo Server, Kasbon, &amp; Laporan? Klik tombol di bawah untuk masuk otomatis tanpa mendaftar.
+            </p>
+            <form method="POST" action="{{ route('demo.login') }}">
+                @csrf
+                <button
+                    type="submit"
+                    class="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-xs shadow-md shadow-emerald-600/25 hover:shadow-emerald-600/40 active:scale-[0.99] transition-all flex items-center justify-center gap-2 cursor-pointer"
+                >
+                    <span>🚀 Masuk Sebagai Demo (1 Klik)</span>
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+                    </svg>
+                </button>
+            </form>
+            <div class="pt-2 border-t border-emerald-200/60 dark:border-emerald-800/50 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-600 dark:text-slate-400">
+                <div class="flex items-center gap-1.5 flex-wrap">
+                    <span>Email: <code class="font-mono font-bold text-emerald-700 dark:text-emerald-300 select-all">{{ $demoEmail }}</code></span>
+                    <span>&bull;</span>
+                    <span>Sandi: <code class="font-mono font-bold text-emerald-700 dark:text-emerald-300 select-all">{{ $demoPassword }}</code></span>
+                </div>
+                <button type="button" @click="fillDemo()" class="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer">
+                    Isi ke form &darr;
+                </button>
+            </div>
         </div>
         @endif
 
@@ -156,7 +217,8 @@
             </div>
         </form>
 
-        <!-- Divider & Beralih ke Registrasi -->
+        <!-- Divider & Beralih ke Registrasi (Hanya tampil jika pendaftaran publik diizinkan) -->
+        @if($canRegister)
         <div class="mt-6 pt-5 border-t border-slate-200/80 dark:border-slate-700/80 text-center">
             <p class="text-xs text-slate-600 dark:text-slate-400">
                 Belum memiliki akun konter?
@@ -165,13 +227,14 @@
                 </a>
             </p>
         </div>
+        @endif
 
         <!-- ============================================================= -->
         <!-- KOTAK AKUN PENGUJIAN DENGAN TOAST NOTIFIKASI SUKSES ISI       -->
         <!-- Hanya muncul di lingkungan pengembangan lokal (Laragon/Local) -->
-        <!-- Otomatis disembunyikan saat di-hosting (Production)           -->
+        <!-- Otomatis disembunyikan saat di-hosting (Production/Demo)      -->
         <!-- ============================================================= -->
-        @if(!app()->isProduction())
+        @if(!$isDemoMode && !app()->isProduction())
         <div class="mt-5 p-4 rounded-2xl bg-gradient-to-r from-indigo-50/80 via-white to-sky-50/80 dark:from-slate-800/90 dark:via-indigo-950/30 dark:to-slate-800/90 border border-indigo-100 dark:border-indigo-900/60 shadow-xs relative overflow-hidden">
             <!-- Feedback Toast saat klik Isi Otomatis -->
             <div
@@ -218,7 +281,7 @@
                 </div>
             </div>
             <p class="text-[10px] text-slate-400 dark:text-slate-500 mt-2 italic leading-relaxed">
-                *Akun pengujian tetap aktif untuk uji coba lokal di Laragon. Untuk keperluan hosting kedepannya, gunakan tombol "Daftar Akun Baru" di atas.
+                *Akun pengujian hanya tampil di lingkungan lokal (Laragon) dan otomatis disembunyikan saat di-hosting.
             </p>
         </div>
         @endif

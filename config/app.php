@@ -43,6 +43,21 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Keamanan Akses & Mode Demo Portofolio KonterKu
+    |--------------------------------------------------------------------------
+    | - allow_public_registration: null (otomatis tutup di production jika user sudah ada),
+    |   false (selalu kunci pendaftaran publik), atau true (izinkan pendaftaran).
+    | - demo_mode: true untuk mengaktifkan tombol 1-klik login demo & proteksi akun demo
+    |   khusus pada subdomain portofolio.
+    */
+
+    'allow_public_registration' => env('ALLOW_PUBLIC_REGISTRATION', null),
+    'demo_mode' => (bool) env('DEMO_MODE', false),
+    'demo_email' => env('DEMO_EMAIL', 'demo@konterku.com'),
+    'demo_password' => env('DEMO_PASSWORD', 'demo123'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application URL
     |--------------------------------------------------------------------------
     |

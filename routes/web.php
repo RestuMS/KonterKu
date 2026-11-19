@@ -16,6 +16,7 @@ Route::middleware('guest')->group(function () {
     // Login
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
     Route::post('/login', [AuthController::class, 'login'])->name('login.post');
+    Route::post('/demo-login', [AuthController::class, 'demoLogin'])->name('demo.login');
 
     // Registrasi Akun Baru
     Route::get('/register', [AuthController::class, 'showRegister'])->name('register');

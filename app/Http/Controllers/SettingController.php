@@ -83,6 +83,11 @@ class SettingController extends Controller
 
     public function updateProfile(Request $request): RedirectResponse
     {
+        if (config('app.demo_mode', false)) {
+            return redirect()->route('settings.index', ['tab' => 'keamanan'])
+                ->with('warning', 'Perubahan profil & email akun dinonaktifkan pada Mode Demo Portofolio agar akun demo tetap dapat digunakan pengunjung lain.');
+        }
+
         $user = Auth::user();
 
         $validated = $request->validate([
@@ -103,6 +108,11 @@ class SettingController extends Controller
 
     public function updatePassword(Request $request): RedirectResponse
     {
+        if (config('app.demo_mode', false)) {
+            return redirect()->route('settings.index', ['tab' => 'keamanan'])
+                ->with('warning', 'Perubahan kata sandi dinonaktifkan pada Mode Demo Portofolio agar akun demo tetap dapat diakses.');
+        }
+
         $validated = $request->validate([
             'current_password' => ['required', 'current_password'],
             'password' => ['required', 'confirmed', Password::min(6)],
@@ -125,8 +135,13 @@ class SettingController extends Controller
     /**
      * Unduh file cadangan database lengkap (.sql) untuk pengamanan data konter.
      */
-    public function backupDatabase(): \Symfony\Component\HttpFoundation\StreamedResponse
+    public function backupDatabase(): \Symfony\Component\HttpFoundation\StreamedResponse|RedirectResponse
     {
+        if (config('app.demo_mode', false)) {
+            return redirect()->route('settings.index', ['tab' => 'keamanan'])
+                ->with('warning', 'Unduh cadangan database SQL dinonaktifkan pada Mode Demo Portofolio.');
+        }
+
         $shopName = Setting::get('shop_name', 'KonterKu');
         $slug = \Illuminate\Support\Str::slug($shopName) ?: 'konterku';
         $fileName = "Backup-{$slug}-" . now()->format('Y-m-d-His') . ".sql";
